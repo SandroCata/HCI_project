@@ -1,8 +1,8 @@
-#Human Computer Interaction Project 2024/2025
+# Human Computer Interaction Project 2024/2025
 
-##User Requirements (Phase 1)
+## User Requirements (Phase 1)
 
-###Scenarios and Personas
+### Scenarios and Personas
 
 1.Alex Jameson - Student with the dream of a car
 
@@ -40,7 +40,7 @@ onboard activities.
 Thanks to A, Maggie enjoys her cruise stress-free, knowing she’s financially secure and won’t return home to 
 unexpected expenses.
 
-###Requirements
+### Requirements
 
 Some original features with respect to competitors:
 - Currency Conversion
