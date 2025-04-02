@@ -40,6 +40,39 @@ onboard activities.
 Thanks to A, Maggie enjoys her cruise stress-free, knowing she’s financially secure and won’t return home to 
 unexpected expenses.
 
+### Possible questions for Interview/Questionaire
+
+1) Feature Validation:
+
+Would you find a reward-based financial tracking system useful? (Questionaire)
+Would a reward system encourage you to save more? Why or why not? (Interview)
+“How often do you need to convert currencies when tracking finances?”
+
+2) Usability Preferences:
+
+Do you prefer manual input or automatic transaction categorization?
+Would you like the option to customize the app theme?
+Which features do you use most in a finance app, and why?
+If you could improve one thing in finance apps, what would it be?
+
+3) Adoption Barriers:
+
+What would stop you from using a finance app?
+What’s the most frustrating thing about finance apps?
+What would convince you to switch to a new finance app? 
+
+4) Decision-Making Data:
+
+How often do you check your expenses?
+What budgeting tools do you currently use, and what do you wish they did better?
+Would you like an app that predicts or automates the categorization of your future expenses based on past spending?
+How important is data privacy in a finance app?
+
+5) Behavior revealing:
+
+What strategies do you use to save money?
+
+
 ### Requirements
 
 Some original features with respect to competitors:
