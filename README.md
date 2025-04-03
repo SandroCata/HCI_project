@@ -46,7 +46,7 @@ How often do you need to convert currencies when tracking finances?(Questionaire
 (Dayly, Weekly, Monthly, Yearly)
 How would you like to visualize transactions?(Questionaire)<br>
 (List, pie chart, histogram, calendar, trend graph)
-Would you like to have a section dedicated to debts/credits?(Questiionaire)<br>
+Would you like to have a section dedicated to debts/credits?(Questionaire)<br>
 (Yes, No, No preferences)
 
 2) Usability Preferences:
