@@ -79,6 +79,9 @@ How important is data privacy in a finance app?(Questionaire)<br>
 What strategies do you use to save money? Examples: transactions on paper, on app, on excel (Interview)<br>
 
 
+Questionnaire link: https://docs.google.com/forms/d/e/1FAIpQLSf4AM7F7IMudV8a5u1K-E7mbgpVdBHdVqkefE_mNiafYGRb0A/viewform?usp=header
+
+
 ### Requirements
 
 Some original features with respect to competitors:
