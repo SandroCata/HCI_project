@@ -34,19 +34,19 @@ Impact of A:
   
 Thanks to A, Maggie enjoys her cruise stress-free, knowing she’s financially secure and won’t return home to unexpected expenses.
 
-### Possible questions for Interview/Questionaire (ask if you need to insert questions about target and which type of interview)
+### Possible questions for Interview/Questionnaire
 
 1) Feature Validation:
 
 Would a reward system encourage you to save more? Why or why not?(Interview)<br>
 
-How useful would you find a reward-based financial tracking system?(Questionaire)<br>
+How useful would you find a reward-based financial tracking system?(Questionnaire)<br>
 (Low, Mid, High)
-How often do you need to convert currencies when tracking finances?(Questionaire)<br>
+How often do you need to convert currencies when tracking finances?(Questionnaire)<br>
 (Dayly, Weekly, Monthly, Yearly)
-How would you like to visualize transactions?(Questionaire)<br>
+How would you like to visualize transactions?(Questionnaire)<br>
 (List, pie chart, histogram, calendar, trend graph)
-Would you like to have a section dedicated to debts/credits?(Questionaire)<br>
+Would you like to have a section dedicated to debts/credits?(Questionnaire)<br>
 (Yes, No, No preferences)
 
 2) Usability Preferences:
@@ -54,24 +54,24 @@ Would you like to have a section dedicated to debts/credits?(Questionaire)<br>
 Which features do you use most in a finance app, and why?(Interview)<br>
 If you could improve one thing in finance apps, what would it be?(Interview)<br>
 
-Do you prefer manual input or automatic transaction categorization?(Questionaire)<br>
+Do you prefer manual input or automatic transaction categorization?(Questionnaire)<br>
 (Manual, Automatic, No preferences)
-Would you like the option to customize the app theme?(Questionaire)<br>
+Would you like the option to customize the app theme?(Questionnaire)<br>
 (Yes, No, No preferences)
 
 
 3) Adoption Barriers:
 
-What would stop you from using a finance app?(Questionaire open)<br>
+What would stop you from using a finance app?(Questionnaire open)<br>
 
 
 4) Decision-Making Data:
 
-How often do you check your expenses?(Questionaire)<br>
+How often do you check your expenses?(Questionnaire)<br>
 (Once a day, Several times a day, Weekly, Never)
-What budgeting tools do you currently use?(Questionaire)<br>
+What budgeting tools do you currently use?(Questionnaire)<br>
 (Excel/Google Sheets, Smartphone Notes, Paper Notebook, None, Finance App (to specifiy))
-How important is data privacy in a finance app?(Questionaire)<br>
+How important is data privacy in a finance app?(Questionnaire)<br>
 (Important, No preference, Not important)
 
 5) Behavior revealing:
