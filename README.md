@@ -34,52 +34,19 @@ Impact of A:
   
 Thanks to A, Maggie enjoys her cruise stress-free, knowing she’s financially secure and won’t return home to unexpected expenses.
 
-### Possible questions for Interview/Questionnaire
+### Interview
 
-1) Feature Validation:
+1) Is there any particular strategy that you adopt to save money? If yes, please indicate which one (Examples: transactions on paper, on app, on excel)<br>
 
-Would a reward system encourage you to save more? Why or why not?(Interview)<br>
+2) Which features would you find more useful in a finance app, and why?<br>
 
-How useful would you find a reward-based financial tracking system?(Questionnaire)<br>
-(Low, Mid, High)
-How often do you need to convert currencies when tracking finances?(Questionnaire)<br>
-(Dayly, Weekly, Monthly, Yearly)
-How would you like to visualize transactions?(Questionnaire)<br>
-(List, pie chart, histogram, calendar, trend graph)
-Would you like to have a section dedicated to debts/credits?(Questionnaire)<br>
-(Yes, No, No preferences)
+3) Would a reward system encourage you to save more? Why or why not?<br>
 
-2) Usability Preferences:
+4) If you could improve one thing in finance apps, what would it be?<br>
 
-Which features do you use most in a finance app, and why?(Interview)<br>
-If you could improve one thing in finance apps, what would it be?(Interview)<br>
+### Questionnaire
 
-Do you prefer manual input or automatic transaction categorization?(Questionnaire)<br>
-(Manual, Automatic, No preferences)
-Would you like the option to customize the app theme?(Questionnaire)<br>
-(Yes, No, No preferences)
-
-
-3) Adoption Barriers:
-
-What would stop you from using a finance app?(Questionnaire open)<br>
-
-
-4) Decision-Making Data:
-
-How often do you check your expenses?(Questionnaire)<br>
-(Once a day, Several times a day, Weekly, Never)
-What budgeting tools do you currently use?(Questionnaire)<br>
-(Excel/Google Sheets, Smartphone Notes, Paper Notebook, None, Finance App (to specifiy))
-How important is data privacy in a finance app?(Questionnaire)<br>
-(Important, No preference, Not important)
-
-5) Behavior revealing:
-
-What strategies do you use to save money? Examples: transactions on paper, on app, on excel (Interview)<br>
-
-
-[Questionnaire link](https://docs.google.com/forms/d/1fRGUwQrCjuY9JcCf58vKLwpskM2qY9og3AjtkynC6AY/edit)
+[Here](https://docs.google.com/forms/d/1fRGUwQrCjuY9JcCf58vKLwpskM2qY9og3AjtkynC6AY/edit)
 
 
 ### Requirements
