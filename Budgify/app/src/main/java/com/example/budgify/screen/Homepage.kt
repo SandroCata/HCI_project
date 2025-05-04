@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -273,9 +274,34 @@ fun ContiBox() {
             accounts.forEach { account ->
                 AccountItem(account = account)
             }
+            // Aggiungi l'item con il "+"
+            AddAccountItem()
         }
     }
 }
+
+@Composable
+fun AddAccountItem() {
+    Column(
+        modifier = Modifier
+            .padding(8.dp)
+            .width(150.dp)
+            .height(80.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        IconButton(onClick = { /* TODO: Handle add account logic */ }) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = "Add Account",
+                modifier = Modifier.size(40.dp)
+            )
+        }
+    }
+}
+
 //Composbale per visualizzare le sezioni di ogni account
 @Composable
 fun AccountItem(account: Account) {
@@ -283,9 +309,11 @@ fun AccountItem(account: Account) {
         modifier = Modifier
             .padding(8.dp)
             .width(150.dp)
-            .clip(RoundedCornerShape(3.dp))
+            .height(80.dp)
+            .clip(RoundedCornerShape(16.dp))
             .background(Color.White),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Text(text = account.title, fontWeight = FontWeight.Bold)
         Text(text = "${account.amount}€", color = Color.Gray)
