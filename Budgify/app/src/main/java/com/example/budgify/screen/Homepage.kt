@@ -66,135 +66,57 @@ import java.time.LocalDate
 // Definisci gli stili del testo
 val smallTextStyle = TextStyle(fontSize = 11.8.sp)
 
+// Definisco la lista di schermate
+val items = listOf(
+    ScreenRoutes.Transactions,
+    ScreenRoutes.Objectives,
+    ScreenRoutes.Adding,
+    ScreenRoutes.CredDeb,
+    ScreenRoutes.Categories
+)
+
+val itemsTopBar = listOf(
+    ScreenRoutes.Home,
+    ScreenRoutes.Settings
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Homepage(navController: NavController) {
-    // Definisco la lista di schermate
-    val items = listOf(
-        ScreenRoutes.Transactions,
-        ScreenRoutes.Objectives,
-        ScreenRoutes.Adding,
-        ScreenRoutes.CredDeb,
-        ScreenRoutes.Categories
-    )
-
-    val itemsTopBar = listOf(
-        ScreenRoutes.Home,
-        ScreenRoutes.Settings
-    )
-
-    var showDialog by remember { mutableStateOf(false) }
     var currentRoute by remember { mutableStateOf(ScreenRoutes.Home.route) }
+    Scaffold (
+        topBar = { TopBar(navController, currentRoute) },
+        bottomBar = { BottomBar(navController) }
+    ){
+        innerPadding ->
+            Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // TopAppBar
-            CenterAlignedTopAppBar(
-                title = { Text("Dashboard", fontSize = 30.sp) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.LightGray,
-                    titleContentColor = Color.Black
-                ),
-                navigationIcon = {
-                    if (currentRoute != ScreenRoutes.Home.route) {
-                        IconButton(onClick = {
-                            navController.navigate(ScreenRoutes.Home.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }) {
-                            Icon(Icons.Filled.Home, contentDescription = "Home", modifier = Modifier.size(50.dp))
-                        }
-                    }
-                },
-                actions = { // Aggiunte le icone in alto a destra
-                    IconButton(onClick = {
-                        navController.navigate(ScreenRoutes.Settings.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }) {
-                        Icon( Icons.Filled.Settings, contentDescription = "Settings", modifier = Modifier.size(50.dp))
-                    }
+                //TopBar(navController, currentRoute)
 
+                // Box per i pie chart e istogramma
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .height(250.dp)
+                    .padding(16.dp, 16.dp, 16.dp, 0.dp)) {
+                    GraficiBox()
                 }
-            )
 
-
-            // Box per i pie chart e istogramma
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .height(250.dp)
-                .padding(16.dp, 16.dp, 16.dp, 0.dp)) {
-                GraficiBox()
-            }
-
-            // Box per i conti e il saldo totale
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp, 16.dp, 16.dp, 16.dp)) {
-                ContiBox()
-            }
-
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp, 0.dp, 16.dp, 0.dp)) {
-                LastTransactionBox()
-            }
-
-
-
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 0.dp)) {
-            // Barra di navigazione inferiore
-            NavigationBar (modifier = Modifier.align(Alignment.BottomCenter)) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-                val desc=""
-                items.forEach { screen ->
-                    val iconModifier = if (screen == ScreenRoutes.Adding) {
-                        Modifier.size(50.dp)// Icona ingrandita per "Add"
-                    } else {
-                        Modifier.size(35.dp) // Icona standard per le altre schermate
-                    }
-                    NavigationBarItem(
-                        icon = {
-                            Icon(
-                                painterResource(id = screen.icon),
-                                contentDescription = null,
-                                modifier = iconModifier
-                            )
-                        },
-                        label = { if(screen != ScreenRoutes.Adding){ //aggiunto l'if per mostrare la label
-                            Text(screen.title, style = smallTextStyle)
-                        } },
-                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                        onClick = {
-                            if (screen == ScreenRoutes.Adding) {
-                                showDialog = true
-                            } else {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                    }
-                                }
-                            }
-                        )
-                    }
+                // Box per i conti e il saldo totale
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp, 16.dp, 16.dp, 16.dp)) {
+                    ContiBox()
                 }
+
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp, 0.dp, 16.dp, 0.dp)) {
+                    LastTransactionBox()
+                }
+
+
             }
         }
-    }
 }
 
 //Composbale per visualizzare le transazioni
@@ -337,3 +259,104 @@ fun GraficiBox() {
         Text("Istogramma...")
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TopBar(navController: NavController, currentRoute: String) {
+    val title = when (currentRoute) {
+        "home_screen" -> "Dashboard"
+        "objectives_screen" -> "Objectives"
+        "settings_screen" -> "Settings"
+        "transactions_screen" -> "Transactions"
+        "cred_deb_screen" -> "Loans"
+        "categories_screen" -> "Categories"
+        else -> ""
+    }
+    CenterAlignedTopAppBar(
+        title = { Text(title, fontSize = 30.sp) },
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+            containerColor = Color.LightGray,
+            titleContentColor = Color.Black
+        ),
+        navigationIcon = {
+            if (currentRoute != ScreenRoutes.Home.route) {
+                IconButton(onClick = {
+                    navController.navigate(ScreenRoutes.Home.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }) {
+                    Icon(Icons.Filled.Home, contentDescription = "Home", modifier = Modifier.size(50.dp))
+                }
+            }
+        },
+        actions = { // Aggiunte le icone in alto a destra
+            IconButton(onClick = {
+                navController.navigate(ScreenRoutes.Settings.route) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }) {
+                Icon( Icons.Filled.Settings, contentDescription = "Settings", modifier = Modifier.size(50.dp))
+            }
+
+        }
+    )
+}
+
+@Composable
+fun BottomBar(navController: NavController) {
+    var showDialog by remember { mutableStateOf(false) }
+    Box(
+        modifier = Modifier
+            .padding(bottom = 0.dp)
+    ) {
+        NavigationBar(modifier = Modifier.align(Alignment.BottomCenter)) {
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentDestination = navBackStackEntry?.destination
+            val desc = ""
+            items.forEach { screen ->
+                val iconModifier = if (screen == ScreenRoutes.Adding) {
+                    Modifier.size(50.dp)// Icona ingrandita per "Add"
+                } else {
+                    Modifier.size(35.dp) // Icona standard per le altre schermate
+                }
+                NavigationBarItem(
+                    icon = {
+                        Icon(
+                            painterResource(id = screen.icon),
+                            contentDescription = null,
+                            modifier = iconModifier
+                        )
+                    },
+                    label = {
+                        if (screen != ScreenRoutes.Adding) { //aggiunto l'if per mostrare la label
+                            Text(screen.title, style = smallTextStyle)
+                        }
+                    },
+                    selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                    onClick = {
+                        if (screen == ScreenRoutes.Adding) {
+                            showDialog = true
+                        } else {
+                            navController.navigate(screen.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+

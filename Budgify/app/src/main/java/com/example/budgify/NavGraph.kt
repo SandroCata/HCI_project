@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.budgify.screen.Homepage
+import com.example.budgify.screen.Objectives
 
 @Composable
 fun NavGraph() {
@@ -14,5 +15,6 @@ fun NavGraph() {
 
     NavHost(navController = navController, startDestination = "home_screen") {
         composable("home_screen") { Homepage(navController) }
+        composable("objectives_screen") { Objectives(navController) }
     }
 }
