@@ -5,10 +5,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,10 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.runtime.Composable
-import androidx.navigation.NavController
-
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,17 +23,15 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
-
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,13 +40,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
+import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -80,41 +71,26 @@ val itemsTopBar = listOf(
     ScreenRoutes.Settings
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Homepage(navController: NavController) {
-    var currentRoute by remember { mutableStateOf(ScreenRoutes.Home.route) }
+    val currentRoute by remember { mutableStateOf(ScreenRoutes.Home.route) }
     Scaffold (
         topBar = { TopBar(navController, currentRoute) },
         bottomBar = { BottomBar(navController) }
     ){
         innerPadding ->
-            Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-
-                //TopBar(navController, currentRoute)
-
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
                 // Box per i pie chart e istogramma
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .height(250.dp)
-                    .padding(16.dp, 16.dp, 16.dp, 0.dp)) {
-                    GraficiBox()
-                }
+                GraficiBox()
 
                 // Box per i conti e il saldo totale
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp, 16.dp, 16.dp, 16.dp)) {
-                    ContiBox()
-                }
+                ContiBox()
 
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp, 0.dp, 16.dp, 0.dp)) {
-                    LastTransactionBox()
-                }
-
-
+                LastTransactionBox()
             }
         }
 }
@@ -129,10 +105,20 @@ fun TransactionItem(transaction: Transaction) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
-            Text(text = transaction.description, fontWeight = FontWeight.Bold)
-            Text(text = transaction.date.toString(), color = Color.Gray, fontSize = 12.sp)
+            Text(
+                text = transaction.description,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = transaction.date.toString(),
+                style = MaterialTheme.typography.bodySmall
+            )
         }
-        Text(text = "${transaction.amount}€", fontWeight = FontWeight.Bold)
+        Text(
+            text = "${transaction.amount}€",
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 
@@ -147,18 +133,27 @@ fun LastTransactionBox() {
         Transaction(6, "Bank",true, LocalDate.now().minusDays(5), "Lavoro", 100.0, "Entrata"),
         Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.0, "Spesa"),
     )
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.LightGray.copy(alpha = 0.3f))
-            .padding(16.dp)
+            .padding(16.dp, 5.dp, 16.dp, 5.dp)
     ) {
-        Text("Ultime Transazioni", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            items(transactions.take(5)) { transaction ->
-                TransactionItem(transaction = transaction)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.LightGray.copy(alpha = 0.3f))
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Ultime Transazioni",
+                style = MaterialTheme.typography.titleLarge
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                items(transactions.take(5)) { transaction ->
+                    TransactionItem(transaction = transaction)
+                }
             }
         }
     }
@@ -178,26 +173,35 @@ fun ContiBox() {
     // Calcola il saldo totale
     val totalBalance = accounts.sumOf { it.amount }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.LightGray.copy(alpha = 0.3f))
-            .padding(16.dp)
+            .padding(16.dp, 5.dp, 16.dp, 5.dp)
     ) {
-        Text("Saldo Totale: $totalBalance €", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-        Spacer(modifier = Modifier.height(4.dp))
-        //Sezione scrollable
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.LightGray.copy(alpha = 0.3f))
+                .padding(16.dp)
         ) {
-            accounts.forEach { account ->
-                AccountItem(account = account)
+            Text(
+                text = "Saldo Totale: $totalBalance €",
+                style = MaterialTheme.typography.titleLarge
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            //Sezione scrollable
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+            ) {
+                accounts.forEach { account ->
+                    AccountItem(account = account)
+                }
+                // Aggiungi l'item con il "+"
+                AddAccountItem()
             }
-            // Aggiungi l'item con il "+"
-            AddAccountItem()
         }
     }
 }
@@ -208,7 +212,7 @@ fun AddAccountItem() {
         modifier = Modifier
             .padding(8.dp)
             .width(150.dp)
-            .height(80.dp)
+            .height(65.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(Color.White),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -231,7 +235,7 @@ fun AccountItem(account: Account) {
         modifier = Modifier
             .padding(8.dp)
             .width(150.dp)
-            .height(80.dp)
+            .height(65.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(Color.White),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -245,18 +249,28 @@ fun AccountItem(account: Account) {
 // Composbale per visualizzare la box dei grafici
 @Composable
 fun GraficiBox() {
-    Column(
+    Box(
         modifier = Modifier
-            .fillMaxSize()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.LightGray.copy(alpha = 0.3f))
-            .padding(16.dp)
+            .fillMaxWidth()
+            .height(230.dp)
+            .padding(16.dp, 5.dp, 16.dp, 5.dp)
     ) {
-        Text("Grafici", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-        // Qui puoi aggiungere la logica per visualizzare i grafici
-        Text("Grafico a torta...")
-        Text("Istogramma...")
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.LightGray.copy(alpha = 0.3f))
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Grafici",
+                style = MaterialTheme.typography.titleLarge
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            // Qui puoi aggiungere la logica per visualizzare i grafici
+            Text("Grafico a torta...")
+            Text("Istogramma...")
+        }
     }
 }
 
