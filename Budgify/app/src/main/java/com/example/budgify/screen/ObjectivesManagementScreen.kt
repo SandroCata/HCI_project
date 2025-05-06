@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,14 +22,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.budgify.datastruct.Objective
+import com.example.budgify.datastruct.ObjectiveType
 import com.example.budgify.routes.ScreenRoutes
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 
 // TODO: fix navigation of bottom bar
 
@@ -88,32 +91,45 @@ enum class ObjectivesManagementSection(val title: String) {
 
 @Composable
 fun ObjectiveItem(obj: Objective) {
+
+    val formatter = remember { SimpleDateFormat("dd/MM/yy", Locale.getDefault()) }
+
+    // Determina il colore di sfondo in base al tipo di obiettivo
+    val backgroundColor = when (obj.type) {
+        ObjectiveType.INCOME -> Color.Green.copy(alpha = 0.3f) // Verde semi-trasparente per profitto
+        ObjectiveType.EXPENSE -> Color.Red.copy(alpha = 0.3f) // Rosso semi-trasparente per spesa
+    }
+
     Column (
         modifier = Modifier
             .padding(8.dp)
-    ){
-        Text(obj.desc)
-        Row {
-            Text("${obj.amount}")
-            Spacer(modifier = Modifier.width(3.dp))
-            Text("${obj.date}")
-        }
+            .width(150.dp) // Aggiunto una larghezza fissa per un migliore allineamento
+            .clip(RoundedCornerShape(8.dp)) // Angoli arrotondati per la box dell'item
+            .background(backgroundColor) // Applica il colore di sfondo
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally // Allinea orizzontalmente al centro
+    ) {
+        Text(
+            text = obj.desc,
+            textAlign = TextAlign.Center // Allinea il testo al centro
+        )
+        Text(
+            text = formatter.format(obj.date), // Formatta la data
+            textAlign = TextAlign.Center // Allinea il testo al centro
+        )
+        Text(
+            text = "${obj.amount}€", // Aggiunto l'euro
+            textAlign = TextAlign.Center // Allinea il testo al centro
+        )
     }
 }
 
 @Composable
 fun ActiveObjectivesSection() {
     val objectives = listOf(
-        Objective("Desc1", 100.0, Date()),
-        Objective("Desc2", 200.0, Date()),
-        Objective("Desc3", 300.0, Date()),
-        Objective("Desc4", 400.0, Date()),
-        Objective("Desc5", 500.0, Date()),
-        Objective("Desc6", 600.0, Date()),
-        Objective("Desc7", 700.0, Date()),
-        Objective("Desc8", 800.0, Date()),
-        Objective("Desc9", 900.0, Date()),
-        Objective("Desc10", 1000.0, Date())
+        Objective(ObjectiveType.EXPENSE, "Desc1", 100.0, Date()),
+        Objective(ObjectiveType.INCOME, "Desc2", 200.0, Date()),
+        Objective(ObjectiveType.EXPENSE,"Desc3", 300.0, Date()),
         // Add more objectives to see the grid scrolling
     )
     // Use LazyVerticalGrid instead of Column
@@ -134,7 +150,7 @@ fun ActiveObjectivesSection() {
             Box (
                 modifier = Modifier
                     .width(150.dp) // You might want to adjust these dimensions
-                    .height(65.dp)  // based on the grid cell arrangement
+                    .height(80.dp)  // based on the grid cell arrangement
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color.White)
             ){
