@@ -36,7 +36,7 @@ import androidx.navigation.NavController
 import com.example.budgify.routes.ScreenRoutes
 
 @Composable
-fun Objectives(navController: NavController) {
+fun ObjectivesScreen(navController: NavController) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Objectives.route) }
     Scaffold (
         topBar = { TopBar(navController, currentRoute) },
@@ -175,8 +175,6 @@ fun ProfileAndLevelSection(profilePicture: Painter, currentLevel: Int, progressT
 fun ManageObjectivesButton(navController: NavController) {
     Button(
         onClick = {
-            // TODO: Replace "objectives_management_screen" with the actual route
-            // of your Objectives Management screen in your NavGraph.
             navController.navigate("objectives_management_screen")
         },
         modifier = Modifier
