@@ -56,16 +56,16 @@ fun ObjectivesScreen(navController: NavController) {
                     // Section 1: Profile Picture, Level, and Level Bar
                     ProfileAndLevelSection(
                         profilePicture = rememberVectorPainter(Icons.Filled.Person), // Replace with your logic to get the profile picture
-                        currentLevel = 5, // Replace with your user's current level
-                        progressToNextLevel = 0.75f // Replace with user's progress (0.0 to 1.0)
+                        currentLevel = 0, // Replace with your user's current level
+                        progressToNextLevel = 0.0f // Replace with user's progress (0.0 to 1.0)
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Section 2: Reached and Unreached Objectives Count
                     ObjectiveCountsSection(
-                        reachedCount = 15, // Replace with the number of reached objectives
-                        unreachedCount = 5 // Replace with the number of unreached objectives
+                        reachedCount = 0, // Replace with the number of reached objectives
+                        unreachedCount = 0 // Replace with the number of unreached objectives
                     )
 
                     // Section 3: Manage Objectives Button
@@ -133,7 +133,7 @@ fun ProfileAndLevelSection(profilePicture: Painter, currentLevel: Int, progressT
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "Stats",
+            text = "Your Achievments",
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
