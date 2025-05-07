@@ -337,17 +337,22 @@ fun BottomBar(navController: NavController) {
             val currentDestination = navBackStackEntry?.destination
             val desc = ""
             items.forEach { screen ->
-                    Modifier.size(35.dp) // Icona standard per le altre schermate
+                val iconModifier = if (screen == ScreenRoutes.Adding) {
+                    Modifier.size(45.dp)// Icona ingrandita per "Add"
+                } else {
+                    Modifier.size(30.dp) // Icona standard per le altre schermate
+                }
                 NavigationBarItem(
                     icon = {
                         Icon(
                             painterResource(id = screen.icon),
-                            contentDescription = null
+                            contentDescription = null,
+                            modifier = iconModifier
                         )
                     },
-                    label = {
-                            Text(screen.title, style = smallTextStyle)
-                    },
+                    label = { if(screen != ScreenRoutes.Adding){ //aggiunto l'if per mostrare la label
+                        Text(screen.title, style = smallTextStyle)
+                    } },
                     selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                     onClick = {
                         if (screen == ScreenRoutes.Adding) {
