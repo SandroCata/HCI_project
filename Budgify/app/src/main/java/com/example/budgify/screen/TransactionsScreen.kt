@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -15,9 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -38,8 +34,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -48,10 +49,6 @@ import com.example.budgify.routes.ScreenRoutes
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import kotlin.rem
-import kotlin.text.category
-import kotlin.text.format
-import kotlin.toString
 
 @Composable
 fun TransactionsScreen(navController: NavController) {
@@ -232,16 +229,16 @@ fun MonthlyCalendar(
 fun TransactionBox(selectedDate: LocalDate?) {
     // Here we simulate data from a local file, which will then be taken from a DB
     val allTransactions = listOf(
-        Transaction(1, "Bank",false, LocalDate.now(), "Spesa Alimentari", 50.00, "Spesa"),
-        Transaction(2, "Bank",false, LocalDate.now().minusDays(1), "Trasporto", 25.00, "Spesa"),
-        Transaction(3, "Bank",true, LocalDate.now().minusDays(3), "Stipendio", 1500.00, "Entrata"),
-        Transaction(6, "Bank",true, LocalDate.now().minusDays(5), "Lavoro", 100.00, "Entrata"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.00, "Spesa"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.00, "Spesa"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.00, "Spesa"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.00, "Spesa"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.00, "Spesa"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.00, "Spesa"),
+        Transaction(1, "Bank",false, LocalDate.now(), "Spesa Alimentari", 50.00, "Cibo"),
+        Transaction(2, "Wallet",false, LocalDate.now(), "Biglietto Autobus", 2.00, "Trasporto"),
+        Transaction(3, "Bank",true, LocalDate.now().minusDays(1), "Mensilitá lavoro", 1500.00, "Stipendio"),
+        Transaction(6, "Wallet",true, LocalDate.now().minusDays(1), "Maglietta Vinted", 10.00, "Vendite"),
+        Transaction(7, "Bank",false, LocalDate.now().minusDays(1), "Abbonamento Palestra", 65.00, "Allenamento"),
+        Transaction(7, "Wallet",false, LocalDate.now().minusDays(3), "Cinema", 65.00, "Svago"),
+        Transaction(7, "Bank",false, LocalDate.now().minusDays(5), "Spesa Alimentari", 65.00, "Cibo"),
+        Transaction(7, "Wallet",false, LocalDate.now().minusDays(2), "Spesa Alimentari", 65.00, "Cibo"),
+        Transaction(7, "Bank",false, LocalDate.now().minusDays(2), "Spesa Alimentari", 65.00, "Cibo"),
+        Transaction(7, "Wallet",false, LocalDate.now().minusDays(1), "Spesa Alimentari", 65.00, "Cibo"),
     )
 
     // Filter transactions by the selected date
@@ -269,7 +266,7 @@ fun TransactionBox(selectedDate: LocalDate?) {
                 .padding(16.dp)
         ) {
             Text(
-                text = if (selectedDate != null) "Transactions for ${selectedDate.format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))}" else "Last Transactions",
+                text = if (selectedDate != null) "${selectedDate.format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))}" else "Latest",
                 style = MaterialTheme.typography.titleLarge
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -299,12 +296,36 @@ fun TransactionItem1(transaction: Transaction) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
-            Text(text = transaction.description, fontWeight = FontWeight.Bold)
-            Text(text = transaction.category, fontSize = 12.sp)
+            val formattedDescription1 = buildAnnotatedString {
+                // Aggiungi la descrizione in grassetto
+                withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
+                    append(transaction.description)
+                }
+                // Aggiungi lo spazio e la parentesi aperta
+                append("  (")
+                // Aggiungi la categoria in corsivo
+                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                    append(transaction.category)
+                }
+                // Aggiungi la parentesi chiusa
+                append(")")
+            }
+            Text(text = formattedDescription1, fontSize = 15.sp)
+            Spacer(modifier = Modifier.height(3.dp))
+            val formattedDescription2 = buildAnnotatedString {
+                withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
+                    append(transaction.account)
+                }
+                append(" - ")
+                withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
+                    append(transaction.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                }
+            }
+            Text(text = formattedDescription2, fontFamily = FontFamily.SansSerif, fontSize = 12.sp)
         }
         Text(
             text = "${if (transaction.type) "+" else "-"} ${transaction.amount}€",
-            color = if (transaction.type) Color.Green else Color.Red,
+            color = if (transaction.type) Color(red = 0.0f, green = 0.6f, blue = 0.0f) else Color(red = 0.7f, green = 0.0f, blue = 0.0f),
             fontWeight = FontWeight.Bold
         )
     }

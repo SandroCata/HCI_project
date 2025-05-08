@@ -25,12 +25,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,12 +34,9 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,9 +47,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Transparent
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -69,7 +65,7 @@ import com.example.budgify.datastruct.Account
 import com.example.budgify.datastruct.Transaction
 import com.example.budgify.routes.ScreenRoutes
 import java.time.LocalDate
-import kotlin.text.format
+import java.time.format.DateTimeFormatter
 
 // Definisci gli stili del testo
 val smallTextStyle = TextStyle(fontSize = 11.8.sp)
@@ -81,11 +77,6 @@ val items = listOf(
     ScreenRoutes.Adding,
     ScreenRoutes.CredDeb,
     ScreenRoutes.Categories
-)
-
-val itemsTopBar = listOf(
-    ScreenRoutes.Home,
-    ScreenRoutes.Settings
 )
 
 @Composable
@@ -121,6 +112,8 @@ fun Homepage(navController: NavController) {
 //Composbale per visualizzare le transazioni
 @Composable
 fun TransactionItem(transaction: Transaction) {
+
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -128,19 +121,38 @@ fun TransactionItem(transaction: Transaction) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
+            val formattedDescription1 = buildAnnotatedString {
+                withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
+                    append(transaction.description)
+                }
+                append("  (")
+                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                    append(transaction.category)
+                }
+                append(")")
+            }
             Text(
-                text = transaction.description,
+                text = formattedDescription1,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold
             )
+            val formattedDescription2 = buildAnnotatedString {
+                withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
+                    append(transaction.account)
+                }
+                append(" - ")
+                withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
+                    append(transaction.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                }
+            }
             Text(
-                text = transaction.date.toString(),
+                text = formattedDescription2,
                 style = MaterialTheme.typography.bodySmall
             )
         }
         Text(
-            text = "${transaction.amount}€",
-            style = MaterialTheme.typography.bodyMedium
+            text = "${if (transaction.type) "+" else "-"} ${transaction.amount}€",
+            color = if (transaction.type) Color(red = 0.0f, green = 0.6f, blue = 0.0f) else Color(red = 0.7f, green = 0.0f, blue = 0.0f),
+            fontWeight = FontWeight.Bold
         )
     }
 }
@@ -150,11 +162,11 @@ fun TransactionItem(transaction: Transaction) {
 fun LastTransactionBox() {
     // Qui simuliamo i dati da un file locale, che poi andranno presi da un DB
     val transactions = listOf(
-        Transaction(1, "Bank",false, LocalDate.now(), "Spesa Alimentari", 50.0, "Spesa"),
-        Transaction(2, "Bank",false, LocalDate.now().minusDays(1), "Trasporto", 25.0, "Spesa"),
-        Transaction(3, "Bank",true, LocalDate.now().minusDays(3), "Stipendio", 1500.0, "Entrata"),
-        Transaction(6, "Bank",true, LocalDate.now().minusDays(5), "Lavoro", 100.0, "Entrata"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.0, "Spesa"),
+        Transaction(1, "Bank",false, LocalDate.now(), "Spesa Alimentari", 50.0, "Cibo"),
+        Transaction(2, "Wallet",false, LocalDate.now().minusDays(1), "Biglietto Autobus", 2.0, "Trasporto"),
+        Transaction(3, "Bank",true, LocalDate.now().minusDays(3), "Mensilitá lavoro", 1500.0, "Stipendio"),
+        Transaction(6, "Bank",true, LocalDate.now().minusDays(3), "Maglietta Vinted", 100.0, "Vendite"),
+        Transaction(7, "Wallet",false, LocalDate.now().minusDays(1), "Spesa Alimentari", 65.0, "Cibo"),
     )
     Box(
         modifier = Modifier
@@ -169,7 +181,7 @@ fun LastTransactionBox() {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Ultime Transazioni",
+                text = "Latest Transactions",
                 style = MaterialTheme.typography.titleLarge
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -187,9 +199,8 @@ fun LastTransactionBox() {
 fun ContiBox() {
     // Dati di esempio per i conti
     val accounts = listOf(
-        Account("Conto Corrente", 1000.0),
-        Account("Conto Risparmio", 5000.0),
-        Account("Carta di Credito", 2500.0),
+        Account("Bank", 1000.0),
+        Account("Savings", 5000.0),
         Account("Wallet", 150.0)
     )
 
@@ -209,7 +220,7 @@ fun ContiBox() {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Saldo Totale: $totalBalance €",
+                text = "Total Balance: $totalBalance €",
                 style = MaterialTheme.typography.titleLarge
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -286,13 +297,13 @@ fun GraficiBox() {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Grafici",
+                text = "Graphs",
                 style = MaterialTheme.typography.titleLarge
             )
             Spacer(modifier = Modifier.height(8.dp))
             // Qui puoi aggiungere la logica per visualizzare i grafici
-            Text("Grafico a torta...")
-            Text("Istogramma...")
+            Text("Pie charts...")
+            Text("Histogram...")
         }
     }
 }

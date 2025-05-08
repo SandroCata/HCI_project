@@ -34,9 +34,8 @@ import androidx.navigation.NavController
 import com.example.budgify.datastruct.Objective
 import com.example.budgify.datastruct.ObjectiveType
 import com.example.budgify.routes.ScreenRoutes
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 // TODO: fix navigation of bottom bar
 
@@ -107,8 +106,6 @@ enum class ObjectivesManagementSection(val title: String) {
 @Composable
 fun ObjectiveItem(obj: Objective) {
 
-    val formatter = remember { SimpleDateFormat("dd/MM/yy", Locale.getDefault()) }
-
     // Determina il colore di sfondo in base al tipo di obiettivo
     val backgroundColor = when (obj.type) {
         ObjectiveType.INCOME -> Color.Green.copy(alpha = 0.3f) // Verde semi-trasparente per profitto
@@ -129,7 +126,7 @@ fun ObjectiveItem(obj: Objective) {
             textAlign = TextAlign.Center // Allinea il testo al centro
         )
         Text(
-            text = formatter.format(obj.date), // Formatta la data
+            text = obj.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), // Formatta la data
             textAlign = TextAlign.Center // Allinea il testo al centro
         )
         Text(
@@ -142,20 +139,12 @@ fun ObjectiveItem(obj: Objective) {
 @Composable
 fun ActiveObjectivesSection() {
     val objectives = listOf(
-        Objective(ObjectiveType.EXPENSE, "Desc1", 100.0, Date()),
-        Objective(ObjectiveType.INCOME, "Desc2", 200.0, Date()),
-        Objective(ObjectiveType.EXPENSE,"Desc3", 300.0, Date()),
-        Objective(ObjectiveType.EXPENSE,"Desc4", 300.0, Date()),
-        Objective(ObjectiveType.EXPENSE,"Desc5", 300.0, Date()),
-        Objective(ObjectiveType.EXPENSE,"Desc6", 300.0, Date()),
-        Objective(ObjectiveType.EXPENSE,"Desc7", 300.0, Date()),
-        Objective(ObjectiveType.EXPENSE,"Desc8", 300.0, Date()),
-        Objective(ObjectiveType.EXPENSE,"Desc9", 300.0, Date()),
-        Objective(ObjectiveType.EXPENSE,"Desc10", 300.0, Date()),
-        Objective(ObjectiveType.EXPENSE,"Desc11", 300.0, Date()),
-        Objective(ObjectiveType.EXPENSE,"Desc12", 300.0, Date()),
-        Objective(ObjectiveType.EXPENSE,"Desc13", 300.0, Date()),
-        // Add more objectives to see the grid scrolling
+        Objective(ObjectiveType.EXPENSE, "Desc1", 100.0, LocalDate.now()),
+        Objective(ObjectiveType.INCOME, "Desc2", 200.0, LocalDate.now().minusDays(1)),
+        Objective(ObjectiveType.EXPENSE,"Desc3", 300.0,LocalDate.now().minusDays(1)),
+        Objective(ObjectiveType.EXPENSE,"Desc4", 300.0, LocalDate.now().minusDays(3)),
+        Objective(ObjectiveType.EXPENSE,"Desc5", 300.0, LocalDate.now().minusDays(3)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5))
     )
     // Use LazyVerticalGrid instead of Column
     LazyVerticalGrid(
