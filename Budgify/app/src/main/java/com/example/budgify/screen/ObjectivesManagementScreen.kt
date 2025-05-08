@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -13,6 +14,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -66,6 +68,7 @@ fun ObjectivesManagementScreen(navController: NavController) {
             // Section 2: Content based on the selected section
             Box(
                 modifier = Modifier
+                    .weight(1f)
                     .fillMaxSize()
                     .padding(16.dp) // Add padding around the content within the selected section
             ) {
@@ -78,6 +81,18 @@ fun ObjectivesManagementScreen(navController: NavController) {
                         CompletedObjectivesSection()
                     }
                 }
+            }
+
+            Button(
+                onClick = {
+                    navController.navigate("objectives_screen")
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp)
+            ) {
+                Text("Back to Objectives")
             }
         }
     }
@@ -130,6 +145,16 @@ fun ActiveObjectivesSection() {
         Objective(ObjectiveType.EXPENSE, "Desc1", 100.0, Date()),
         Objective(ObjectiveType.INCOME, "Desc2", 200.0, Date()),
         Objective(ObjectiveType.EXPENSE,"Desc3", 300.0, Date()),
+        Objective(ObjectiveType.EXPENSE,"Desc4", 300.0, Date()),
+        Objective(ObjectiveType.EXPENSE,"Desc5", 300.0, Date()),
+        Objective(ObjectiveType.EXPENSE,"Desc6", 300.0, Date()),
+        Objective(ObjectiveType.EXPENSE,"Desc7", 300.0, Date()),
+        Objective(ObjectiveType.EXPENSE,"Desc8", 300.0, Date()),
+        Objective(ObjectiveType.EXPENSE,"Desc9", 300.0, Date()),
+        Objective(ObjectiveType.EXPENSE,"Desc10", 300.0, Date()),
+        Objective(ObjectiveType.EXPENSE,"Desc11", 300.0, Date()),
+        Objective(ObjectiveType.EXPENSE,"Desc12", 300.0, Date()),
+        Objective(ObjectiveType.EXPENSE,"Desc13", 300.0, Date()),
         // Add more objectives to see the grid scrolling
     )
     // Use LazyVerticalGrid instead of Column
