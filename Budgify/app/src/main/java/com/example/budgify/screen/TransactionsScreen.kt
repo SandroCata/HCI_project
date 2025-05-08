@@ -48,16 +48,22 @@ import com.example.budgify.routes.ScreenRoutes
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import kotlin.rem
+import kotlin.text.category
+import kotlin.text.format
+import kotlin.toString
 
 @Composable
 fun TransactionsScreen(navController: NavController) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Transactions.route) }
+    // State to hold the selected date
+    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
     Scaffold (
         topBar = { TopBar(navController, currentRoute) },
         bottomBar = { BottomBar(navController) }
     ){
             innerPadding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
@@ -65,21 +71,19 @@ fun TransactionsScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-
-
-                // Qui inserisci il calendario
+            item {
+                // Pass the onDaySelected lambda to update the selectedDate state
                 MonthlyCalendar(
-                    onDaySelected = { selectedDate ->
-                        // TODO: Qui gestisci cosa succede quando un giorno è selezionato.
-                        // Ad esempio, potresti caricare le transazioni per quella data.
-                        println("Giorno selezionato in TransactionsScreen: $selectedDate")
+                    onDaySelected = { date ->
+                        selectedDate = date // Update the selected date state
                     }
                 )
+            }
 
-
-
-                TransactionBox() // Aggiungi le ultime transazioni qui
-
+                item {
+                    // Pass the selected date to TransactionBox
+                    TransactionBox(selectedDate = selectedDate)
+                }
             }
 
 
@@ -151,50 +155,71 @@ fun MonthlyCalendar(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Griglia dei giorni del mese
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(7), // 7 colonne per i giorni della settimana
-            contentPadding = PaddingValues(0.dp),
-            userScrollEnabled = false // Disabilita lo scroll verticale per il calendario
+        // Grid of the month days - Use a simple Column with Rows instead of LazyVerticalGrid
+        Column(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            items(calendarDays.size) { index ->
-                val day = calendarDays[index]
-                val isSelected = selectedDate.value == day
-                val isToday = day == LocalDate.now()
-
-                Box(
-                    modifier = Modifier
-                        .aspectRatio(1f) // Rende le celle quadrate
-                        .padding(2.dp)
-                        .clickable(enabled = day != null) {
-                            if (day != null) {
-                                selectedDate.value = day
-                                onDaySelected(day)
-                            }
-                        },
-                    contentAlignment = Alignment.Center
+            // Divide the calendarDays list into rows of 7 days
+            val weeks = calendarDays.chunked(7)
+            weeks.forEach { week ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    if (day != null) {
-                        Surface(
-                            shape = MaterialTheme.shapes.small,
-                            color = when {
-                                isSelected -> MaterialTheme.colorScheme.primary
-                                isToday -> MaterialTheme.colorScheme.primaryContainer
-                                else -> Color.Transparent
-                            }
-                        ) {
-                            Text(
-                                text = day.dayOfMonth.toString(),
-                                fontSize = 14.sp,
-                                textAlign = TextAlign.Center,
-                                color = when {
-                                    isSelected -> MaterialTheme.colorScheme.onPrimary
-                                    isToday -> MaterialTheme.colorScheme.onPrimaryContainer
-                                    else -> LocalContentColor.current
+                    // Add empty boxes for padding at the start if the first week is not full
+                    val daysInWeek = week.size
+                    val emptySlots = 7 - daysInWeek
+
+                    week.forEach { day ->
+                        val isSelected = selectedDate.value == day
+                        val isToday = day == LocalDate.now()
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f) // Give each day equal weight in the row
+                                .aspectRatio(1f) // Keep the aspect ratio
+                                .padding(2.dp)
+                                .clickable(enabled = day != null) {
+                                    if (day != null) {
+                                        selectedDate.value = day
+                                        onDaySelected(day)
+                                    }
                                 },
-                                modifier = Modifier.padding(4.dp)
-                            )
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (day != null) {
+                                Surface(
+                                    shape = MaterialTheme.shapes.small,
+                                    color = when {
+                                        isSelected -> MaterialTheme.colorScheme.primary
+                                        isToday -> MaterialTheme.colorScheme.primaryContainer
+                                        else -> Color.Transparent
+                                    }
+                                ) {
+                                    Text(
+                                        text = day.dayOfMonth.toString(),
+                                        fontSize = 14.sp,
+                                        textAlign = TextAlign.Center,
+                                        color = when {
+                                            isSelected -> MaterialTheme.colorScheme.onPrimary
+                                            isToday -> MaterialTheme.colorScheme.onPrimaryContainer
+                                            else -> LocalContentColor.current
+                                        },
+                                        modifier = Modifier.padding(10.dp)
+                                    )
+                                }
+                            }
                         }
+                    }
+
+                    // Add empty boxes to fill the remaining space in the last row
+                    repeat(emptySlots) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .padding(2.dp)
+                        )
                     }
                 }
             }
@@ -204,20 +229,32 @@ fun MonthlyCalendar(
 
 // Composbale per visualizzare gli ultimi movimenti
 @Composable
-fun TransactionBox() {
-    // Qui simuliamo i dati da un file locale, che poi andranno presi da un DB
-    val transactions = listOf(
-        Transaction(1, "Bank",false, LocalDate.now(), "Spesa Alimentari", 50.0, "Spesa"),
-        Transaction(2, "Bank",false, LocalDate.now().minusDays(1), "Trasporto", 25.0, "Spesa"),
-        Transaction(3, "Bank",true, LocalDate.now().minusDays(3), "Stipendio", 1500.0, "Entrata"),
-        Transaction(6, "Bank",true, LocalDate.now().minusDays(5), "Lavoro", 100.0, "Entrata"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.0, "Spesa"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.0, "Spesa"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.0, "Spesa"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.0, "Spesa"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.0, "Spesa"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.0, "Spesa"),
+fun TransactionBox(selectedDate: LocalDate?) {
+    // Here we simulate data from a local file, which will then be taken from a DB
+    val allTransactions = listOf(
+        Transaction(1, "Bank",false, LocalDate.now(), "Spesa Alimentari", 50.00, "Spesa"),
+        Transaction(2, "Bank",false, LocalDate.now().minusDays(1), "Trasporto", 25.00, "Spesa"),
+        Transaction(3, "Bank",true, LocalDate.now().minusDays(3), "Stipendio", 1500.00, "Entrata"),
+        Transaction(6, "Bank",true, LocalDate.now().minusDays(5), "Lavoro", 100.00, "Entrata"),
+        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.00, "Spesa"),
+        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.00, "Spesa"),
+        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.00, "Spesa"),
+        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.00, "Spesa"),
+        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.00, "Spesa"),
+        Transaction(7, "Bank",false, LocalDate.now().minusDays(6), "Spesa Alimentari", 65.00, "Spesa"),
     )
+
+    // Filter transactions by the selected date
+    val transactionsForSelectedDate = if (selectedDate != null) {
+        allTransactions.filter { it.date == selectedDate }
+    } else {
+        // If no date is selected, maybe show the latest transactions
+        // or an empty list, depending on your desired behavior.
+        // For now, let's show all transactions if no date is selected.
+        // You might want to adjust this.
+        allTransactions.take(10) // Keep showing latest 10 if no date is selected
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -232,16 +269,44 @@ fun TransactionBox() {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Ultime Transazioni",
+                text = if (selectedDate != null) "Transactions for ${selectedDate.format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))}" else "Last Transactions",
                 style = MaterialTheme.typography.titleLarge
             )
             Spacer(modifier = Modifier.height(8.dp))
-            LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                items(transactions.take(10)) { transaction ->
-                    TransactionItem(transaction = transaction)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Display filtered transactions
+                if (transactionsForSelectedDate.isEmpty() && selectedDate != null) {
+                    Text("No transactions for this date.", style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    transactionsForSelectedDate.forEach { transaction ->
+                        TransactionItem1(transaction = transaction)
+                    }
                 }
             }
         }
+    }
+}
+
+// Assume TransactionItem is a composable that displays a single transaction
+@Composable
+fun TransactionItem1(transaction: Transaction) {
+    // Your existing TransactionItem implementation
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(text = transaction.description, fontWeight = FontWeight.Bold)
+            Text(text = transaction.category, fontSize = 12.sp)
+        }
+        Text(
+            text = "${if (transaction.type) "+" else "-"} ${transaction.amount}€",
+            color = if (transaction.type) Color.Green else Color.Red,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
