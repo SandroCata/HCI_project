@@ -11,6 +11,7 @@ import com.example.budgify.screen.ObjectivesScreen
 import com.example.budgify.screen.Settings
 import com.example.budgify.screen.TransactionsScreen
 
+
 @Composable
 fun NavGraph(viewModel: FinanceViewModel) {
 
