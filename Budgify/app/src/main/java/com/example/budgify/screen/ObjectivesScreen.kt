@@ -33,10 +33,11 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.routes.ScreenRoutes
 
 @Composable
-fun ObjectivesScreen(navController: NavController) {
+fun ObjectivesScreen(navController: NavController, viewModel: FinanceViewModel) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Objectives.route) }
     Scaffold (
         topBar = { TopBar(navController, currentRoute) },

@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.routes.ScreenRoutes
 
 // Enum per rappresentare le opzioni delle impostazioni selezionate
@@ -26,7 +27,7 @@ enum class SettingsOptionType {
 }
 
 @Composable
-fun Settings(navController: NavController) {
+fun Settings(navController: NavController, viewModel: FinanceViewModel) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Settings.route) }
     // Stato per tenere traccia dell'opzione selezionata
     var selectedOption by remember { mutableStateOf(SettingsOptionType.NONE) }

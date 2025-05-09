@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    // Aggiungi questa riga per il plugin KAPT
+    id("org.jetbrains.kotlin.kapt")
 }
 
 android {
@@ -52,6 +54,16 @@ dependencies {
 
     implementation("androidx.navigation:navigation-compose:2.8.9")
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
+
+    implementation("androidx.room:room-runtime:2.7.1")
+    annotationProcessor("androidx.room:room-compiler:2.7.1") // For Java users
+    // Per utenti Kotlin con KAPT
+    kapt("androidx.room:room-compiler:2.7.1")
+    // Per utenti Kotlin con KSP
+    //ksp("androidx.room:room-compiler:$room_version")
+
+    // Optional: support for Kotlin Coroutines and Flow
+    implementation("androidx.room:room-ktx:2.7.1")
 
 
     testImplementation(libs.junit)

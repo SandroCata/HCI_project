@@ -61,8 +61,10 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.example.budgify.datastruct.Account
-import com.example.budgify.datastruct.Transaction
+import com.example.budgify.applicationlogic.FinanceViewModel
+import com.example.budgify.entities.Account
+import com.example.budgify.entities.Transaction
+import com.example.budgify.entities.TransactionType
 import com.example.budgify.routes.ScreenRoutes
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -80,7 +82,7 @@ val items = listOf(
 )
 
 @Composable
-fun Homepage(navController: NavController) {
+fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Home.route) }
     Scaffold (
         topBar = { TopBar(navController, currentRoute) },
@@ -150,8 +152,8 @@ fun TransactionItem(transaction: Transaction) {
             )
         }
         Text(
-            text = "${if (transaction.type) "+" else "-"} ${transaction.amount}€",
-            color = if (transaction.type) Color(red = 0.0f, green = 0.6f, blue = 0.0f) else Color(red = 0.7f, green = 0.0f, blue = 0.0f),
+            text = "${if (transaction.type == TransactionType.INCOME) "+" else "-"} ${transaction.amount}€",
+            color = if (transaction.type == TransactionType.INCOME) Color(red = 0.0f, green = 0.6f, blue = 0.0f) else Color(red = 0.7f, green = 0.0f, blue = 0.0f),
             fontWeight = FontWeight.Bold
         )
     }
@@ -162,11 +164,11 @@ fun TransactionItem(transaction: Transaction) {
 fun LastTransactionBox() {
     // Qui simuliamo i dati da un file locale, che poi andranno presi da un DB
     val transactions = listOf(
-        Transaction(1, "Bank",false, LocalDate.now(), "Spesa Alimentari", 50.0, "Cibo"),
-        Transaction(2, "Wallet",false, LocalDate.now().minusDays(1), "Biglietto Autobus", 2.0, "Trasporto"),
-        Transaction(3, "Bank",true, LocalDate.now().minusDays(3), "Mensilitá lavoro", 1500.0, "Stipendio"),
-        Transaction(6, "Bank",true, LocalDate.now().minusDays(3), "Maglietta Vinted", 100.0, "Vendite"),
-        Transaction(7, "Wallet",false, LocalDate.now().minusDays(1), "Spesa Alimentari", 65.0, "Cibo"),
+        Transaction(1, "Bank",TransactionType.EXPENSE, LocalDate.now(), "Spesa Alimentari", 50.0, "Cibo"),
+        Transaction(2, "Wallet",TransactionType.EXPENSE, LocalDate.now().minusDays(1), "Biglietto Autobus", 2.0, "Trasporto"),
+        Transaction(3, "Bank",TransactionType.INCOME, LocalDate.now().minusDays(3), "Mensilitá lavoro", 1500.0, "Stipendio"),
+        Transaction(6, "Bank",TransactionType.INCOME, LocalDate.now().minusDays(3), "Maglietta Vinted", 100.0, "Vendite"),
+        Transaction(7, "Wallet",TransactionType.EXPENSE, LocalDate.now().minusDays(1), "Spesa Alimentari", 65.0, "Cibo"),
     )
     Box(
         modifier = Modifier
@@ -199,9 +201,9 @@ fun LastTransactionBox() {
 fun ContiBox() {
     // Dati di esempio per i conti
     val accounts = listOf(
-        Account("Bank", 1000.0),
-        Account("Savings", 5000.0),
-        Account("Wallet", 150.0)
+        Account(1,"Bank", 1000.0),
+        Account(2,"Savings", 5000.0),
+        Account(3, "Wallet", 150.0)
     )
 
     // Calcola il saldo totale

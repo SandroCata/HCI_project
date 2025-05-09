@@ -44,14 +44,16 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.budgify.datastruct.Transaction
+import com.example.budgify.applicationlogic.FinanceViewModel
+import com.example.budgify.entities.Transaction
+import com.example.budgify.entities.TransactionType
 import com.example.budgify.routes.ScreenRoutes
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun TransactionsScreen(navController: NavController) {
+fun TransactionsScreen(navController: NavController, viewModel: FinanceViewModel) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Transactions.route) }
     // State to hold the selected date
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
@@ -229,16 +231,16 @@ fun MonthlyCalendar(
 fun TransactionBox(selectedDate: LocalDate?) {
     // Here we simulate data from a local file, which will then be taken from a DB
     val allTransactions = listOf(
-        Transaction(1, "Bank",false, LocalDate.now(), "Spesa Alimentari", 50.00, "Cibo"),
-        Transaction(2, "Wallet",false, LocalDate.now(), "Biglietto Autobus", 2.00, "Trasporto"),
-        Transaction(3, "Bank",true, LocalDate.now().minusDays(1), "Mensilitá lavoro", 1500.00, "Stipendio"),
-        Transaction(6, "Wallet",true, LocalDate.now().minusDays(1), "Maglietta Vinted", 10.00, "Vendite"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(1), "Abbonamento Palestra", 65.00, "Allenamento"),
-        Transaction(7, "Wallet",false, LocalDate.now().minusDays(3), "Cinema", 65.00, "Svago"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(5), "Spesa Alimentari", 65.00, "Cibo"),
-        Transaction(7, "Wallet",false, LocalDate.now().minusDays(2), "Spesa Alimentari", 65.00, "Cibo"),
-        Transaction(7, "Bank",false, LocalDate.now().minusDays(2), "Spesa Alimentari", 65.00, "Cibo"),
-        Transaction(7, "Wallet",false, LocalDate.now().minusDays(1), "Spesa Alimentari", 65.00, "Cibo"),
+        Transaction(1, "Bank", TransactionType.EXPENSE, LocalDate.now(), "Spesa Alimentari", 50.00, "Cibo"),
+        Transaction(2, "Wallet",TransactionType.EXPENSE, LocalDate.now(), "Biglietto Autobus", 2.00, "Trasporto"),
+        Transaction(3, "Bank",TransactionType.INCOME, LocalDate.now().minusDays(1), "Mensilitá lavoro", 1500.00, "Stipendio"),
+        Transaction(6, "Wallet",TransactionType.INCOME, LocalDate.now().minusDays(1), "Maglietta Vinted", 10.00, "Vendite"),
+        Transaction(7, "Bank",TransactionType.EXPENSE, LocalDate.now().minusDays(1), "Abbonamento Palestra", 65.00, "Allenamento"),
+        Transaction(7, "Wallet",TransactionType.EXPENSE, LocalDate.now().minusDays(3), "Cinema", 65.00, "Svago"),
+        Transaction(7, "Bank",TransactionType.EXPENSE, LocalDate.now().minusDays(5), "Spesa Alimentari", 65.00, "Cibo"),
+        Transaction(7, "Wallet",TransactionType.EXPENSE, LocalDate.now().minusDays(2), "Spesa Alimentari", 65.00, "Cibo"),
+        Transaction(7, "Bank",TransactionType.EXPENSE, LocalDate.now().minusDays(2), "Spesa Alimentari", 65.00, "Cibo"),
+        Transaction(7, "Wallet",TransactionType.EXPENSE, LocalDate.now().minusDays(1), "Spesa Alimentari", 65.00, "Cibo"),
     )
 
     // Filter transactions by the selected date
@@ -324,8 +326,8 @@ fun TransactionItem1(transaction: Transaction) {
             Text(text = formattedDescription2, fontFamily = FontFamily.SansSerif, fontSize = 12.sp)
         }
         Text(
-            text = "${if (transaction.type) "+" else "-"} ${transaction.amount}€",
-            color = if (transaction.type) Color(red = 0.0f, green = 0.6f, blue = 0.0f) else Color(red = 0.7f, green = 0.0f, blue = 0.0f),
+            text = "${if (transaction.type == TransactionType.INCOME) "+" else "-"} ${transaction.amount}€",
+            color = if (transaction.type == TransactionType.INCOME) Color(red = 0.0f, green = 0.6f, blue = 0.0f) else Color(red = 0.7f, green = 0.0f, blue = 0.0f),
             fontWeight = FontWeight.Bold
         )
     }
