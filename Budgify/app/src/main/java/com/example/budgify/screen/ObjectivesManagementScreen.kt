@@ -1,25 +1,31 @@
 package com.example.budgify.screen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,54 +50,81 @@ fun ObjectivesManagementScreen(navController: NavController) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.ObjectivesManagement.route) }
     // State variable to track the selected section
     var selectedSection by remember { mutableStateOf(ObjectivesManagementSection.Active) }
-    Scaffold (
+
+    val listState = rememberLazyGridState()
+    val showButton by remember {
+        derivedStateOf {
+            val isAtTop = listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+            val isAtBottom = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index == listState.layoutInfo.totalItemsCount - 1 && listState.layoutInfo.totalItemsCount > 0
+            isAtTop || isAtBottom
+        }
+    }
+
+    Scaffold(
         topBar = { TopBar(navController, currentRoute) },
-        bottomBar = { BottomBar(navController) }
-    ){
-        innerPadding ->
-        Column (
+        bottomBar = { BottomBar(navController) },
+        containerColor = Color.Transparent
+    ) { innerPadding ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-        ){
-            TabRow(selectedTabIndex = selectedSection.ordinal) {
-                ObjectivesManagementSection.entries.forEach { section ->
-                    Tab(
-                        selected = selectedSection == section,
-                        onClick = { selectedSection = section },
-                        text = { Text(section.title) }
-                    )
-                }
-            }
-
-            // Section 2: Content based on the selected section
-            Box(
+                .padding(innerPadding) // Apply Scaffold's padding
+            // Optional: If you want a background *behind* the scrollable content but not the button
+            // .background(MaterialTheme.colorScheme.background) // or a specific color
+        ) {
+            Column(
                 modifier = Modifier
-                    .weight(1f)
                     .fillMaxSize()
-                    .padding(16.dp) // Add padding around the content within the selected section
+                    //.padding(innerPadding)
             ) {
-                when (selectedSection) {
-                    ObjectivesManagementSection.Active -> {
-                        ActiveObjectivesSection()
+                TabRow(selectedTabIndex = selectedSection.ordinal) {
+                    ObjectivesManagementSection.entries.forEach { section ->
+                        Tab(
+                            selected = selectedSection == section,
+                            onClick = { selectedSection = section },
+                            text = { Text(section.title) }
+                        )
                     }
+                }
 
-                    ObjectivesManagementSection.Completed -> {
-                        CompletedObjectivesSection()
+                // Section 2: Content based on the selected section
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxSize()
+                        .padding(16.dp) // Add padding around the content within the selected section
+                ) {
+                    when (selectedSection) {
+                        ObjectivesManagementSection.Active -> {
+                            ActiveObjectivesSection(listState)
+                        }
+
+                        ObjectivesManagementSection.Completed -> {
+                            CompletedObjectivesSection(listState)
+                        }
                     }
                 }
             }
-
-            Button(
-                onClick = {
-                    navController.navigate("objectives_screen")
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 16.dp)
+            AnimatedVisibility(
+                visible = showButton,
+                enter = slideInVertically(initialOffsetY = { fullHeight -> fullHeight }), // Slide in from bottom
+                exit = slideOutVertically(targetOffsetY = { fullHeight -> fullHeight }), // Slide out to bottom
+                modifier = Modifier.align(Alignment.BottomCenter)
             ) {
-                Text("Back to Objectives")
+                Button(
+                    onClick = {
+                        navController.navigate("objectives_screen")
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        //containerColor = Color.White.copy(alpha = 0.8f) // Optional: Give it a subtle background
+                    ),
+                    modifier = Modifier
+                        //.align(Alignment.BottomCenter)
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 16.dp)
+                ) {
+                    Text("Back to Objectives")
+                }
             }
         }
     }
@@ -137,23 +170,40 @@ fun ObjectiveItem(obj: Objective) {
 }
 
 @Composable
-fun ActiveObjectivesSection() {
+fun ActiveObjectivesSection(listState: LazyGridState) {
     val objectives = listOf(
         Objective(ObjectiveType.EXPENSE, "Desc1", 100.0, LocalDate.now()),
         Objective(ObjectiveType.INCOME, "Desc2", 200.0, LocalDate.now().minusDays(1)),
         Objective(ObjectiveType.EXPENSE,"Desc3", 300.0,LocalDate.now().minusDays(1)),
         Objective(ObjectiveType.EXPENSE,"Desc4", 300.0, LocalDate.now().minusDays(3)),
         Objective(ObjectiveType.EXPENSE,"Desc5", 300.0, LocalDate.now().minusDays(3)),
-        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5))
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
     )
     // Use LazyVerticalGrid instead of Column
     LazyVerticalGrid(
         // Define the grid cells. Fixed(2) means two columns of equal width.
         // You can also use GridCells.Adaptive(minSize = 100.dp) for a responsive grid
         // where the number of columns adapts to the available width with a minimum item size.
+        state = listState,
         columns = GridCells.Fixed(2),
         // Add some padding around the entire grid if needed
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 50.dp),
         // Add space between rows and columns
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -175,10 +225,56 @@ fun ActiveObjectivesSection() {
 }
 
 @Composable
-fun CompletedObjectivesSection() {
-    Column {
-        Text("Content for Completed Objectives")
-        // Add your Composables to display completed objectives here
-        // For example, a LazyColumn to list completed objectives
+fun CompletedObjectivesSection(listState: LazyGridState) {
+    val objectives = listOf(
+        Objective(ObjectiveType.EXPENSE, "Desc1", 100.0, LocalDate.now()),
+        Objective(ObjectiveType.INCOME, "Desc2", 200.0, LocalDate.now().minusDays(1)),
+        Objective(ObjectiveType.EXPENSE,"Desc3", 300.0,LocalDate.now().minusDays(1)),
+        Objective(ObjectiveType.EXPENSE,"Desc4", 300.0, LocalDate.now().minusDays(3)),
+        Objective(ObjectiveType.EXPENSE,"Desc5", 300.0, LocalDate.now().minusDays(3)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+        Objective(ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
+    )
+    // Use LazyVerticalGrid instead of Column
+    LazyVerticalGrid(
+        // Define the grid cells. Fixed(2) means two columns of equal width.
+        // You can also use GridCells.Adaptive(minSize = 100.dp) for a responsive grid
+        // where the number of columns adapts to the available width with a minimum item size.
+        state = listState,
+        columns = GridCells.Fixed(2),
+        // Add some padding around the entire grid if needed
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 50.dp),
+        // Add space between rows and columns
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Use the items extension function to efficiently display the list
+        items(objectives) { objective ->
+            // Each item in the grid will be this Box containing an ObjectiveItem
+            Box (
+                modifier = Modifier
+                    .width(150.dp) // You might want to adjust these dimensions
+                    .height(80.dp)  // based on the grid cell arrangement
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White)
+            ){
+                ObjectiveItem(objective)
+            }
+        }
     }
 }
