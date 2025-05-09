@@ -31,7 +31,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.routes.ScreenRoutes
@@ -41,7 +40,7 @@ import java.time.format.DateTimeFormatter
 // TODO: fix navigation of bottom bar
 
 @Composable
-fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceViewModel) {
+fun ObjectivesManagementScreen(navController: NavController) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.ObjectivesManagement.route) }
     // State variable to track the selected section
     var selectedSection by remember { mutableStateOf(ObjectivesManagementSection.Active) }
@@ -140,7 +139,7 @@ fun ObjectiveItem(obj: Objective) {
 @Composable
 fun ActiveObjectivesSection() {
     val objectives = listOf(
-        Objective(1,ObjectiveType.EXPENSE, "Desc1", 100.0, LocalDate.now()),
+        Objective(1, ObjectiveType.EXPENSE, "Desc1", 100.0, LocalDate.now()),
         Objective(2, ObjectiveType.INCOME, "Desc2", 200.0, LocalDate.now().minusDays(1)),
         Objective(3, ObjectiveType.EXPENSE,"Desc3", 300.0,LocalDate.now().minusDays(1)),
         Objective(4, ObjectiveType.EXPENSE,"Desc4", 300.0, LocalDate.now().minusDays(3)),
