@@ -4,17 +4,16 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import com.example.budgify.dataaccessobjects.AccountDao
 import com.example.budgify.dataaccessobjects.ObjectiveDao
 import com.example.budgify.dataaccessobjects.TransactionDao
 import com.example.budgify.entities.Account
 import com.example.budgify.entities.Objective
-import androidx.room.TypeConverter
 import com.example.budgify.entities.Transaction
 import com.example.budgify.entities.TransactionType
 import java.time.LocalDate
-import java.util.Date
 
 class Converters {
     @TypeConverter
