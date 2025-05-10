@@ -9,6 +9,7 @@ import androidx.room.Update
 import com.example.budgify.entities.Account
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.Transaction
+import com.example.budgify.entities.Category
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -63,4 +64,22 @@ interface ObjectiveDao {
 
     @Query("SELECT * FROM objectives WHERE id = :id")
     fun getGoalById(id: Int): Flow<Objective>
+}
+
+@Dao
+interface CategoryDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(category: Category)
+
+    @Update
+    suspend fun update(category: Category)
+
+    @Delete
+    suspend fun delete(category: Category)
+
+    @Query("SELECT * FROM categories ORDER BY id ASC")
+    fun getAllCategories(): Flow<List<Category>>
+
+    @Query("SELECT * FROM objectives WHERE id = :id")
+    fun getCategoryById(id: Int): Flow<Category>
 }

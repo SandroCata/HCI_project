@@ -1,6 +1,9 @@
 package com.example.budgify.screen
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.RemoveCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -231,36 +236,74 @@ fun AddAccountItem() {
             .width(150.dp)
             .height(65.dp)
             .clip(RoundedCornerShape(16.dp))
+            .clickable {
+                // TODO: Handle add account logic here
+                // This lambda is executed when the Box is clicked.
+                // For example:
+            }
             .background(Color.White),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        IconButton(onClick = { /* TODO: Handle add account logic */ }) {
-            Icon(
-                imageVector = Icons.Filled.Add,
-                contentDescription = "Add Account",
-                modifier = Modifier.size(40.dp)
-            )
-        }
+        Icon(
+            imageVector = Icons.Filled.Add,
+            contentDescription = "Add Account",
+            modifier = Modifier.size(40.dp)
+        )
     }
 }
 
 //Composbale per visualizzare le sezioni di ogni account
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AccountItem(account: Account) {
-    Column(
-        modifier = Modifier
-            .padding(8.dp)
-            .width(150.dp)
-            .height(65.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(text = account.title, fontWeight = FontWeight.Bold)
-        Text(text = "${account.amount}€", color = Color.Gray)
+
+    var isLongPressed by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier
+        .padding(8.dp)
+        .width(150.dp)
+        .height(65.dp)
+        .clip(RoundedCornerShape(16.dp))
+        .combinedClickable(
+            onClick = {
+                if (isLongPressed) {
+                    isLongPressed = false // Reset if long pressed and clicked again
+                } else {
+                    // Handle regular click
+                }
+            },
+            onLongClick = {
+                isLongPressed = true // Set state on long press
+            }
+        )){
+        Column(
+            modifier = Modifier
+                .width(150.dp)
+                .height(65.dp)
+                .background(Color.White),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(text = account.title, fontWeight = FontWeight.Bold)
+
+            Text(text = "${account.amount}€", color = Color.Gray)
+        }
+
+        if (isLongPressed) {
+            IconButton(
+                onClick = {
+                    // Handle account removal
+                    isLongPressed = false // Reset state after action
+                },
+                modifier = Modifier.align(Alignment.TopEnd)
+            ) {
+                Icon(Icons.Filled.RemoveCircle, contentDescription = "Remove Account")
+            }
+        }
     }
+
+
 }
 
 // Composbale per visualizzare la box dei grafici
