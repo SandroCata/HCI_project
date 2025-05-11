@@ -10,4 +10,12 @@ enum class TransactionType {
 }
 
 @Entity(tableName = "transactions")
-data class Transaction(@PrimaryKey(autoGenerate = true) val id: Int = 0, val account: String, val type: TransactionType, val date: LocalDate, val description: String, val amount: Double, val category: String)
+data class Transaction(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val account: String,
+    val type: TransactionType,
+    val date: LocalDate,
+    val description: String,
+    val amount: Double,
+    val category: String
+)

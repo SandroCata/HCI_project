@@ -1,6 +1,5 @@
 package com.example.budgify.navigation
 
-import android.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -57,6 +56,8 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.budgify.applicationlogic.FinanceViewModel
+import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.entities.Transaction
 import com.example.budgify.routes.ScreenRoutes
@@ -118,7 +119,7 @@ fun TopBar(navController: NavController, currentRoute: String) {
 }
 
 @Composable
-fun BottomBar(navController: NavController) {
+fun BottomBar(navController: NavController, viewModel: FinanceViewModel) {
     var showDialog by remember { mutableStateOf(false) }
     var showAddTransactionDialog by remember { mutableStateOf(false) }
     var showAddObjectiveDialog by remember { mutableStateOf(false) }
@@ -242,7 +243,10 @@ fun BottomBar(navController: NavController) {
 
         // Dialog for adding an objective
         if (showAddObjectiveDialog) {
-            AddObjectiveDialog(onDismiss = { showAddObjectiveDialog = false }) {
+            AddObjectiveDialog(
+                onDismiss = { showAddObjectiveDialog = false },
+                viewModel = viewModel
+            ) {
                 // Handle objective added
             }
         }
@@ -483,7 +487,11 @@ fun AddTransactionDialog(onDismiss: () -> Unit, onTransactionAdded: (Transaction
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddObjectiveDialog(onDismiss: () -> Unit, onTransactionAdded: (Transaction) -> Unit) {
+fun AddObjectiveDialog(
+    onDismiss: () -> Unit,
+    viewModel: FinanceViewModel,
+    onObjectiveAdded: (Objective) -> Unit
+) {
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var type by remember { mutableStateOf("Expense") } // Or use a dropdown/radio buttons
@@ -572,11 +580,24 @@ fun AddObjectiveDialog(onDismiss: () -> Unit, onTransactionAdded: (Transaction) 
                     Text("Cancel")
                 }
                 Button(onClick = {
-                    // Create Transaction object and pass it back
-                    // Valdate input first
-                    // val newTransaction = Transaction(...)
-                    // onTransactionAdded(newTransaction)
-                    onDismiss() // Close the dialog after adding
+                    // **Validation (Add your validation logic here)**
+                    val amountDouble = amount.toDoubleOrNull()
+                    if (description.isNotBlank() && amountDouble != null && selectedDate != null) {
+                        // Create Objective object
+                        val newObjective = Objective(
+                            id = 0, // Room will auto-generate the ID
+                            type = selectedType,
+                            desc = description,
+                            amount = amountDouble,
+                            startDate = LocalDate.now(),
+                            endDate = selectedDate!!
+                        )
+
+                        // Insert objective using the ViewModel
+                        viewModel.addObjective(newObjective)
+
+                        onDismiss() // Close the dialog after adding
+                    }
                 }) {
                     Text("Add")
                 }

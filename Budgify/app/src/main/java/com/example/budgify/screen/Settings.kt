@@ -46,7 +46,7 @@ fun Settings(navController: NavController, viewModel: FinanceViewModel, onThemeC
 
     Scaffold(
         topBar = { TopBar(navController, currentRoute) },
-        bottomBar = { BottomBar(navController) }
+        bottomBar = { BottomBar(navController, viewModel) }
     ) { innerPadding ->
         Column(
             modifier = Modifier

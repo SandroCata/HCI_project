@@ -4,6 +4,7 @@ import com.example.budgify.dataaccessobjects.AccountDao
 import com.example.budgify.dataaccessobjects.ObjectiveDao
 import com.example.budgify.dataaccessobjects.TransactionDao
 import com.example.budgify.entities.Account
+import com.example.budgify.entities.Objective
 import com.example.budgify.entities.Transaction
 import kotlinx.coroutines.flow.Flow
 
@@ -24,5 +25,25 @@ class FinanceRepository(private val transactionDao: TransactionDao, private val 
         return accountDao.getAccountById(id)
     }
 
-    // ... altre funzioni per interagire con i DAO
+
+    // OBJECTIVES
+    fun getAllObjectives(): Flow<List<Objective>> {
+        return objectiveDao.getAllGoalsByDate()
+    }
+
+    suspend fun insertObjective(objective: Objective) {
+        objectiveDao.insert(objective)
+    }
+
+    fun getObjectiveById(id: Int): Flow<Objective> {
+        return objectiveDao.getGoalById(id)
+    }
+
+    suspend fun updateObjective(objective: Objective) {
+        objectiveDao.update(objective)
+    }
+
+    suspend fun deleteObjective(objective: Objective) {
+        objectiveDao.delete(objective)
+    }
 }

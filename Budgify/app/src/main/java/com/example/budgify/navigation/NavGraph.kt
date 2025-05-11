@@ -75,7 +75,7 @@ fun NavGraph(
         }
 
         // Your existing screens
-        composable(ScreenRoutes.Categories.route) { CategoriesScreen(navController) }
+        composable(ScreenRoutes.Categories.route) { CategoriesScreen(navController, viewModel) }
         composable(ScreenRoutes.Home.route) { Homepage(navController, viewModel) }
         composable(ScreenRoutes.Objectives.route) { ObjectivesScreen(navController, viewModel) }
         composable(ScreenRoutes.ObjectivesManagement.route) { ObjectivesManagementScreen(navController, viewModel) }

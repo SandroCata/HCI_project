@@ -60,7 +60,7 @@ interface ObjectiveDao {
     suspend fun delete(objective: Objective)
 
     @Query("SELECT * FROM objectives ORDER BY startDate ASC")
-    fun getAllGoalsByDate(): Flow<Objective>
+    fun getAllGoalsByDate(): Flow<List<Objective>>
 
     @Query("SELECT * FROM objectives WHERE id = :id")
     fun getGoalById(id: Int): Flow<Objective>

@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.navigation.BottomBar
 import com.example.budgify.navigation.TopBar
 import com.example.budgify.entities.Category
@@ -42,14 +43,14 @@ import com.example.budgify.entities.CategoryType
 import com.example.budgify.routes.ScreenRoutes
 
 @Composable
-fun CategoriesScreen(navController: NavController) {
+fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Categories.route) }
     // State variable to track the selected section
     var selectedSection by remember { mutableStateOf(CategoriesSection.Active) }
 
     Scaffold (
         topBar = { TopBar(navController, currentRoute) },
-        bottomBar = { BottomBar(navController) }
+        bottomBar = { BottomBar(navController, viewModel) }
     ){
             innerPadding ->
         Column (

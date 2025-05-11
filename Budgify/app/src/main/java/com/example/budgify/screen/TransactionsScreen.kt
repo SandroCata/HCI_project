@@ -61,7 +61,7 @@ fun TransactionsScreen(navController: NavController, viewModel: FinanceViewModel
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
     Scaffold (
         topBar = { TopBar(navController, currentRoute) },
-        bottomBar = { BottomBar(navController) }
+        bottomBar = { BottomBar(navController, viewModel) }
     ){
             innerPadding ->
         LazyColumn(

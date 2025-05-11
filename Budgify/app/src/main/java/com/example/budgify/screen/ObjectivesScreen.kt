@@ -43,7 +43,7 @@ fun ObjectivesScreen(navController: NavController, viewModel: FinanceViewModel) 
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Objectives.route) }
     Scaffold (
         topBar = { TopBar(navController, currentRoute) },
-        bottomBar = { BottomBar(navController) }
+        bottomBar = { BottomBar(navController, viewModel) }
     ){
         innerPadding ->
             Column(

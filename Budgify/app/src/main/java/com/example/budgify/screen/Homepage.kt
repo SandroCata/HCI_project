@@ -72,7 +72,7 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Home.route) }
     Scaffold (
         topBar = { TopBar(navController, currentRoute) },
-        bottomBar = { BottomBar(navController) }
+        bottomBar = { BottomBar(navController, viewModel) }
     ){
         innerPadding ->
             LazyColumn(
