@@ -119,7 +119,7 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
-                        .padding(16.dp) // Add padding around the content within the selected section
+                        .padding(horizontal = 16.dp, vertical = 0.dp) // Add padding around the content within the selected section
                 ) {
                     when (selectedSection) {
                         ObjectivesManagementSection.Active -> {

@@ -17,4 +17,4 @@ data class Objective(
     val amount: Double,
     val startDate: LocalDate,
     val endDate: LocalDate,
-    var  completed: Boolean = false)
+    var completed: Boolean = false)
