@@ -1,5 +1,6 @@
-package com.example.budgify
+package com.example.budgify.navigation
 
+import android.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -62,7 +63,7 @@ fun TopBar(navController: NavController, currentRoute: String) {
     val title = when (currentRoute) {
         "home_screen" -> "Dashboard"
         "objectives_screen" -> "Objectives"
-        "objectives_management_screen" -> "Objectives"
+        "objectives_management_screen" -> "Manage Objectives"
         "settings_screen" -> "Settings"
         "transactions_screen" -> "Transactions"
         "cred_deb_screen" -> "Loans"

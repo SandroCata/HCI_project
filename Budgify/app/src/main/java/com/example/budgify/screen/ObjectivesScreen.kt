@@ -33,8 +33,8 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.budgify.BottomBar
-import com.example.budgify.TopBar
+import com.example.budgify.navigation.BottomBar
+import com.example.budgify.navigation.TopBar
 import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.routes.ScreenRoutes
 

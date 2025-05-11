@@ -1,4 +1,4 @@
-package com.example.budgify
+package com.example.budgify.navigation
 
 import android.content.Context
 import android.util.Log
@@ -21,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.error
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -39,11 +38,15 @@ import com.example.budgify.screen.ObjectivesManagementScreen
 import com.example.budgify.screen.ObjectivesScreen
 import com.example.budgify.screen.Settings
 import com.example.budgify.screen.TransactionsScreen
+import com.example.budgify.userpreferences.AppTheme
+import com.example.budgify.userpreferences.ThemePreferenceManager
 
 @Composable
 fun NavGraph(
     viewModel: FinanceViewModel,
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    onThemeChange: (AppTheme) -> Unit,
+    themePreferenceManager: ThemePreferenceManager
 ) {
     // Read the PIN state once when the NavGraph is created
     val context = LocalContext.current
@@ -76,17 +79,20 @@ fun NavGraph(
         composable(ScreenRoutes.Home.route) { Homepage(navController, viewModel) }
         composable(ScreenRoutes.Objectives.route) { ObjectivesScreen(navController, viewModel) }
         composable(ScreenRoutes.ObjectivesManagement.route) { ObjectivesManagementScreen(navController, viewModel) }
-        composable(ScreenRoutes.Settings.route) { Settings(navController, viewModel) }
+        composable(ScreenRoutes.Settings.route) {
+            // Passa il callback onThemeChange alla schermata delle impostazioni
+            Settings(
+                navController = navController,
+                viewModel = viewModel,
+                onThemeChange = onThemeChange // Passa il callback qui
+            )}
         composable(ScreenRoutes.Transactions.route) { TransactionsScreen(navController, viewModel) }
 
         /*
         // Keep your commented out composables if you plan to use them later
-        composable("manage_objectives_screen") { ManageObjectives(navController) }
         composable("cred_deb_screen") { CredDeb() }
         composable("credits_screen") { Credits() }
         composable("debits_screen") { Debits() }
-        composable("categories_screen") { Categories() }
-        composable("adding_screen") { Adding() }
          */
     }
 }

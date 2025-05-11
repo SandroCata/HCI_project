@@ -1,6 +1,5 @@
 package com.example.budgify.screen
 
-import android.system.Os
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,11 +25,13 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.example.budgify.BottomBar
-import com.example.budgify.TopBar
+import com.example.budgify.navigation.BottomBar
+import com.example.budgify.navigation.TopBar
 import com.example.budgify.applicationlogic.FinanceViewModel
-import com.example.budgify.getSavedPinFromContext
+import com.example.budgify.navigation.getSavedPinFromContext
 import com.example.budgify.routes.ScreenRoutes
+import com.example.budgify.userpreferences.AppTheme
+import com.example.budgify.userpreferences.rememberThemePreferenceManager
 
 // Enum per rappresentare le opzioni delle impostazioni selezionate
 enum class SettingsOptionType {
@@ -38,7 +39,7 @@ enum class SettingsOptionType {
 }
 
 @Composable
-fun Settings(navController: NavController, viewModel: FinanceViewModel) {
+fun Settings(navController: NavController, viewModel: FinanceViewModel, onThemeChange: (AppTheme) -> Unit) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Settings.route) }
     // Stato per tenere traccia dell'opzione selezionata
     var selectedOption by remember { mutableStateOf(SettingsOptionType.NONE) }
@@ -97,7 +98,7 @@ fun Settings(navController: NavController, viewModel: FinanceViewModel) {
                         PinSettingsContent()
                     }
                     SettingsOptionType.THEME -> {
-                        ThemeSettingsContent()
+                        ThemeSettingsContent(onThemeChange)
                     }
                     SettingsOptionType.ABOUT -> {
                         AboutSettingsContent()
@@ -326,23 +327,60 @@ fun PinSettingsContent() {
 
 // Composbale per i dettagli delle impostazioni del tema
 @Composable
-fun ThemeSettingsContent() {
+fun ThemeSettingsContent(onThemeChange: (AppTheme) -> Unit) {
+    val themePreferenceManager = rememberThemePreferenceManager()
+
+    // Leggi lo stato del tema corrente per inizializzare la UI di questa Composable
+    var currentTheme by remember { mutableStateOf(themePreferenceManager.getSavedTheme()) }
+
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxWidth() // Per centrare i pulsanti
     ) {
-        Text("Choose the theme:", fontWeight = FontWeight.Bold)
-        // TODO: Implementare le opzioni per scegliere il tema (radio buttons, toggles, etc.)
+        Text("Choose the theme:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
+
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp) // Aggiungi padding
         ) {
-            Icon(imageVector = Icons.Default.WbSunny, contentDescription = "Light Mode")
-            Button(onClick = { /* TODO: Cambia tema in chiaro */ }) {"Light theme"}
-            // Esempio di ToggleButton (richiede implementazione)
-            // Switch(checked = isDarkMode, onCheckedChange = { /* TODO: Cambia tema */ })
-            Icon(imageVector = Icons.Default.NightsStay, contentDescription = "Dark Mode")
-            Button(onClick = { /* TODO: Cambia tema in scuro */ }) {"Dark theme"}
+            // Pulsante per il Tema Chiaro
+            Button(
+                onClick = {
+                    // * NON salvare la preferenza direttamente qui. *
+                    // La MainActivity salverà la preferenza quando riceve il callback.
+
+                    onThemeChange(AppTheme.LIGHT) // *** CHIAMA IL CALLBACK! ***
+
+                    // Aggiorna lo stato locale per l'UI di questa schermata (es. per disabilitare il pulsante)
+                    currentTheme = AppTheme.LIGHT
+                },
+                enabled = currentTheme != AppTheme.LIGHT // Disabilita se è già selezionato
+            ) {
+                Icon(imageVector = Icons.Default.WbSunny, contentDescription = "Light Mode")
+                Spacer(Modifier.width(4.dp))
+                Text("Light Theme")
+            }
+
+            // Pulsante per il Tema Scuro
+            Button(
+                onClick = {
+                    // * NON salvare la preferenza direttamente qui. *
+                    // La MainActivity salverà la preferenza quando riceve il callback.
+
+                    onThemeChange(AppTheme.DARK) // *** CHIAMA IL CALLBACK! ***
+
+                    // Aggiorna lo stato locale per l'UI di questa schermata
+                    currentTheme = AppTheme.DARK
+                },
+                enabled = currentTheme != AppTheme.DARK // Disabilita se è già selezionato
+            ) {
+                Icon(imageVector = Icons.Default.NightsStay, contentDescription = "Dark Mode")
+                Spacer(Modifier.width(4.dp))
+                Text("Dark Theme")
+            }
         }
     }
 }

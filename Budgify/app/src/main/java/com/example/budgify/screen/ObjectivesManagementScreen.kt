@@ -42,12 +42,12 @@ import com.example.budgify.routes.ScreenRoutes
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import androidx.compose.runtime.derivedStateOf
-import com.example.budgify.BottomBar
-import com.example.budgify.TopBar
+import com.example.budgify.navigation.BottomBar
+import com.example.budgify.navigation.TopBar
 
 enum class ObjectiveSectionType {
     ACTIVE,
-    COMPLETED
+    EXPIRED
 }
 
 @Composable
@@ -104,8 +104,8 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                             ObjectivesSection(ObjectiveSectionType.ACTIVE, listState)
                         }
 
-                        ObjectivesManagementSection.Completed -> {
-                            ObjectivesSection(ObjectiveSectionType.COMPLETED, listState)
+                        ObjectivesManagementSection.Expired -> {
+                            ObjectivesSection(ObjectiveSectionType.EXPIRED, listState)
                         }
                     }
                 }
@@ -135,7 +135,7 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
 // Define the possible sections
 enum class ObjectivesManagementSection(val title: String) {
     Active("Active Objectives"),
-    Completed("Completed Objectives")
+    Expired("Expired Objectives")
 }
 
 @Composable
@@ -143,8 +143,8 @@ fun ObjectiveItem(obj: Objective) {
 
     // Determina il colore di sfondo in base al tipo di obiettivo
     val backgroundColor = when (obj.type) {
-        ObjectiveType.INCOME -> Color.Green.copy(alpha = 0.3f) // Verde semi-trasparente per profitto
-        ObjectiveType.EXPENSE -> Color.Red.copy(alpha = 0.3f) // Rosso semi-trasparente per spesa
+        ObjectiveType.INCOME -> Color(0xff0db201) // Verde semi-trasparente per profitto
+        ObjectiveType.EXPENSE -> Color(0xffff6f51) // Rosso semi-trasparente per spesa
     }
 
     Column (
@@ -161,7 +161,11 @@ fun ObjectiveItem(obj: Objective) {
             textAlign = TextAlign.Center // Allinea il testo al centro
         )
         Text(
-            text = obj.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), // Formatta la data
+            text = "Start: ${obj.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", // Formatta la data"obj.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), // Formatta la data
+            textAlign = TextAlign.Center // Allinea il testo al centro
+        )
+        Text(
+            text = "End: ${obj.endDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", // Formatta la data"obj.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), // Formatta la data
             textAlign = TextAlign.Center // Allinea il testo al centro
         )
         Text(
@@ -174,44 +178,22 @@ fun ObjectiveItem(obj: Objective) {
 @Composable
 fun ObjectivesSection(type: ObjectiveSectionType, listState: LazyGridState) {
     val objectives = listOf(
-        Objective(1, ObjectiveType.EXPENSE, "Desc1", 100.0, LocalDate.now()),
-        Objective(2, ObjectiveType.INCOME, "Desc2", 200.0, LocalDate.now().minusDays(1)),
-        Objective(3, ObjectiveType.EXPENSE,"Desc3", 300.0,LocalDate.now().minusDays(1)),
-        Objective(4, ObjectiveType.EXPENSE,"Desc4", 300.0, LocalDate.now().minusDays(3)),
-        Objective(5, ObjectiveType.EXPENSE,"Desc5", 300.0, LocalDate.now().minusDays(3)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5)),
-    )
+        Objective(1, ObjectiveType.EXPENSE, "Desc1", 100.0, LocalDate.now(), LocalDate.now().plusDays(7)),
+        Objective(2, ObjectiveType.INCOME, "Desc2", 200.0, LocalDate.now().minusDays(1), LocalDate.now().plusDays(3), false),
+        Objective(3, ObjectiveType.EXPENSE,"Desc3", 300.0,LocalDate.now().minusDays(1), LocalDate.now().plusDays(3), false),
+        Objective(4, ObjectiveType.EXPENSE,"Desc4", 300.0, LocalDate.now().minusDays(3), LocalDate.now().plusDays(3), false),
+        Objective(5, ObjectiveType.EXPENSE,"Desc5", 300.0, LocalDate.now().minusDays(3), LocalDate.now().plusDays(3), false),
+        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5), LocalDate.now().plusDays(3), false),
+        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5), LocalDate.now().plusDays(3), false),
+        Objective(6, ObjectiveType.INCOME,"Desc6", 300.0, LocalDate.now().minusDays(5), LocalDate.now().plusDays(3), false)
+        )
+
     // Use LazyVerticalGrid instead of Column
     LazyVerticalGrid(
         // Define the grid cells. Fixed(2) means two columns of equal width.
         // You can also use GridCells.Adaptive(minSize = 100.dp) for a responsive grid
         // where the number of columns adapts to the available width with a minimum item size.
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Fixed(1),
         // Add some padding around the entire grid if needed
         state = listState,
         contentPadding = PaddingValues(16.dp),
@@ -223,11 +205,7 @@ fun ObjectivesSection(type: ObjectiveSectionType, listState: LazyGridState) {
         items(objectives) { objective ->
             // Each item in the grid will be this Box containing an ObjectiveItem
             Box (
-                modifier = Modifier
-                    .width(150.dp) // You might want to adjust these dimensions
-                    .height(80.dp)  // based on the grid cell arrangement
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White)
+                modifier = Modifier.fillMaxSize()
             ){
                 ObjectiveItem(objective)
             }

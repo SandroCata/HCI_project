@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -36,8 +35,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.budgify.BottomBar
-import com.example.budgify.TopBar
+import com.example.budgify.navigation.BottomBar
+import com.example.budgify.navigation.TopBar
 import com.example.budgify.entities.Category
 import com.example.budgify.entities.CategoryType
 import com.example.budgify.routes.ScreenRoutes
@@ -125,7 +124,7 @@ fun AddCategoryButton(categoryType: CategoryType) {
             .width(150.dp) // You might want to adjust these dimensions
             .height(80.dp)  // based on the grid cell arrangement
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
+            .background(Color.LightGray)
             .clickable {
                 // TODO: Handle add category logic here
                 // This lambda is executed when the Box is clicked.
@@ -186,7 +185,7 @@ fun ExpensesSection(){
                     .width(150.dp) // You might want to adjust these dimensions
                     .height(80.dp)  // based on the grid cell arrangement
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White)
+                    .background(Color(0xffff6f51))  //Red
             ){
                 ObjectiveItem(category)
             }
@@ -226,7 +225,7 @@ fun IncomeSection(){
                     .width(150.dp) // You might want to adjust these dimensions
                     .height(80.dp)  // based on the grid cell arrangement
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White)
+                    .background(Color(0xff0db201)) //Green
             ){
                 ObjectiveItem(category)
             }
