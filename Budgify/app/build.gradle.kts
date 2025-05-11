@@ -65,6 +65,8 @@ dependencies {
     // Optional: support for Kotlin Coroutines and Flow
     implementation("androidx.room:room-ktx:2.7.1")
 
+    implementation("androidx.security:security-crypto:1.1.0-alpha07")
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

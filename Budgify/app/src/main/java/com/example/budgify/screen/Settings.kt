@@ -1,7 +1,10 @@
 package com.example.budgify.screen
 
+import android.system.Os
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
@@ -14,13 +17,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import com.example.budgify.BottomBar
 import com.example.budgify.TopBar
 import com.example.budgify.applicationlogic.FinanceViewModel
+import com.example.budgify.getSavedPinFromContext
 import com.example.budgify.routes.ScreenRoutes
 
 // Enum per rappresentare le opzioni delle impostazioni selezionate
@@ -119,21 +128,201 @@ fun SettingsOption(
     Divider()
 }
 
-// Composbale per i dettagli delle impostazioni PIN
 @Composable
 fun PinSettingsContent() {
+    // Stati per i campi di input del PIN
+    var newPin by remember { mutableStateOf("") }
+    var confirmPin by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) } // Stato per mostrare messaggi di errore
+    // Stato per mostrare messaggi di successo specifici per la rimozione del PIN
+    var removeSuccessMessage by remember { mutableStateOf<String?>(null) }
+    // Stato per mostrare messaggi di successo per il salvataggio del PIN
+    var saveSuccessMessage by remember { mutableStateOf<String?>(null) }
+
+    // Obtain the context to access SharedPreferences
+    val context = LocalContext.current
+
+    // Stato mutabile per tracciare se un PIN è attualmente impostato
+    var isPinSet by remember { mutableStateOf(getSavedPinFromContext(context) != null) }
+
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxWidth() // Riempie la larghezza disponibile
     ) {
-        // TODO: Implementare i campi di input e la logica per impostare il PIN
-        Text("Type new PIN:")
-        Text("Confirm new PIN")
-        Button(onClick = { /* TODO: Salva il PIN */ }) {
+        Text("PIN Settings", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
+
+        // Controlla se mostrare il pulsante di rimozione o il messaggio di successo della rimozione
+        if (isPinSet && removeSuccessMessage == null) { // Mostra il pulsante solo se il PIN è impostato E non c'è un messaggio di successo di rimozione
+            Button(
+                onClick = {
+                    try {
+                        val masterKey = MasterKey.Builder(context)
+                            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                            .build()
+
+                        val sharedPreferences = EncryptedSharedPreferences.create(
+                            context,
+                            "AppSettings", // File name for SharedPreferences
+                            masterKey,
+                            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                        )
+
+                        // Remove the PIN key
+                        with(sharedPreferences.edit()) {
+                            remove("access_pin")
+                            apply()
+                        }
+
+                        // Imposta il messaggio di successo per la rimozione
+                        removeSuccessMessage = "PIN removed successfully"
+                        saveSuccessMessage = null // Cancella il messaggio di successo per il salvataggio
+                        errorMessage = null // Clear error message
+                        newPin = "" // Clear input fields
+                        confirmPin = ""
+                        // Aggiorna lo stato isPinSet (opzionale qui se il messaggio prende il suo posto, ma utile per coerenza)
+                        isPinSet = false
+
+
+                    } catch (e: Exception) {
+                        Log.e("PinSettingsContent", "Error removing PIN", e)
+                        errorMessage = "Error removing PIN: ${e.localizedMessage}"
+                        removeSuccessMessage = null // Cancella il messaggio di successo per la rimozione
+                        saveSuccessMessage = null // Cancella il messaggio di successo per il salvataggio
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error), // Use error color for "Remove"
+                modifier = Modifier.fillMaxWidth() // Riempie la larghezza
+            ) {
+                Text("Remove secure access")
+            }
+        } else if (!isPinSet && removeSuccessMessage != null) { // Mostra il messaggio di successo della rimozione se il PIN NON è impostato E c'è un messaggio
+            // Mostra il messaggio di successo specifico per la rimozione al posto del pulsante
+            Text(
+                text = removeSuccessMessage!!, // Usiamo !! perché sappiamo che non è nullo qui
+                color = MaterialTheme.colorScheme.primary, // Colore per i successi
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth() // Riempi la larghezza per allineamento
+            )
+        }
+
+        if (isPinSet) {
+            Text("Change your access PIN:", fontWeight = FontWeight.Bold)
+        } else {
+            Text("Set an access PIN:", fontWeight = FontWeight.Bold)
+        }
+
+
+        // Campo di input per il nuovo PIN
+        TextField(
+            value = newPin,
+            onValueChange = {
+                newPin = it
+                // Clear messages when user starts typing
+                errorMessage = null
+                removeSuccessMessage = null // Cancella messaggi di successo all'input
+                saveSuccessMessage = null
+            },
+            label = { Text("New PIN") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            visualTransformation = PasswordVisualTransformation(), // Nasconde il testo
+            modifier = Modifier.fillMaxWidth() // Riempie la larghezza
+        )
+
+        // Campo di input per confermare il PIN
+        TextField(
+            value = confirmPin,
+            onValueChange = {
+                confirmPin = it
+                // Clear messages when user starts typing
+                errorMessage = null
+                removeSuccessMessage = null // Cancella messaggi di successo all'input
+                saveSuccessMessage = null
+            },
+            label = { Text("Confirm New PIN") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            visualTransformation = PasswordVisualTransformation(), // Nasconde il testo
+            modifier = Modifier.fillMaxWidth() // Riempie la larghezza
+        )
+
+        // Mostra messaggio di errore se presente
+        errorMessage?.let { message ->
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
+        // Mostra messaggio di successo per il salvataggio se presente
+        saveSuccessMessage?.let { message ->
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.primary, // Colore per i successi
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
+        Button(
+            onClick = {
+                // Aggiungi la validazione per la lunghezza minima del PIN
+                if (newPin.isBlank() || confirmPin.isBlank()) {
+                    errorMessage = "PIN cannot be empty"
+                    saveSuccessMessage = null
+                    removeSuccessMessage = null
+                } else if (newPin.length < 4) {
+                    errorMessage = "PIN must be at least 4 digits long"
+                    saveSuccessMessage = null
+                    removeSuccessMessage = null
+                } else if (newPin != confirmPin) {
+                    errorMessage = "PINs do not match"
+                    saveSuccessMessage = null
+                    removeSuccessMessage = null
+                } else {
+                    try {
+                        val masterKey = MasterKey.Builder(context)
+                            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                            .build()
+
+                        val sharedPreferences = EncryptedSharedPreferences.create(
+                            context,
+                            "AppSettings", // File name for SharedPreferences
+                            masterKey,
+                            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                        )
+
+                        with(sharedPreferences.edit()) {
+                            putString("access_pin", newPin)
+                            apply()
+                        }
+
+                        saveSuccessMessage = "PIN saved successfully"
+                        errorMessage = null // Clear error message
+                        removeSuccessMessage = null // Clear success message
+                        newPin = ""
+                        confirmPin = ""
+                        // Aggiorna lo stato isPinSet per mostrare il pulsante di rimozione
+                        isPinSet = true
+
+
+                    } catch (e: Exception) {
+                        Log.e("PinSettingsContent", "Error saving PIN", e)
+                        errorMessage = "Error saving PIN: ${e.localizedMessage}"
+                        saveSuccessMessage = null // Clear success message
+                        removeSuccessMessage = null // Clear success message
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth() // Riempie la larghezza
+        ) {
             Text("Save PIN")
         }
     }
 }
+
 
 // Composbale per i dettagli delle impostazioni del tema
 @Composable
@@ -149,11 +338,11 @@ fun ThemeSettingsContent() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(imageVector = Icons.Default.WbSunny, contentDescription = "Light Mode")
-            Text("Light theme")
+            Button(onClick = { /* TODO: Cambia tema in chiaro */ }) {"Light theme"}
             // Esempio di ToggleButton (richiede implementazione)
             // Switch(checked = isDarkMode, onCheckedChange = { /* TODO: Cambia tema */ })
             Icon(imageVector = Icons.Default.NightsStay, contentDescription = "Dark Mode")
-            Text("Dark theme")
+            Button(onClick = { /* TODO: Cambia tema in scuro */ }) {"Dark theme"}
         }
     }
 }
@@ -165,7 +354,6 @@ fun AboutSettingsContent() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // TODO: Ottieni la versione dell'app dinamicamente
         Text("Version: 1.0.0")
         Text("Developers: A. Catalano, A. Rocchi, O. Iacobelli")
         Text("Budgify is an app that deals with managing your finances.")
