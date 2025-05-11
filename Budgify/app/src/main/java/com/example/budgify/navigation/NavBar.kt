@@ -110,7 +110,7 @@ fun TopBar(navController: NavController, currentRoute: String) {
                     restoreState = true
                 }
             }) {
-                Icon( Icons.Filled.Settings, contentDescription = "Settings", modifier = Modifier.size(50.dp))
+                Icon( Icons.Filled.Settings, contentDescription = "Settings", modifier = Modifier.size(50.dp), tint = MaterialTheme.colorScheme.onSurface)
             }
 
         }
