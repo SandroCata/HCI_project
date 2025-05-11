@@ -17,10 +17,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,9 +32,12 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,11 +56,14 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.entities.Transaction
 import com.example.budgify.routes.ScreenRoutes
 import com.example.budgify.screen.items
 import com.example.budgify.screen.smallTextStyle
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -280,7 +289,8 @@ fun AddTransactionDialog(onDismiss: () -> Unit, onTransactionAdded: (Transaction
             TextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text("Description") }
+                label = { Text("Description") },
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -470,11 +480,16 @@ fun AddTransactionDialog(onDismiss: () -> Unit, onTransactionAdded: (Transaction
     //}
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddObjectiveDialog(onDismiss: () -> Unit, onTransactionAdded: (Transaction) -> Unit) {
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var type by remember { mutableStateOf("Expense") } // Or use a dropdown/radio buttons
+    var selectedDate by remember { mutableStateOf<LocalDate?>(null) } // State for selected date
+    var selectedType by remember { mutableStateOf(ObjectiveType.EXPENSE) } // State for objective type (Expense/Income)
+    var showDatePickerDialog by remember { mutableStateOf(false) }
+    val objectiveTypes = ObjectiveType.entries.toList()
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -483,23 +498,68 @@ fun AddObjectiveDialog(onDismiss: () -> Unit, onTransactionAdded: (Transaction) 
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(16.dp)
         ) {
-            Text("Add Transaction", style = MaterialTheme.typography.titleLarge)
+            Text("Add Objective", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Input fields for transaction details
-            // For example, using TextField:
-            // TextField(
-            //     value = description,
-            //     onValueChange = { description = it },
-            //     label = { Text("Description") }
-            // )
-            // Spacer(modifier = Modifier.height(8.dp))
-            // TextField(
-            //     value = amount,
-            //     onValueChange = { amount = it },
-            //     label = { Text("Amount") },
-            //     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            // )
+             // Input fields for transaction details
+             // For example, using TextField:
+             TextField(
+                 value = description,
+                 onValueChange = { description = it },
+                 label = { Text("Description") },
+                 modifier = Modifier.fillMaxWidth()
+             )
+             Spacer(modifier = Modifier.height(8.dp))
+             TextField(
+                 value = amount,
+                 onValueChange = { amount = it },
+                 label = { Text("Amount") },
+                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                 modifier = Modifier.fillMaxWidth()
+             )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Date Selection TextField (opens DatePickerDialog)
+            TextField(
+                value = selectedDate?.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "", // Format the selected date for display
+                onValueChange = {}, // Value is set by the DatePickerDialog
+                label = { Text("Date") },
+                readOnly = true, // Make it read-only so the keyboard doesn't show
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.CalendarToday,
+                        contentDescription = "Select Date",
+                        modifier = Modifier.clickable { showDatePickerDialog = true } // Open dialog on click
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Objective Type (Radio Buttons)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("Type:")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly // Distribute radio buttons horizontally
+                ) {
+                    objectiveTypes.forEach { type ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable {
+                                selectedType = type
+                            } // Allow clicking the whole Row
+                        ) {
+                            RadioButton(
+                                selected = selectedType == type,
+                                onClick = { selectedType = type } // Update selectedType on click
+                            )
+                            Text(type.name) // Display the enum name (e.g., "EXPENSE", "INCOME")
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -520,6 +580,43 @@ fun AddObjectiveDialog(onDismiss: () -> Unit, onTransactionAdded: (Transaction) 
                     Text("Add")
                 }
             }
+        }
+    }
+
+    if (showDatePickerDialog) {
+        val datePickerState = rememberDatePickerState()
+        val confirmEnabled = remember {
+            derivedStateOf { datePickerState.selectedDateMillis != null }
+        }
+        DatePickerDialog(
+            onDismissRequest = {
+                showDatePickerDialog = false
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDatePickerDialog = false
+                        // Convert the selected date from milliseconds to LocalDate
+                        selectedDate = datePickerState.selectedDateMillis?.let {
+                            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+                        }
+                    },
+                    enabled = confirmEnabled.value // Enable OK button only if a date is selected
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDatePickerDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }
