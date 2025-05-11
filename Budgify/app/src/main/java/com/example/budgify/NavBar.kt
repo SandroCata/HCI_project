@@ -255,6 +255,7 @@ fun BottomBar(navController: NavController) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTransactionDialog(onDismiss: () -> Unit, onTransactionAdded: (Transaction) -> Unit) {
     var description by remember { mutableStateOf("") }
@@ -340,23 +341,22 @@ fun AddTransactionDialog(onDismiss: () -> Unit, onTransactionAdded: (Transaction
             //        }
             //    }
             //}
-            Spacer(modifier = Modifier.height(8.dp))
+            // Spacer(modifier = Modifier.height(8.dp))
 
-            // Date Selection (opens DatePickerDialog)
-            //TextField(
-            //    value = selectedDate?.format(androidx.core.i18n.DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
-            //    onValueChange = {}, // Value is set by the DatePickerDialog
-            //    label = { Text("Date") },
-            //    readOnly = true, // Make it read-only so the keyboard doesn't show
-            //    trailingIcon = {
-            //        Icon(
-            //            imageVector = Icons.Default.CalendarToday,
-            //            contentDescription = "Select Date",
-            //            modifier = Modifier.clickable { showDatePickerDialog = true } // Open dialog on click
-            //        )
-            //    },
-            //    modifier = Modifier.fillMaxWidth()
-            //)
+            TextField(
+                value = selectedDate?.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "", // Format the selected date for display
+                onValueChange = {}, // Value is set by the DatePickerDialog
+                label = { Text("Date") },
+                readOnly = true, // Make it read-only so the keyboard doesn't show
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.CalendarToday,
+                        contentDescription = "Select Date",
+                        modifier = Modifier.clickable { showDatePickerDialog = true } // Open dialog on click
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(modifier = Modifier.height(8.dp))
 
             // Transaction Type (Radio Buttons or Tabs)
@@ -442,42 +442,42 @@ fun AddTransactionDialog(onDismiss: () -> Unit, onTransactionAdded: (Transaction
         }
     }
 
-    // DatePickerDialog
-    //if (showDatePickerDialog) {
-    //    val datePickerState = rememberDatePickerState()
-    //    val confirmEnabled = remember {
-    //        derivedStateOf { datePickerState.selectedDateMillis != null }
-    //    }
-    //    DatePickerDialog(
-    //        onDismissRequest = {
-    //            showDatePickerDialog = false
-    //        },
-    //        confirmButton = {
-    //            TextButton(
-    //                onClick = {
-    //                    showDatePickerDialog = false
-    //                    selectedDate = datePickerState.selectedDateMillis?.let {
-    //                        Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
-    //                    }
-    //                },
-    //                enabled = confirmEnabled.value
-    //            ) {
-    //                Text("OK")
-    //            }
-    //        },
-    //        dismissButton = {
-    //            TextButton(
-    //                onClick = {
-    //                    showDatePickerDialog = false
-    //                }
-    //            ) {
-    //                Text("Cancel")
-    //            }
-    //        }
-    //    ) {
-    //        DatePicker(state = datePickerState)
-    //    }
-    //}
+    if (showDatePickerDialog) {
+        val datePickerState = rememberDatePickerState()
+        val confirmEnabled = remember {
+            derivedStateOf { datePickerState.selectedDateMillis != null }
+        }
+        DatePickerDialog(
+            onDismissRequest = {
+                showDatePickerDialog = false
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDatePickerDialog = false
+                        // Convert the selected date from milliseconds to LocalDate
+                        selectedDate = datePickerState.selectedDateMillis?.let {
+                            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+                        }
+                    },
+                    enabled = confirmEnabled.value // Enable OK button only if a date is selected
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDatePickerDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
