@@ -3,6 +3,7 @@ package com.example.budgify.applicationlogic
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.budgify.entities.Category
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.Transaction
 import kotlinx.coroutines.launch
@@ -47,6 +48,31 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
     fun deleteObjective(objective: Objective) {
         viewModelScope.launch {
             repository.deleteObjective(objective)
+        }
+    }
+
+    //CATEGORIES
+    val allCategories = repository.getAllCategories().stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        emptyList()
+    )
+
+    fun addCategory(category: Category) {
+        viewModelScope.launch {
+            repository.insertCategory(category)
+        }
+    }
+
+    fun updateCategory(category: Category) {
+        viewModelScope.launch {
+            repository.updateCategory(category)
+        }
+    }
+
+    fun deleteCategory(category: Category) {
+        viewModelScope.launch {
+            repository.deleteCategory(category)
         }
     }
 
