@@ -1,17 +1,17 @@
 package com.example.budgify.applicationlogic
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.budgify.entities.Account
 import com.example.budgify.entities.Category
-import com.example.budgify.entities.Objective
 import com.example.budgify.entities.MyTransaction
-import com.example.budgify.entities.TransactionWithDetails
+import com.example.budgify.entities.Objective
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() {
@@ -34,21 +34,42 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
             repository.updateAccountBalance(myTransaction.accountId)
         }
     }
+    // TODO: fix the balance update after transaction edit
     suspend fun updateTransaction(myTransaction: MyTransaction) {
-        // Fetch the old transaction to see if the account changed
         val oldTransaction = withContext(Dispatchers.IO) {
-            repository.getTransactionById(myTransaction.id) // You'll need this in your Repository
+            repository.getTransactionById(myTransaction.id)
         }
-
+        Log.d("FinanceViewModel", "Old Transaction: $oldTransaction")
+        Log.d("FinanceViewModel", "Old Balance: ${repository.getAccountById(myTransaction.accountId)?.amount.toString()}")
+        // Update the transaction in the database
         repository.updateTransaction(myTransaction)
-
-        // Update the balance of the new account if it's different
-        if (oldTransaction != null && oldTransaction.accountId != myTransaction.accountId) {
-            repository.updateAccountBalance(oldTransaction.accountId)
-            repository.updateAccountBalance(myTransaction.accountId)
+        Log.d("FinanceViewModel", "New Transaction: $myTransaction")
+        Log.d("FinanceViewModel", "Old TransactionAgain: $oldTransaction")
+        // Now, after the transaction is updated, update the account balance(s)
+        if (oldTransaction != null) {
+            Log.d("FinanceViewModel", "Pass")
+            if (oldTransaction.accountId != myTransaction.accountId) {
+                // Account changed: Update balance of old and new accounts
+                withContext(Dispatchers.IO) {
+                    repository.updateAccountBalance(oldTransaction.accountId)
+                    repository.updateAccountBalance(myTransaction.accountId)
+                }
+                Log.d("FinanceViewModel", "1-Old Balance: ${repository.getAccountById(myTransaction.accountId)?.amount.toString()}")
+            } else {
+                // Account is the same: Update balance of the current account
+                withContext(Dispatchers.IO) {
+                    repository.updateAccountBalance(myTransaction.accountId)
+                }
+                Log.d("FinanceViewModel", "2-Old Balance: ${repository.getAccountById(myTransaction.accountId)?.amount.toString()}")
+            }
         } else {
-            // If the account is the same, just update the balance of that account
-            repository.updateAccountBalance(myTransaction.accountId)
+            // This case is unexpected for an update, but if the old transaction
+            // wasn't found, we can still try to update the balance of the
+            // account the transaction is currently associated with.
+            withContext(Dispatchers.IO) {
+                repository.updateAccountBalance(myTransaction.accountId)
+            }
+            Log.d("FinanceViewModel", "3-Old Balance: ${repository.getAccountById(myTransaction.accountId)?.amount.toString()}")
         }
     }
     fun deleteTransaction(myTransaction: MyTransaction) {

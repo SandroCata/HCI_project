@@ -1,7 +1,6 @@
 package com.example.budgify.database
 
 import android.content.Context
-import androidx.compose.ui.input.key.type
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -14,12 +13,11 @@ import com.example.budgify.dataaccessobjects.TransactionDao
 import com.example.budgify.entities.Account
 import com.example.budgify.entities.Category
 import com.example.budgify.entities.CategoryType
-import com.example.budgify.entities.Objective
 import com.example.budgify.entities.MyTransaction
+import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.entities.TransactionType
 import java.time.LocalDate
-import kotlin.io.path.name
 
 class Converters {
 
@@ -76,7 +74,7 @@ class Converters {
         Objective::class,
         Category::class
    ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class) // Se hai bisogno di TypeConverters

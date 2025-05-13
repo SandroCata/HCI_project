@@ -22,18 +22,32 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.RemoveCircle
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,11 +67,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.entities.Account
+import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.TransactionType
 import com.example.budgify.entities.TransactionWithDetails
 import com.example.budgify.navigation.BottomBar
 import com.example.budgify.navigation.TopBar
 import com.example.budgify.routes.ScreenRoutes
+import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 // Definisci gli stili del testo
@@ -105,8 +124,12 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
 }
 
 //Composbale per visualizzare le transazioni
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TransactionItem(transactionWithDetails: TransactionWithDetails) {
+fun TransactionItem(
+    transactionWithDetails: TransactionWithDetails,
+    onLongClick: (MyTransaction) -> Unit
+) {
     val myTransaction = transactionWithDetails.transaction
     val account = transactionWithDetails.account
     val category = transactionWithDetails.category
@@ -114,7 +137,16 @@ fun TransactionItem(transactionWithDetails: TransactionWithDetails) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(8.dp)
+            .combinedClickable( // Use combinedClickable
+                onClick = {
+                    // Handle regular click if needed (e.g., view details)
+                    // Log.d("TransactionItem", "Transaction clicked: ${myTransaction.id}")
+                },
+                onLongClick = {
+                    onLongClick(myTransaction) // Call the lambda on long click
+                }
+            ),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
@@ -159,6 +191,9 @@ fun TransactionItem(transactionWithDetails: TransactionWithDetails) {
 fun LastTransactionBox(viewModel: FinanceViewModel) { // Pass the ViewModel
     // Collect the flow of transactions with details
     val transactionsWithDetails by viewModel.allTransactionsWithDetails.collectAsStateWithLifecycle()
+    // State to hold the transaction to be edited, and control dialog visibility
+    var transactionToEdit by remember { mutableStateOf<MyTransaction?>(null) }
+    var showEditDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -181,10 +216,328 @@ fun LastTransactionBox(viewModel: FinanceViewModel) { // Pass the ViewModel
                 // Iterate through the collected list of TransactionWithDetails
                 transactionsWithDetails.take(5).forEach { transactionWithDetails ->
                     // Pass the TransactionWithDetails object to the updated TransactionItem
-                    TransactionItem(transactionWithDetails = transactionWithDetails)
+                    TransactionItem(
+                        transactionWithDetails = transactionWithDetails,
+                        onLongClick = { transaction ->
+                            // Set the transaction to be edited and show the dialog
+                            transactionToEdit = transaction
+                            showEditDialog = true
+                        }
+                    )
                 }
             }
         }
+    }
+    // Show the Edit Transaction Dialog if showEditDialog is true and transactionToEdit is not null
+    if (showEditDialog && transactionToEdit != null) {
+        EditTransactionDialog(
+            transaction = transactionToEdit!!, // Pass the transaction to the dialog
+            viewModel = viewModel,
+            onDismiss = {
+                showEditDialog = false
+                transactionToEdit = null // Clear the transaction when dialog is dismissed
+            }
+            // You would likely need more parameters for the dialog like lists of accounts and categories
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditTransactionDialog(
+    transaction: MyTransaction, // The transaction to be edited
+    viewModel: FinanceViewModel,
+    onDismiss: () -> Unit
+) {
+    // Use the existing transaction data as initial state for editing
+    var description by remember { mutableStateOf(transaction.description) }
+    var amount by remember { mutableStateOf(transaction.amount.toString()) }
+    val categories by viewModel.allCategories.collectAsStateWithLifecycle()
+    var categoryExpanded by remember { mutableStateOf(false) }
+    // Initialize selected category ID with the transaction's categoryId
+    var selectedCategoryId by remember { mutableStateOf<Int?>(transaction.categoryId) }
+    val selectedCategory = remember(categories, selectedCategoryId) {
+        categories.firstOrNull { it.id == selectedCategoryId }
+    }
+    // Initialize selected date with the transaction's date
+    var selectedDate by remember { mutableStateOf<LocalDate?>(transaction.date) }
+    // Initialize selected type with the transaction's type
+    var selectedType by remember { mutableStateOf<TransactionType>(transaction.type) }
+    val accounts by viewModel.allAccounts.collectAsStateWithLifecycle()
+    var accountExpanded by remember { mutableStateOf(false) }
+    // Initialize selected account ID with the transaction's accountId
+    var selectedAccountId by remember { mutableStateOf<Int?>(transaction.accountId) }
+    val selectedAccount = remember(accounts, selectedAccountId) {
+        accounts.firstOrNull { it.id == selectedAccountId }
+    }
+    val transactionTypes = listOf(TransactionType.EXPENSE, TransactionType.INCOME)
+
+    // State for showing the DatePickerDialog
+    var showDatePickerDialog by remember { mutableStateOf(false) }
+    // State to control the visibility of the delete confirmation dialog
+    var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
+
+    val coroutineScope = rememberCoroutineScope()
+
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(16.dp)
+        ) {
+            Text(
+                "Edit Transaction",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Description") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextField(
+                value = amount,
+                onValueChange = { amount = it },
+                label = { Text("Amount") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Category Dropdown Menu
+            ExposedDropdownMenuBox(
+                expanded = categoryExpanded,
+                onExpandedChange = { categoryExpanded = !categoryExpanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TextField(
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    readOnly = true,
+                    value = selectedCategory?.desc ?: "Select Category", // Display description or placeholder
+                    onValueChange = {},
+                    label = { Text("Category") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
+                    },
+                    colors = ExposedDropdownMenuDefaults.textFieldColors()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = categoryExpanded,
+                    onDismissRequest = { categoryExpanded = false }
+                ) {
+                    categories.forEach { category ->
+                        DropdownMenuItem(
+                            text = { Text(category.desc) },
+                            onClick = {
+                                selectedCategoryId = category.id // Store the ID
+                                categoryExpanded = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Account Dropdown Menu
+            ExposedDropdownMenuBox(
+                expanded = accountExpanded,
+                onExpandedChange = { accountExpanded = !accountExpanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TextField(
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    readOnly = true,
+                    value = selectedAccount?.title ?: "Select Account", // Display title or placeholder
+                    onValueChange = {},
+                    label = { Text("Account") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded)
+                    },
+                    colors = ExposedDropdownMenuDefaults.textFieldColors()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = accountExpanded,
+                    onDismissRequest = { accountExpanded = false }
+                ) {
+                    accounts.forEach { account ->
+                        DropdownMenuItem(
+                            text = { Text(account.title) },
+                            onClick = {
+                                selectedAccountId = account.id // Store the ID
+                                accountExpanded = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextField(
+                value = selectedDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
+                onValueChange = {},
+                label = { Text("Date") },
+                readOnly = true,
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.CalendarToday,
+                        contentDescription = "Select Date",
+                        modifier = Modifier.clickable { showDatePickerDialog = true }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("Type:")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    transactionTypes.forEach { type ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { selectedType = type }
+                        ) {
+                            RadioButton(
+                                selected = selectedType == type,
+                                onClick = { selectedType = type }
+                            )
+                            Text(type.toString())
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+
+                Button(
+                    onClick = {
+                        showDeleteConfirmationDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red) // Optional: Red color for delete
+                ) {
+                    Text("Delete")
+                }
+
+                Spacer(modifier = Modifier.width(8.dp)) // Add spacing
+
+                Button(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+                Button(onClick = {
+                    // Implement save logic
+                    val amountDouble = amount.toDoubleOrNull()
+                    // Add validation
+                    if (description.isNotBlank() && amountDouble != null && selectedDate != null && selectedAccountId != null && selectedCategoryId != null) {
+                        val updatedTransaction = transaction.copy( // Use copy to create a new instance with updated values
+                            accountId = selectedAccountId!!,
+                            type = selectedType,
+                            date = selectedDate!!,
+                            description = description,
+                            amount = amountDouble,
+                            categoryId = selectedCategoryId
+                        )
+                        coroutineScope.launch {
+                            viewModel.updateTransaction(updatedTransaction)
+                            onDismiss() // Close the dialog after updating
+                        }
+                        onDismiss() // Close the dialog after updating
+                    } else {
+                        // Show validation error to the user
+                    }
+                }) {
+                    Text("Save")
+                }
+            }
+        }
+    }
+
+    if (showDatePickerDialog) {
+        // Initialize DatePickerState with the transaction's date if available
+        val initialDateMillis = selectedDate?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDateMillis)
+
+        val confirmEnabled = remember {
+            derivedStateOf { datePickerState.selectedDateMillis != null }
+        }
+        DatePickerDialog(
+            onDismissRequest = {
+                showDatePickerDialog = false
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDatePickerDialog = false
+                        selectedDate = datePickerState.selectedDateMillis?.let {
+                            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+                        }
+                    },
+                    enabled = confirmEnabled.value
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDatePickerDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    // Delete Confirmation Dialog
+    if (showDeleteConfirmationDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmationDialog = false },
+            title = { Text("Confirm Deletion") },
+            text = { Text("Are you sure you want to delete this transaction?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            viewModel.deleteTransaction(transaction) // Delete the transaction
+                            onDismiss() // Dismiss the Edit dialog
+                        }
+                        showDeleteConfirmationDialog = false // Dismiss the confirmation dialog
+                    }
+                ) {
+                    Text("Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteConfirmationDialog = false } // Dismiss the confirmation dialog
+                ) {
+                    Text("No")
+                }
+            }
+        )
     }
 }
 
@@ -371,7 +724,8 @@ fun AddAccountDialog(
                         // Create a new Account object
                         val newAccount = Account(
                             title = accountTitle,
-                            amount = balanceDouble
+                            amount = balanceDouble,
+                            initialAmount = balanceDouble
                         )
                         // Insert the new account using the ViewModel
                         viewModel.addAccount(newAccount)

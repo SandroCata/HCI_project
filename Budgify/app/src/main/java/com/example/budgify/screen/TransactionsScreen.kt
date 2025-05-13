@@ -1,7 +1,9 @@
 package com.example.budgify.screen
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -46,18 +47,16 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.budgify.navigation.BottomBar
-import com.example.budgify.navigation.TopBar
 import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.TransactionType
 import com.example.budgify.entities.TransactionWithDetails
+import com.example.budgify.navigation.BottomBar
+import com.example.budgify.navigation.TopBar
 import com.example.budgify.routes.ScreenRoutes
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import kotlin.text.append
-import kotlin.text.format
 
 @Composable
 fun TransactionsScreen(navController: NavController, viewModel: FinanceViewModel) {
@@ -234,6 +233,7 @@ fun MonthlyCalendar(
 }
 
 // Composbale per visualizzare gli ultimi movimenti
+@OptIn(ExperimentalFoundationApi::class) // Opt-in for ExperimentalFoundationApi
 @Composable
 fun TransactionBox(selectedDate: LocalDate?, viewModel: FinanceViewModel) {
     // Collect all transactions with details from the ViewModel
@@ -245,11 +245,13 @@ fun TransactionBox(selectedDate: LocalDate?, viewModel: FinanceViewModel) {
     } else {
         // If no date is selected, maybe show the latest transactions
         // or an empty list, depending on your desired behavior.
-        // For now, let's show all transactions if no date is selected.
-        // You might want to adjust this.
+        // For now, let's show the latest 10 transactions if no date is selected.
         allTransactionsWithDetails.sortedByDescending { it.transaction.date }.take(10)
     }
 
+    // State to hold the transaction to be edited and control dialog visibility
+    var transactionToEdit by remember { mutableStateOf<MyTransaction?>(null) }
+    var showEditDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -279,17 +281,40 @@ fun TransactionBox(selectedDate: LocalDate?, viewModel: FinanceViewModel) {
                 else {
                     transactionsForSelectedDate.forEach { transactionWithDetails ->
                         // Pass the TransactionWithDetails object to the updated TransactionItem
-                        TransactionItem1(transactionWithDetails = transactionWithDetails)
+                        TransactionItem1(
+                            transactionWithDetails = transactionWithDetails,
+                            onLongClick = { transaction ->
+                                // Set the transaction to be edited and show the dialog
+                                transactionToEdit = transaction
+                                showEditDialog = true
+                            }
+                        )
                     }
                 }
             }
         }
     }
+
+    // Show the Edit Transaction Dialog if showEditDialog is true and transactionToEdit is not null
+    if (showEditDialog && transactionToEdit != null) {
+        EditTransactionDialog(
+            transaction = transactionToEdit!!, // Pass the transaction to the dialog
+            viewModel = viewModel,
+            onDismiss = {
+                showEditDialog = false
+                transactionToEdit = null // Clear the transaction when dialog is dismissed
+            }
+        )
+    }
 }
 
 // Assume TransactionItem is a composable that displays a single transaction
+@OptIn(ExperimentalFoundationApi::class) // Opt-in for ExperimentalFoundationApi
 @Composable
-fun TransactionItem1(transactionWithDetails: TransactionWithDetails) {
+fun TransactionItem1(
+    transactionWithDetails: TransactionWithDetails,
+    onLongClick: (MyTransaction) -> Unit // Add a long click lambda parameter
+) {
     val myTransaction = transactionWithDetails.transaction
     val account = transactionWithDetails.account
     val category = transactionWithDetails.category
@@ -297,7 +322,15 @@ fun TransactionItem1(transactionWithDetails: TransactionWithDetails) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 4.dp)
+            .combinedClickable( // Use combinedClickable
+                onClick = {
+                    // Handle regular click if needed (e.g., view details)
+                },
+                onLongClick = {
+                    onLongClick(myTransaction) // Call the lambda on long click
+                }
+            ),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {

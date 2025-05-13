@@ -103,7 +103,7 @@ class FinanceRepository(
             }
 
             // Update the account's amount in the database
-            val updatedAccount = account.copy(amount = newBalance)
+            val updatedAccount = account.copy(amount = account.initialAmount + newBalance)
             accountDao.update(updatedAccount)
         }
     }
