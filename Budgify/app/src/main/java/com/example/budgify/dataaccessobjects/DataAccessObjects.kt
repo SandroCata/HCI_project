@@ -29,11 +29,14 @@ interface TransactionDao {
     fun getAllTransactions(): Flow<List<MyTransaction>>
 
     @Query("SELECT * FROM transactions WHERE id = :id")
-    fun getTransactionById(id: Int): Flow<MyTransaction>
+    fun getTransactionById(id: Int): MyTransaction?
 
     @Transaction // Use @Transaction when querying relations
     @Query("SELECT * FROM transactions")
     fun getAllTransactionsWithDetails(): Flow<List<TransactionWithDetails>>
+
+    @Query("SELECT * FROM transactions WHERE accountId = :accountId")
+    suspend fun getTransactionsForAccount(accountId: Int): List<MyTransaction> // Return List<MyTransaction>
 
 }
 
@@ -52,7 +55,7 @@ interface AccountDao {
     fun getAllAccounts(): Flow<List<Account>>
 
     @Query("SELECT * FROM accounts WHERE id = :id")
-    fun getAccountById(id: Int): Flow<Account>
+    suspend fun getAccountById(id: Int): Account?
 }
 
 @Dao
