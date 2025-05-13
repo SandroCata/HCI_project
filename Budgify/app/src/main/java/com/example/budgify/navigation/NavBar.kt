@@ -24,7 +24,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +55,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -236,7 +240,10 @@ fun BottomBar(navController: NavController, viewModel: FinanceViewModel) {
 
         // Dialog for adding a transaction
         if (showAddTransactionDialog) {
-            AddTransactionDialog(onDismiss = { showAddTransactionDialog = false }) {
+            AddTransactionDialog(
+                onDismiss = { showAddTransactionDialog = false },
+                viewModel = viewModel
+            ) {
                 // Handle transaction added
             }
         }
@@ -262,15 +269,17 @@ fun BottomBar(navController: NavController, viewModel: FinanceViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddTransactionDialog(onDismiss: () -> Unit, onTransactionAdded: (Transaction) -> Unit) {
+fun AddTransactionDialog(
+    viewModel: FinanceViewModel,
+    onDismiss: () -> Unit,
+    onTransactionAdded: (Transaction) -> Unit
+) {
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("") } // State for selected category
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) } // State for selected date
     var selectedType by remember { mutableStateOf("Expense") } // State for transaction type (Expense/Income)
     var selectedAccount by remember { mutableStateOf("") } // State for selected account
-
-    val categories = listOf("Food", "Transport", "Shopping", "Utilities", "Salary", "Other") // Example categories
     val accounts = listOf("Cash", "Bank Account 1", "Credit Card") // Example accounts
     val transactionTypes = listOf("Expense", "Income")
 
@@ -311,42 +320,43 @@ fun AddTransactionDialog(onDismiss: () -> Unit, onTransactionAdded: (Transaction
             Spacer(modifier = Modifier.height(8.dp))
 
             // Category Dropdown Menu
-            //var categoryExpanded by remember { mutableStateOf(false) }
-            //ExposedDropdownMenuBox(
-            //    expanded = categoryExpanded,
-            //    onExpandedChange = { categoryExpanded = !categoryExpanded },
-            //    modifier = Modifier.fillMaxWidth()
-            //) {
-            //    TextField(
-            //        modifier = Modifier
-            //            .menuAnchor() // Anchor the dropdown to the TextField
-            //            .fillMaxWidth(),
-            //        readOnly = true,
-            //        value = selectedCategory,
-            //        onValueChange = {},
-            //        label = { Text("Category") },
-            //        trailingIcon = {
-            //            ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
-            //        },
-            //        colors = ExposedDropdownMenuDefaults.textFieldColors()
-            //    )
-            //    ExposedDropdownMenu(
-            //        expanded = categoryExpanded,
-            //        onDismissRequest = { categoryExpanded = false }
-            //    ) {
-            //        categories.forEach { category ->
-            //            DropdownMenuItem(
-            //                text = { Text(category) },
-            //                onClick = {
-            //                    selectedCategory = category
-            //                    categoryExpanded = false
-            //                },
-            //                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-            //            )
-            //        }
-            //    }
-            //}
-            // Spacer(modifier = Modifier.height(8.dp))
+            val categories by viewModel.allCategories.collectAsStateWithLifecycle();
+            var categoryExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = categoryExpanded,
+                onExpandedChange = { categoryExpanded = !categoryExpanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TextField(
+                    modifier = Modifier
+                        .menuAnchor() // Anchor the dropdown to the TextField
+                        .fillMaxWidth(),
+                    readOnly = true,
+                    value = selectedCategory,
+                    onValueChange = {},
+                    label = { Text("Category") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
+                    },
+                    colors = ExposedDropdownMenuDefaults.textFieldColors()
+                )
+                ExposedDropdownMenu(
+                    expanded = categoryExpanded,
+                    onDismissRequest = { categoryExpanded = false }
+                ) {
+                    categories.forEach { category ->
+                        DropdownMenuItem(
+                            text = { Text(category.desc) },
+                            onClick = {
+                                selectedCategory = category.desc
+                                categoryExpanded = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
+                }
+            }
+             Spacer(modifier = Modifier.height(8.dp))
 
             TextField(
                 value = selectedDate?.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "", // Format the selected date for display
