@@ -19,14 +19,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.RemoveCircle
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,18 +44,20 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.example.budgify.navigation.BottomBar
-import com.example.budgify.navigation.TopBar
 import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.entities.Account
-import com.example.budgify.entities.Transaction
 import com.example.budgify.entities.TransactionType
+import com.example.budgify.entities.TransactionWithDetails
+import com.example.budgify.navigation.BottomBar
+import com.example.budgify.navigation.TopBar
 import com.example.budgify.routes.ScreenRoutes
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 // Definisci gli stili del testo
@@ -87,11 +92,13 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
 
                 // Box per i conti e il saldo totale
                 item {
-                    ContiBox()
+                    ContiBox(viewModel)
                 }
 
                 item {
-                    LastTransactionBox()
+                    LastTransactionBox(
+                        viewModel = viewModel
+                    )
                 }
             }
         }
@@ -99,8 +106,10 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
 
 //Composbale per visualizzare le transazioni
 @Composable
-fun TransactionItem(transaction: Transaction) {
-
+fun TransactionItem(transactionWithDetails: TransactionWithDetails) {
+    val myTransaction = transactionWithDetails.transaction
+    val account = transactionWithDetails.account
+    val category = transactionWithDetails.category
 
     Row(
         modifier = Modifier
@@ -111,11 +120,11 @@ fun TransactionItem(transaction: Transaction) {
         Column {
             val formattedDescription1 = buildAnnotatedString {
                 withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                    append(transaction.description)
+                    append(myTransaction.description)
                 }
                 append("  (")
                 withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                    append(transaction.category)
+                    append(category?.desc ?: "Uncategorized")
                 }
                 append(")")
             }
@@ -125,11 +134,11 @@ fun TransactionItem(transaction: Transaction) {
             )
             val formattedDescription2 = buildAnnotatedString {
                 withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                    append(transaction.account)
+                    append(account.title)
                 }
                 append(" - ")
                 withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                    append(transaction.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                    append(myTransaction.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
                 }
             }
             Text(
@@ -138,8 +147,8 @@ fun TransactionItem(transaction: Transaction) {
             )
         }
         Text(
-            text = "${if (transaction.type == TransactionType.INCOME) "+" else "-"} ${transaction.amount}€",
-            color = if (transaction.type == TransactionType.INCOME) Color(red = 0.0f, green = 0.6f, blue = 0.0f) else Color(red = 0.7f, green = 0.0f, blue = 0.0f),
+            text = "${if (myTransaction.type == TransactionType.INCOME) "+" else "-"} ${myTransaction.amount}€",
+            color = if (myTransaction.type == TransactionType.INCOME) Color(red = 0.0f, green = 0.6f, blue = 0.0f) else Color(red = 0.7f, green = 0.0f, blue = 0.0f),
             fontWeight = FontWeight.Bold
         )
     }
@@ -147,15 +156,10 @@ fun TransactionItem(transaction: Transaction) {
 
 // Composbale per visualizzare gli ultimi movimenti
 @Composable
-fun LastTransactionBox() {
-    // Qui simuliamo i dati da un file locale, che poi andranno presi da un DB
-    val transactions = listOf(
-        Transaction(1, "Bank",TransactionType.EXPENSE, LocalDate.now(), "Spesa Alimentari", 50.0, "Cibo"),
-        Transaction(2, "Wallet",TransactionType.EXPENSE, LocalDate.now().minusDays(1), "Biglietto Autobus", 2.0, "Trasporto"),
-        Transaction(3, "Bank",TransactionType.INCOME, LocalDate.now().minusDays(3), "Mensilitá lavoro", 1500.0, "Stipendio"),
-        Transaction(6, "Bank",TransactionType.INCOME, LocalDate.now().minusDays(3), "Maglietta Vinted", 100.0, "Vendite"),
-        Transaction(7, "Wallet",TransactionType.EXPENSE, LocalDate.now().minusDays(1), "Spesa Alimentari", 65.0, "Cibo"),
-    )
+fun LastTransactionBox(viewModel: FinanceViewModel) { // Pass the ViewModel
+    // Collect the flow of transactions with details
+    val transactionsWithDetails by viewModel.allTransactionsWithDetails.collectAsStateWithLifecycle()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -174,8 +178,10 @@ fun LastTransactionBox() {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Column(modifier = Modifier.fillMaxWidth()) {
-                transactions.take(5).forEach { transaction ->
-                    TransactionItem(transaction = transaction)
+                // Iterate through the collected list of TransactionWithDetails
+                transactionsWithDetails.take(5).forEach { transactionWithDetails ->
+                    // Pass the TransactionWithDetails object to the updated TransactionItem
+                    TransactionItem(transactionWithDetails = transactionWithDetails)
                 }
             }
         }
@@ -184,15 +190,12 @@ fun LastTransactionBox() {
 
 // Composbale per visualizzare la box dei conti
 @Composable
-fun ContiBox() {
-    // Dati di esempio per i conti
-    val accounts = listOf(
-        Account(1,"Bank", 1000.0),
-        Account(2,"Savings", 5000.0),
-        Account(3, "Wallet", 150.0)
-    )
+fun ContiBox(viewModel: FinanceViewModel) {
 
-    // Calcola il saldo totale
+    // Collect the flow of accounts from the ViewModel
+    val accounts by viewModel.allAccounts.collectAsStateWithLifecycle()
+
+    // Calcola il saldo totale from the collected accounts
     val totalBalance = accounts.sumOf { it.amount }
 
     Box(
@@ -218,18 +221,22 @@ fun ContiBox() {
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
             ) {
+                // Iterate through the collected accounts
                 accounts.forEach { account ->
-                    AccountItem(account = account)
+                    AccountItem(account = account, viewModel = viewModel) // Pass ViewModel to AccountItem
                 }
                 // Aggiungi l'item con il "+"
-                AddAccountItem()
+                AddAccountItem(viewModel = viewModel) // Pass ViewModel to AddAccountItem
             }
         }
     }
 }
 
 @Composable
-fun AddAccountItem() {
+fun AddAccountItem(viewModel: FinanceViewModel) {
+    // State to control the visibility of the Add Account dialog
+    var showAddAccountDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .padding(8.dp)
@@ -237,9 +244,7 @@ fun AddAccountItem() {
             .height(65.dp)
             .clip(RoundedCornerShape(16.dp))
             .clickable {
-                // TODO: Handle add account logic here
-                // This lambda is executed when the Box is clicked.
-                // For example:
+                showAddAccountDialog = true // Show the dialog on click
             }
             .background(Color.White),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -251,12 +256,20 @@ fun AddAccountItem() {
             modifier = Modifier.size(40.dp)
         )
     }
+
+    // Show the Add Account dialog if showAddAccountDialog is true
+    if (showAddAccountDialog) {
+        AddAccountDialog(
+            viewModel = viewModel,
+            onDismiss = { showAddAccountDialog = false }, // Hide dialog on dismiss
+        )
+    }
 }
 
 //Composbale per visualizzare le sezioni di ogni account
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AccountItem(account: Account) {
+fun AccountItem(account: Account, viewModel: FinanceViewModel) { // Add ViewModel as a parameter
 
     var isLongPressed by remember { mutableStateOf(false) }
 
@@ -270,7 +283,7 @@ fun AccountItem(account: Account) {
                 if (isLongPressed) {
                     isLongPressed = false // Reset if long pressed and clicked again
                 } else {
-                    // Handle regular click
+                    // TODO: Handle regular click logic (e.g., show account details or transactions)
                 }
             },
             onLongClick = {
@@ -293,7 +306,8 @@ fun AccountItem(account: Account) {
         if (isLongPressed) {
             IconButton(
                 onClick = {
-                    // Handle account removal
+                    // Handle account removal using the ViewModel
+                    viewModel.deleteAccount(account)
                     isLongPressed = false // Reset state after action
                 },
                 modifier = Modifier.align(Alignment.TopEnd)
@@ -302,8 +316,75 @@ fun AccountItem(account: Account) {
             }
         }
     }
+}
 
+@Composable
+fun AddAccountDialog(
+    viewModel: FinanceViewModel,
+    onDismiss: () -> Unit
+) {
+    // State for input fields
+    var accountTitle by remember { mutableStateOf("") }
+    var initialBalance by remember { mutableStateOf("") }
 
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(16.dp)
+        ) {
+            Text("Add New Account",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextField(
+                value = accountTitle,
+                onValueChange = { accountTitle = it },
+                label = { Text("Account Name") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextField(
+                value = initialBalance,
+                onValueChange = { initialBalance = it },
+                label = { Text("Initial Balance") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Button(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+                Button(onClick = {
+                    val balanceDouble = initialBalance.toDoubleOrNull()
+                    // Basic validation
+                    if (accountTitle.isNotBlank() && balanceDouble != null) {
+                        // Create a new Account object
+                        val newAccount = Account(
+                            title = accountTitle,
+                            amount = balanceDouble
+                        )
+                        // Insert the new account using the ViewModel
+                        viewModel.addAccount(newAccount)
+                        onDismiss() // Close the dialog
+                    } else {
+                        // TODO: Show validation error message to the user
+                    }
+                }) {
+                    Text("Add")
+                }
+            }
+        }
+    }
 }
 
 // Composbale per visualizzare la box dei grafici

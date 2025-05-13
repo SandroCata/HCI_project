@@ -3,28 +3,48 @@ package com.example.budgify.applicationlogic
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.budgify.entities.Account
 import com.example.budgify.entities.Category
 import com.example.budgify.entities.Objective
-import com.example.budgify.entities.Transaction
+import com.example.budgify.entities.MyTransaction
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 
 class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() {
 
-    // Espone i dati come StateFlow per la UI
+
+    // TRANSACTIONS
     val allTransactions = repository.getAllTransactions().stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
         emptyList()
     )
 
-    // Funzione per aggiungere una transazione
-    fun addTransaction(transaction: Transaction) {
+    val allTransactionsWithDetails = repository.getAllTransactionsWithDetails().stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        emptyList()
+    )
+
+    fun addTransaction(myTransaction: MyTransaction) {
         viewModelScope.launch {
-            repository.insertTransaction(transaction)
+            repository.insertTransaction(myTransaction)
         }
     }
+
+    fun updateTransaction(myTransaction: MyTransaction) {
+        viewModelScope.launch {
+            repository.updateTransaction(myTransaction)
+        }
+    }
+
+    fun deleteTransaction(myTransaction: MyTransaction) {
+        viewModelScope.launch {
+            repository.deleteTransaction(myTransaction)
+        }
+    }
+
 
     // OBJECTIVES
     val allObjectives = repository.getAllObjectives().stateIn(
@@ -76,7 +96,30 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
         }
     }
 
-    // ... altre funzioni per gestire i dati
+    // ACCOUNTS
+    val allAccounts = repository.getAllAccounts().stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        emptyList()
+    )
+
+    fun addAccount(account: Account) {
+        viewModelScope.launch {
+            repository.insertAccount(account)
+        }
+    }
+
+    fun updateAccount(account: Account) {
+        viewModelScope.launch {
+            repository.updateAccount(account)
+        }
+    }
+
+    fun deleteAccount(account: Account) {
+        viewModelScope.launch {
+            repository.deleteAccount(account)
+        }
+    }
 
     // Factory per creare l'istanza del ViewModel
     class FinanceViewModelFactory(private val repository: FinanceRepository) : ViewModelProvider.Factory {

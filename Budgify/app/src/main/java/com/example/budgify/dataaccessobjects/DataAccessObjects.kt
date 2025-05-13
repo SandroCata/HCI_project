@@ -5,29 +5,36 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import com.example.budgify.entities.Account
 import com.example.budgify.entities.Objective
-import com.example.budgify.entities.Transaction
+import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.Category
+import com.example.budgify.entities.TransactionWithDetails
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TransactionDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(transaction: Transaction)
+    suspend fun insert(myTransaction: MyTransaction)
 
     @Update
-    suspend fun update(transaction: Transaction)
+    suspend fun update(myTransaction: MyTransaction)
 
     @Delete
-    suspend fun delete(transaction: Transaction)
+    suspend fun delete(myTransaction: MyTransaction)
 
     @Query("SELECT * FROM transactions ORDER BY date DESC")
-    fun getAllTransactions(): Flow<List<Transaction>>
+    fun getAllTransactions(): Flow<List<MyTransaction>>
 
     @Query("SELECT * FROM transactions WHERE id = :id")
-    fun getTransactionById(id: Int): Flow<Transaction>
+    fun getTransactionById(id: Int): Flow<MyTransaction>
+
+    @Transaction // Use @Transaction when querying relations
+    @Query("SELECT * FROM transactions")
+    fun getAllTransactionsWithDetails(): Flow<List<TransactionWithDetails>>
+
 }
 
 @Dao

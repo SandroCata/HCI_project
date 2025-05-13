@@ -1,6 +1,7 @@
 package com.example.budgify.database
 
 import android.content.Context
+import androidx.compose.ui.input.key.type
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -12,12 +13,17 @@ import com.example.budgify.dataaccessobjects.ObjectiveDao
 import com.example.budgify.dataaccessobjects.TransactionDao
 import com.example.budgify.entities.Account
 import com.example.budgify.entities.Category
+import com.example.budgify.entities.CategoryType
 import com.example.budgify.entities.Objective
-import com.example.budgify.entities.Transaction
+import com.example.budgify.entities.MyTransaction
+import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.entities.TransactionType
 import java.time.LocalDate
+import kotlin.io.path.name
 
 class Converters {
+
+    // Type Converters for LocalDate
     @TypeConverter
     fun fromLocalDate(date: LocalDate?): Long? {
         return date?.toEpochDay()
@@ -28,19 +34,51 @@ class Converters {
         return epochDay?.let { LocalDate.ofEpochDay(it) }
     }
 
-    // Esempio per TransactionType (Enum)
+    // Type Converters for TransactionType enum
     @TypeConverter
     fun fromTransactionType(type: TransactionType): String {
         return type.name
     }
 
     @TypeConverter
-    fun toTransactionType(name: String): TransactionType {
-        return enumValueOf<TransactionType>(name)
+    fun toTransactionType(typeName: String): TransactionType {
+        return TransactionType.valueOf(typeName)
     }
+
+    // Type Converters for ObjectiveType enum
+    @TypeConverter
+    fun fromObjectiveType(type: ObjectiveType): String {
+        return type.name
+    }
+
+    @TypeConverter
+    fun toObjectiveType(typeName: String): ObjectiveType {
+        return ObjectiveType.valueOf(typeName)
+    }
+
+    // Type Converters for CategoryType enum
+    @TypeConverter
+    fun fromCategoryType(type: CategoryType): String {
+        return type.name
+    }
+
+    @TypeConverter
+    fun toCategoryType(typeName: String): CategoryType {
+        return CategoryType.valueOf(typeName)
+    }
+
 }
 
-@Database(entities = [Transaction::class, Account::class, Objective::class, Category::class], version = 2, exportSchema = false)
+@Database(
+    entities = [
+        MyTransaction::class,
+        Account::class,
+        Objective::class,
+        Category::class
+   ],
+    version = 3,
+    exportSchema = false
+)
 @TypeConverters(Converters::class) // Se hai bisogno di TypeConverters
 abstract class FinanceDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao

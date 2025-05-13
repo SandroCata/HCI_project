@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -47,12 +49,15 @@ import androidx.navigation.NavController
 import com.example.budgify.navigation.BottomBar
 import com.example.budgify.navigation.TopBar
 import com.example.budgify.applicationlogic.FinanceViewModel
-import com.example.budgify.entities.Transaction
+import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.TransactionType
+import com.example.budgify.entities.TransactionWithDetails
 import com.example.budgify.routes.ScreenRoutes
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import kotlin.text.append
+import kotlin.text.format
 
 @Composable
 fun TransactionsScreen(navController: NavController, viewModel: FinanceViewModel) {
@@ -83,7 +88,7 @@ fun TransactionsScreen(navController: NavController, viewModel: FinanceViewModel
 
                 item {
                     // Pass the selected date to TransactionBox
-                    TransactionBox(selectedDate = selectedDate)
+                    TransactionBox(selectedDate = selectedDate, viewModel = viewModel)
                 }
             }
 
@@ -230,31 +235,21 @@ fun MonthlyCalendar(
 
 // Composbale per visualizzare gli ultimi movimenti
 @Composable
-fun TransactionBox(selectedDate: LocalDate?) {
-    // Here we simulate data from a local file, which will then be taken from a DB
-    val allTransactions = listOf(
-        Transaction(1, "Bank", TransactionType.EXPENSE, LocalDate.now(), "Spesa Alimentari", 50.00, "Cibo"),
-        Transaction(2, "Wallet",TransactionType.EXPENSE, LocalDate.now(), "Biglietto Autobus", 2.00, "Trasporto"),
-        Transaction(3, "Bank",TransactionType.INCOME, LocalDate.now().minusDays(1), "Mensilitá lavoro", 1500.00, "Stipendio"),
-        Transaction(6, "Wallet",TransactionType.INCOME, LocalDate.now().minusDays(1), "Maglietta Vinted", 10.00, "Vendite"),
-        Transaction(7, "Bank",TransactionType.EXPENSE, LocalDate.now().minusDays(1), "Abbonamento Palestra", 65.00, "Allenamento"),
-        Transaction(7, "Wallet",TransactionType.EXPENSE, LocalDate.now().minusDays(3), "Cinema", 65.00, "Svago"),
-        Transaction(7, "Bank",TransactionType.EXPENSE, LocalDate.now().minusDays(5), "Spesa Alimentari", 65.00, "Cibo"),
-        Transaction(7, "Wallet",TransactionType.EXPENSE, LocalDate.now().minusDays(2), "Spesa Alimentari", 65.00, "Cibo"),
-        Transaction(7, "Bank",TransactionType.EXPENSE, LocalDate.now().minusDays(2), "Spesa Alimentari", 65.00, "Cibo"),
-        Transaction(7, "Wallet",TransactionType.EXPENSE, LocalDate.now().minusDays(1), "Spesa Alimentari", 65.00, "Cibo"),
-    )
+fun TransactionBox(selectedDate: LocalDate?, viewModel: FinanceViewModel) {
+    // Collect all transactions with details from the ViewModel
+    val allTransactionsWithDetails by viewModel.allTransactionsWithDetails.collectAsState(initial = emptyList())
 
     // Filter transactions by the selected date
     val transactionsForSelectedDate = if (selectedDate != null) {
-        allTransactions.filter { it.date == selectedDate }
+        allTransactionsWithDetails.filter { it.transaction.date == selectedDate }
     } else {
         // If no date is selected, maybe show the latest transactions
         // or an empty list, depending on your desired behavior.
         // For now, let's show all transactions if no date is selected.
         // You might want to adjust this.
-        allTransactions.take(10) // Keep showing latest 10 if no date is selected
+        allTransactionsWithDetails.sortedByDescending { it.transaction.date }.take(10)
     }
+
 
     Box(
         modifier = Modifier
@@ -278,9 +273,13 @@ fun TransactionBox(selectedDate: LocalDate?) {
                 // Display filtered transactions
                 if (transactionsForSelectedDate.isEmpty() && selectedDate != null) {
                     Text("No transactions for this date.", style = MaterialTheme.typography.bodyMedium)
-                } else {
-                    transactionsForSelectedDate.forEach { transaction ->
-                        TransactionItem1(transaction = transaction)
+                } else if (transactionsForSelectedDate.isEmpty() && selectedDate == null) {
+                    Text("No transactions found.", style = MaterialTheme.typography.bodyMedium)
+                }
+                else {
+                    transactionsForSelectedDate.forEach { transactionWithDetails ->
+                        // Pass the TransactionWithDetails object to the updated TransactionItem
+                        TransactionItem1(transactionWithDetails = transactionWithDetails)
                     }
                 }
             }
@@ -290,8 +289,11 @@ fun TransactionBox(selectedDate: LocalDate?) {
 
 // Assume TransactionItem is a composable that displays a single transaction
 @Composable
-fun TransactionItem1(transaction: Transaction) {
-    // Your existing TransactionItem implementation
+fun TransactionItem1(transactionWithDetails: TransactionWithDetails) {
+    val myTransaction = transactionWithDetails.transaction
+    val account = transactionWithDetails.account
+    val category = transactionWithDetails.category
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -301,35 +303,34 @@ fun TransactionItem1(transaction: Transaction) {
     ) {
         Column {
             val formattedDescription1 = buildAnnotatedString {
-                // Aggiungi la descrizione in grassetto
                 withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                    append(transaction.description)
+                    append(myTransaction.description)
                 }
-                // Aggiungi lo spazio e la parentesi aperta
                 append("  (")
-                // Aggiungi la categoria in corsivo
                 withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                    append(transaction.category)
+                    // Access the description from the related Category object
+                    append(category?.desc ?: "Uncategorized") // Use safe call and default if category is null
                 }
-                // Aggiungi la parentesi chiusa
                 append(")")
             }
             Text(text = formattedDescription1, fontSize = 15.sp)
             Spacer(modifier = Modifier.height(3.dp))
             val formattedDescription2 = buildAnnotatedString {
                 withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                    append(transaction.account)
+                    // Access the title from the related Account object
+                    append(account.title)
                 }
                 append(" - ")
                 withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                    append(transaction.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                    // Date formatting remains the same
+                    append(myTransaction.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
                 }
             }
             Text(text = formattedDescription2, fontFamily = FontFamily.SansSerif, fontSize = 12.sp)
         }
         Text(
-            text = "${if (transaction.type == TransactionType.INCOME) "+" else "-"} ${transaction.amount}€",
-            color = if (transaction.type == TransactionType.INCOME) Color(red = 0.0f, green = 0.6f, blue = 0.0f) else Color(red = 0.7f, green = 0.0f, blue = 0.0f),
+            text = "${if (myTransaction.type == TransactionType.INCOME) "+" else "-"} ${myTransaction.amount}€",
+            color = if (myTransaction.type == TransactionType.INCOME) Color(red = 0.0f, green = 0.6f, blue = 0.0f) else Color(red = 0.7f, green = 0.0f, blue = 0.0f),
             fontWeight = FontWeight.Bold
         )
     }

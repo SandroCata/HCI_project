@@ -7,26 +7,40 @@ import com.example.budgify.dataaccessobjects.TransactionDao
 import com.example.budgify.entities.Account
 import com.example.budgify.entities.Category
 import com.example.budgify.entities.Objective
-import com.example.budgify.entities.Transaction
+import com.example.budgify.entities.MyTransaction
+import com.example.budgify.entities.TransactionWithDetails
 import kotlinx.coroutines.flow.Flow
 
 class FinanceRepository(private val transactionDao: TransactionDao, private val accountDao: AccountDao, private val objectiveDao: ObjectiveDao, private val categoryDao: CategoryDao) {
 
-    // Esempio di funzione per ottenere tutte le transazioni
-    fun getAllTransactions(): Flow<List<Transaction>> {
+    // TRANSACTIONS
+    fun getAllTransactions(): Flow<List<MyTransaction>> {
         return transactionDao.getAllTransactions()
     }
 
-    // Esempio di funzione per inserire una transazione
-    suspend fun insertTransaction(transaction: Transaction) {
-        transactionDao.insert(transaction)
+    fun getAllTransactionsWithDetails(): Flow<List<TransactionWithDetails>> {
+        return transactionDao.getAllTransactionsWithDetails()
     }
 
-    // Esempio di funzione per ottenere un account per ID
-    fun getAccountById(id: Int): Flow<Account> {
-        return accountDao.getAccountById(id)
+    fun getTransactionById(id: Int): Flow<MyTransaction> {
+        return transactionDao.getTransactionById(id)
     }
 
+    suspend fun insertTransaction(myTransaction: MyTransaction) {
+        transactionDao.insert(myTransaction)
+    }
+
+    suspend fun updateTransaction(myTransaction: MyTransaction) {
+        transactionDao.update(myTransaction)
+    }
+
+    suspend fun deleteOTransaction(myTransaction: MyTransaction) {
+        transactionDao.delete(myTransaction)
+    }
+
+    suspend fun deleteTransaction(myTransaction: MyTransaction) {
+        transactionDao.delete(myTransaction)
+    }
 
     // OBJECTIVES
     fun getAllObjectives(): Flow<List<Objective>> {
@@ -70,4 +84,24 @@ class FinanceRepository(private val transactionDao: TransactionDao, private val 
         categoryDao.update(category)
     }
 
+    // ACCOUNTS
+    fun getAllAccounts(): Flow<List<Account>> {
+        return accountDao.getAllAccounts()
+    }
+
+    suspend fun insertAccount(account: Account) {
+        accountDao.insert(account)
+    }
+
+    fun getAccountById(id: Int): Flow<Account> {
+        return accountDao.getAccountById(id)
+    }
+
+    suspend fun updateAccount(account: Account) {
+        accountDao.update(account)
+    }
+
+    suspend fun deleteAccount(account: Account) {
+        accountDao.delete(account)
+    }
 }

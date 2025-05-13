@@ -61,9 +61,12 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.budgify.applicationlogic.FinanceViewModel
+import com.example.budgify.entities.Account
+import com.example.budgify.entities.Category
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
-import com.example.budgify.entities.Transaction
+import com.example.budgify.entities.MyTransaction
+import com.example.budgify.entities.TransactionType
 import com.example.budgify.routes.ScreenRoutes
 import com.example.budgify.screen.items
 import com.example.budgify.screen.smallTextStyle
@@ -272,16 +275,25 @@ fun BottomBar(navController: NavController, viewModel: FinanceViewModel) {
 fun AddTransactionDialog(
     viewModel: FinanceViewModel,
     onDismiss: () -> Unit,
-    onTransactionAdded: (Transaction) -> Unit
+    onTransactionAdded: (MyTransaction) -> Unit
 ) {
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("") } // State for selected category
+    val categories by viewModel.allCategories.collectAsStateWithLifecycle()
+    var categoryExpanded by remember { mutableStateOf(false) }
+    var selectedCategoryId by remember { mutableStateOf<Int?>(null) } // State for selected category
+    var selectedCategory = remember(categories, selectedCategoryId) {
+        categories.firstOrNull { it.id == selectedCategoryId }
+    }
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) } // State for selected date
-    var selectedType by remember { mutableStateOf("Expense") } // State for transaction type (Expense/Income)
-    var selectedAccount by remember { mutableStateOf("") } // State for selected account
-    val accounts = listOf("Cash", "Bank Account 1", "Credit Card") // Example accounts
-    val transactionTypes = listOf("Expense", "Income")
+    var selectedType by remember { mutableStateOf<TransactionType>(TransactionType.EXPENSE) } // State for transaction type (Expense/Income)
+    val accounts by viewModel.allAccounts.collectAsStateWithLifecycle()
+    var accountExpanded by remember { mutableStateOf(false) }
+    var selectedAccountId by remember { mutableStateOf<Int?>(null) } // State for selected account
+    val selectedAccount = remember(accounts, selectedAccountId) {
+        accounts.firstOrNull { it.id == selectedAccountId }
+    }
+    val transactionTypes = listOf(TransactionType.EXPENSE, TransactionType.INCOME)
 
     // State for showing the DatePickerDialog
     var showDatePickerDialog by remember { mutableStateOf(false) }
@@ -299,8 +311,6 @@ fun AddTransactionDialog(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            //Input fields for transaction details
-            //For example, using TextField:
             TextField(
                 value = description,
                 onValueChange = { description = it },
@@ -309,7 +319,6 @@ fun AddTransactionDialog(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Amount TextField (with Number keyboard)
             TextField(
                 value = amount,
                 onValueChange = { amount = it },
@@ -320,8 +329,6 @@ fun AddTransactionDialog(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Category Dropdown Menu
-            val categories by viewModel.allCategories.collectAsStateWithLifecycle();
-            var categoryExpanded by remember { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = categoryExpanded,
                 onExpandedChange = { categoryExpanded = !categoryExpanded },
@@ -329,10 +336,10 @@ fun AddTransactionDialog(
             ) {
                 TextField(
                     modifier = Modifier
-                        .menuAnchor() // Anchor the dropdown to the TextField
+                        .menuAnchor()
                         .fillMaxWidth(),
                     readOnly = true,
-                    value = selectedCategory,
+                    value = selectedCategory?.desc ?: "Select Category", // Display description or placeholder
                     onValueChange = {},
                     label = { Text("Category") },
                     trailingIcon = {
@@ -340,6 +347,7 @@ fun AddTransactionDialog(
                     },
                     colors = ExposedDropdownMenuDefaults.textFieldColors()
                 )
+
                 ExposedDropdownMenu(
                     expanded = categoryExpanded,
                     onDismissRequest = { categoryExpanded = false }
@@ -348,7 +356,7 @@ fun AddTransactionDialog(
                         DropdownMenuItem(
                             text = { Text(category.desc) },
                             onClick = {
-                                selectedCategory = category.desc
+                                selectedCategoryId = category.id // Store the ID
                                 categoryExpanded = false
                             },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
@@ -356,26 +364,63 @@ fun AddTransactionDialog(
                     }
                 }
             }
-             Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Account Dropdown Menu
+            ExposedDropdownMenuBox(
+                expanded = accountExpanded,
+                onExpandedChange = { accountExpanded = !accountExpanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TextField(
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    readOnly = true,
+                    value = selectedAccount?.title ?: "Select Account", // Display title or placeholder
+                    onValueChange = {},
+                    label = { Text("Account") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded)
+                    },
+                    colors = ExposedDropdownMenuDefaults.textFieldColors()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = accountExpanded,
+                    onDismissRequest = { accountExpanded = false }
+                ) {
+                    accounts.forEach { account ->
+                        DropdownMenuItem(
+                            text = { Text(account.title) },
+                            onClick = {
+                                selectedAccountId = account.id // Store the ID
+                                accountExpanded = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
 
             TextField(
-                value = selectedDate?.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "", // Format the selected date for display
-                onValueChange = {}, // Value is set by the DatePickerDialog
+                value = selectedDate?.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
+                onValueChange = {},
                 label = { Text("Date") },
-                readOnly = true, // Make it read-only so the keyboard doesn't show
+                readOnly = true,
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Default.CalendarToday,
                         contentDescription = "Select Date",
-                        modifier = Modifier.clickable { showDatePickerDialog = true } // Open dialog on click
+                        modifier = Modifier.clickable { showDatePickerDialog = true }
                     )
                 },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Transaction Type (Radio Buttons or Tabs)
-            // Using Radio Buttons for simplicity
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text("Type:")
                 Row(
@@ -391,50 +436,11 @@ fun AddTransactionDialog(
                                 selected = selectedType == type,
                                 onClick = { selectedType = type }
                             )
-                            Text(type)
+                            Text(type.toString())
                         }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-
-            //// Account Dropdown Menu
-            //var accountExpanded by remember { mutableStateOf(false) }
-            //ExposedDropdownMenuBox(
-            //    expanded = accountExpanded,
-            //    onExpandedChange = { accountExpanded = !accountExpanded },
-            //    modifier = Modifier.fillMaxWidth()
-            //) {
-            //    TextField(
-            //        modifier = Modifier
-            //            .menuAnchor() // Anchor the dropdown to the TextField
-            //            .fillMaxWidth(),
-            //        readOnly = true,
-            //        value = selectedAccount,
-            //        onValueChange = {},
-            //        label = { Text("Account") },
-            //        trailingIcon = {
-            //            ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded)
-            //        },
-            //        colors = ExposedDropdownMenuDefaults.textFieldColors()
-            //    )
-            //    ExposedDropdownMenu(
-            //        expanded = accountExpanded,
-            //        onDismissRequest = { accountExpanded = false }
-            //    ) {
-            //        accounts.forEach { account ->
-            //            DropdownMenuItem(
-            //                text = { Text(account) },
-            //                onClick = {
-            //                    selectedAccount = account
-            //                    accountExpanded = false
-            //                },
-            //                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-            //            )
-            //        }
-            //    }
-            //}
-
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(
@@ -445,17 +451,29 @@ fun AddTransactionDialog(
                     Text("Cancel")
                 }
                 Button(onClick = {
-                    // Create Transaction object and pass it back
-                    // Valdate input first
-                    // val newTransaction = Transaction(...)
-                    // onTransactionAdded(newTransaction)
-                    onDismiss() // Close the dialog after adding
+                    val amountDouble = amount.toDoubleOrNull()
+                    // Add validation for selectedAccountId, selectedCategoryId, selectedDate, etc.
+                    if (description.isNotBlank() && amountDouble != null && selectedDate != null && selectedAccountId != null && selectedCategoryId != null) {
+                        val newTransaction = MyTransaction(
+                            accountId = selectedAccountId!!, // Use the selected ID
+                            type = selectedType,
+                            date = selectedDate!!,
+                            description = description,
+                            amount = amountDouble,
+                            categoryId = selectedCategoryId // Use the selected ID
+                        )
+                        viewModel.addTransaction(newTransaction)
+                        onDismiss()
+                    } else {
+                        // Show validation error to the user
+                    }
                 }) {
                     Text("Add")
                 }
             }
         }
     }
+
 
     if (showDatePickerDialog) {
         val datePickerState = rememberDatePickerState()
@@ -654,7 +672,7 @@ fun AddObjectiveDialog(
 }
 
 @Composable
-fun AddLoanDialog(onDismiss: () -> Unit, onTransactionAdded: (Transaction) -> Unit) {
+fun AddLoanDialog(onDismiss: () -> Unit, onTransactionAdded: (MyTransaction) -> Unit) {
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var type by remember { mutableStateOf("Expense") } // Or use a dropdown/radio buttons
