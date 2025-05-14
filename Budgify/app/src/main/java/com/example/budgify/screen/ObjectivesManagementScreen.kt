@@ -349,7 +349,9 @@ fun EditObjectiveDialog(
                 ) {
                     Text("Delete")
                 }
-                Button(onClick = {
+                Button(
+                    enabled = description.isNotBlank() && amount.isNotBlank(),
+                    onClick = {
                     // **Validation (Add your validation logic here)**
                     val amountDouble = amount.toDoubleOrNull()
                     if (description.isNotBlank() && amountDouble != null) {
@@ -464,7 +466,7 @@ fun DeleteConfirmationDialog(
                     onDismiss()
                 }
             ) {
-                Text("Delete")
+                Text("Delete", color = Color.Red)
             }
         },
         dismissButton = {

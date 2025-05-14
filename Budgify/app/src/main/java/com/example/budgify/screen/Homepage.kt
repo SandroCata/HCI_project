@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.RemoveCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -259,7 +260,7 @@ fun EditTransactionDialog(
     var categoryExpanded by remember { mutableStateOf(false) }
     // Initialize selected category ID with the transaction's categoryId
     var selectedCategoryId by remember { mutableStateOf<Int?>(transaction.categoryId) }
-    val selectedCategory = remember(categories, selectedCategoryId) {
+    var selectedCategory = remember(categories, selectedCategoryId) {
         categories.firstOrNull { it.id == selectedCategoryId }
     }
     // Initialize selected date with the transaction's date
@@ -346,6 +347,13 @@ fun EditTransactionDialog(
                     expanded = categoryExpanded,
                     onDismissRequest = { categoryExpanded = false }
                 ) {
+                    DropdownMenuItem(text = { Text("No Category") }, onClick = {
+                        selectedCategoryId = null
+                        selectedCategory = null
+                        categoryExpanded = false
+                    },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                    )
                     categories.forEach { category ->
                         DropdownMenuItem(
                             text = { Text(category.desc) },
@@ -455,7 +463,9 @@ fun EditTransactionDialog(
 //                Button(onClick = onDismiss) {
 //                    Text("Cancel")
 //                }
-                Button(onClick = {
+                Button(
+                    enabled = description.isNotBlank() && amount.isNotBlank() && selectedDate != null && selectedAccountId != null,
+                    onClick = {
                     // Log.d("EditTransactionDialog", "Button clicked")
                     // Implement save logic
                     val amountDouble = amount.toDoubleOrNull()
@@ -539,14 +549,14 @@ fun EditTransactionDialog(
                         showDeleteConfirmationDialog = false // Dismiss the confirmation dialog
                     }
                 ) {
-                    Text("Yes")
+                    Text("Delete", color = Color.Red)
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { showDeleteConfirmationDialog = false } // Dismiss the confirmation dialog
                 ) {
-                    Text("No")
+                    Text("Cancel")
                 }
             }
         )
@@ -635,8 +645,12 @@ fun AddAccountItem(viewModel: FinanceViewModel) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AccountItem(account: Account, viewModel: FinanceViewModel) { // Add ViewModel as a parameter
-
     var isLongPressed by remember { mutableStateOf(false) }
+    // State to control the visibility of the delete confirmation dialog
+    var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
+
+    // Obtain a CoroutineScope to launch suspend functions
+    val coroutineScope = rememberCoroutineScope()
 
     Box(modifier = Modifier
         .padding(8.dp)
@@ -671,15 +685,49 @@ fun AccountItem(account: Account, viewModel: FinanceViewModel) { // Add ViewMode
         if (isLongPressed) {
             IconButton(
                 onClick = {
-                    // Handle account removal using the ViewModel
-                    viewModel.deleteAccount(account)
-                    isLongPressed = false // Reset state after action
+                    showDeleteConfirmationDialog = true
                 },
                 modifier = Modifier.align(Alignment.TopEnd)
             ) {
-                Icon(Icons.Filled.RemoveCircle, contentDescription = "Remove Account")
+                Icon(Icons.Filled.Delete, contentDescription = "Remove Account")
             }
         }
+    }
+
+    // Delete Confirmation Dialog
+    if (showDeleteConfirmationDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                // Dismiss the dialog if the user clicks outside or presses back
+                showDeleteConfirmationDialog = false
+                isLongPressed = false // Also reset long press state
+            },
+            title = { Text("Confirm Deletion") },
+            text = { Text("Are you sure you want to delete the account \"${account.title}\"?\nAll transactions related to this account will also be deleted") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            viewModel.deleteAccount(account) // Delete the account
+                            showDeleteConfirmationDialog = false // Dismiss the confirmation dialog
+                            isLongPressed = false // Reset long press state
+                        }
+                    }
+                ) {
+                    Text("Delete", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmationDialog = false // Dismiss the confirmation dialog
+                        isLongPressed = false // Reset long press state
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -737,7 +785,9 @@ fun AddAccountDialog(
 //                Button(onClick = onDismiss) {
 //                    Text("Cancel")
 //                }
-                Button(onClick = {
+                Button(
+                    enabled = accountTitle.isNotBlank() && initialBalance.isNotBlank(),
+                    onClick = {
                     val balanceDouble = initialBalance.toDoubleOrNull()
                     // Basic validation
                     if (accountTitle.isNotBlank() && balanceDouble != null) {

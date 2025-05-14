@@ -53,6 +53,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Transparent
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -286,9 +288,6 @@ fun AddTransactionDialog(
     val categories by viewModel.allCategories.collectAsStateWithLifecycle()
     var categoryExpanded by remember { mutableStateOf(false) }
     var selectedCategoryId by remember { mutableStateOf<Int?>(null) } // State for selected category
-    //var selectedCategory = remember(categories, selectedCategoryId) {
-    //    categories.firstOrNull { it.id == selectedCategoryId }
-    //}
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
     var selectedDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) } // State for selected date
     var selectedType by remember { mutableStateOf<TransactionType>(TransactionType.EXPENSE) } // State for transaction type (Expense/Income)
@@ -317,7 +316,8 @@ fun AddTransactionDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Add Transaction",
+                Text(
+                    "Add Transaction",
                     style = MaterialTheme.typography.titleLarge,
                     //modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
@@ -385,7 +385,7 @@ fun AddTransactionDialog(
                         )
                     }
                     DropdownMenuItem(
-                        text = { Text("Add New Category...") },
+                        text = { Text("Add New Category...", style = TextStyle(fontWeight = FontWeight.Bold)) },
                         onClick = {
                             categoryExpanded = false // Close the category dropdown
                             showAddCategoryDialog = true // Show the Add Category dialog
@@ -489,7 +489,9 @@ fun AddTransactionDialog(
 //                Button(onClick = onDismiss) {
 //                    Text("Cancel")
 //                }
-                Button(onClick = {
+                Button(
+                    enabled = description.isNotBlank() && amount.isNotBlank() && selectedDate != null && selectedAccountId != null,
+                    onClick = {
                     val amountDouble = amount.toDoubleOrNull()
                     // Add validation for selectedAccountId, selectedCategoryId, selectedDate, etc.
                     if (description.isNotBlank() && amountDouble != null && selectedDate != null && selectedAccountId != null) {
@@ -667,7 +669,9 @@ fun AddObjectiveDialog(
 //                Button(onClick = onDismiss) {
 //                    Text("Cancel")
 //                }
-                Button(onClick = {
+                Button(
+                    enabled = description.isNotBlank() && amount.isNotBlank() && selectedDate != null,
+                    onClick = {
                     // **Validation (Add your validation logic here)**
                     val amountDouble = amount.toDoubleOrNull()
                     if (description.isNotBlank() && amountDouble != null && selectedDate != null) {
