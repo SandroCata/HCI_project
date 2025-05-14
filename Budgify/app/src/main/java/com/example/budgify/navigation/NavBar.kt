@@ -63,6 +63,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.budgify.applicationlogic.FinanceViewModel
+import com.example.budgify.entities.Category
 import com.example.budgify.entities.CategoryType
 import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.Objective
@@ -285,10 +286,10 @@ fun AddTransactionDialog(
     val categories by viewModel.allCategories.collectAsStateWithLifecycle()
     var categoryExpanded by remember { mutableStateOf(false) }
     var selectedCategoryId by remember { mutableStateOf<Int?>(null) } // State for selected category
-    var selectedCategory = remember(categories, selectedCategoryId) {
-        categories.firstOrNull { it.id == selectedCategoryId }
-    }
-    // var selectedCategory by remember { mutableStateOf<Category?>(null) }
+    //var selectedCategory = remember(categories, selectedCategoryId) {
+    //    categories.firstOrNull { it.id == selectedCategoryId }
+    //}
+    var selectedCategory by remember { mutableStateOf<Category?>(null) }
     var selectedDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) } // State for selected date
     var selectedType by remember { mutableStateOf<TransactionType>(TransactionType.EXPENSE) } // State for transaction type (Expense/Income)
     val accounts by viewModel.allAccounts.collectAsStateWithLifecycle()
@@ -367,6 +368,7 @@ fun AddTransactionDialog(
                 ) {
                     DropdownMenuItem(text = { Text("No Category") }, onClick = {
                         selectedCategoryId = null
+                        selectedCategory = null
                         categoryExpanded = false
                     },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
@@ -376,6 +378,7 @@ fun AddTransactionDialog(
                             text = { Text(category.desc) },
                             onClick = {
                                 selectedCategoryId = category.id // Store the ID
+                                selectedCategory = category
                                 categoryExpanded = false
                             },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
