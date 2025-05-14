@@ -736,6 +736,7 @@ fun AddObjectiveDialog(
     }
 }
 
+// TODO: Add loans management and loans screen
 @Composable
 fun AddLoanDialog(onDismiss: () -> Unit, onTransactionAdded: (MyTransaction) -> Unit) {
     var description by remember { mutableStateOf("") }
