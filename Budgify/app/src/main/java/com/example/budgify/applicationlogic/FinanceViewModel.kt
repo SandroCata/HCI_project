@@ -39,37 +39,40 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
         val oldTransaction = withContext(Dispatchers.IO) {
             repository.getTransactionById(myTransaction.id)
         }
-        Log.d("FinanceViewModel", "Old Transaction: $oldTransaction")
-        Log.d("FinanceViewModel", "Old Balance: ${repository.getAccountById(myTransaction.accountId)?.amount.toString()}")
+        // val oldTransaction = repository.getTransactionById(myTransaction.id)
+        //Log.d("FinanceViewModel", "Old Transaction: $oldTransaction")
+        //Log.d("FinanceViewModel", "Old Balance: ${repository.getAccountById(myTransaction.accountId)?.amount.toString()}")
         // Update the transaction in the database
         repository.updateTransaction(myTransaction)
-        Log.d("FinanceViewModel", "New Transaction: $myTransaction")
-        Log.d("FinanceViewModel", "Old TransactionAgain: $oldTransaction")
+        //Log.d("FinanceViewModel", "New Transaction: $myTransaction")
         // Now, after the transaction is updated, update the account balance(s)
         if (oldTransaction != null) {
-            Log.d("FinanceViewModel", "Pass")
+            //Log.d("FinanceViewModel", "Old Transaction is not null")
             if (oldTransaction.accountId != myTransaction.accountId) {
+                //Log.d("FinanceViewModel", "Account changed")
                 // Account changed: Update balance of old and new accounts
                 withContext(Dispatchers.IO) {
                     repository.updateAccountBalance(oldTransaction.accountId)
                     repository.updateAccountBalance(myTransaction.accountId)
                 }
-                Log.d("FinanceViewModel", "1-Old Balance: ${repository.getAccountById(myTransaction.accountId)?.amount.toString()}")
+                //Log.d("FinanceViewModel", "1-Old Balance: ${repository.getAccountById(myTransaction.accountId)?.amount.toString()}")
             } else {
+                //Log.d("FinanceViewModel", "Account is the same")
                 // Account is the same: Update balance of the current account
                 withContext(Dispatchers.IO) {
                     repository.updateAccountBalance(myTransaction.accountId)
                 }
-                Log.d("FinanceViewModel", "2-Old Balance: ${repository.getAccountById(myTransaction.accountId)?.amount.toString()}")
+                //Log.d("FinanceViewModel", "2-Old Balance: ${repository.getAccountById(myTransaction.accountId)?.amount.toString()}")
             }
         } else {
+            //Log.d("FinanceViewModel", "Old Transaction is null")
             // This case is unexpected for an update, but if the old transaction
             // wasn't found, we can still try to update the balance of the
             // account the transaction is currently associated with.
             withContext(Dispatchers.IO) {
                 repository.updateAccountBalance(myTransaction.accountId)
             }
-            Log.d("FinanceViewModel", "3-Old Balance: ${repository.getAccountById(myTransaction.accountId)?.amount.toString()}")
+            //Log.d("FinanceViewModel", "3-Old Balance: ${repository.getAccountById(myTransaction.accountId)?.amount.toString()}")
         }
     }
     fun deleteTransaction(myTransaction: MyTransaction) {

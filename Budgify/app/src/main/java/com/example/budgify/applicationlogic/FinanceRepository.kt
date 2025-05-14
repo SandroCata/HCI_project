@@ -1,5 +1,6 @@
 package com.example.budgify.applicationlogic
 
+import android.util.Log
 import com.example.budgify.dataaccessobjects.AccountDao
 import com.example.budgify.dataaccessobjects.CategoryDao
 import com.example.budgify.dataaccessobjects.ObjectiveDao
@@ -32,7 +33,9 @@ class FinanceRepository(
         transactionDao.insert(myTransaction)
     }
     suspend fun updateTransaction(myTransaction: MyTransaction) {
+        //Log.d("FinanceRepository", "Updating transaction: $myTransaction")
         transactionDao.update(myTransaction)
+        //Log.d("FinanceRepository", "Updated transaction: $myTransaction")
     }
     suspend fun deleteTransaction(myTransaction: MyTransaction) {
         transactionDao.delete(myTransaction)
@@ -95,7 +98,7 @@ class FinanceRepository(
         if (account != null) {
             // Get all transactions for this account
             val transactionsForAccount = transactionDao.getTransactionsForAccount(accountId)
-
+            Log.d("FinanceRepository", "Transactions for account $accountId: $transactionsForAccount")
             // Calculate the new balance
             var newBalance = 0.0
             transactionsForAccount.forEach { transaction ->

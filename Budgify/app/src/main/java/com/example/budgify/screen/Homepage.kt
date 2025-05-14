@@ -1,5 +1,6 @@
 package com.example.budgify.screen
 
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -230,6 +231,7 @@ fun LastTransactionBox(viewModel: FinanceViewModel) { // Pass the ViewModel
     }
     // Show the Edit Transaction Dialog if showEditDialog is true and transactionToEdit is not null
     if (showEditDialog && transactionToEdit != null) {
+        Log.d("LastTransactionBox", "Showing Edit Transaction Dialog")
         EditTransactionDialog(
             transaction = transactionToEdit!!, // Pass the transaction to the dialog
             viewModel = viewModel,
@@ -445,10 +447,12 @@ fun EditTransactionDialog(
                     Text("Cancel")
                 }
                 Button(onClick = {
+                    // Log.d("EditTransactionDialog", "Button clicked")
                     // Implement save logic
                     val amountDouble = amount.toDoubleOrNull()
                     // Add validation
                     if (description.isNotBlank() && amountDouble != null && selectedDate != null && selectedAccountId != null && selectedCategoryId != null) {
+                        // Log.d("EditTransactionDialog", "Saving updated transaction")
                         val updatedTransaction = transaction.copy( // Use copy to create a new instance with updated values
                             accountId = selectedAccountId!!,
                             type = selectedType,
@@ -461,7 +465,6 @@ fun EditTransactionDialog(
                             viewModel.updateTransaction(updatedTransaction)
                             onDismiss() // Close the dialog after updating
                         }
-                        onDismiss() // Close the dialog after updating
                     } else {
                         // Show validation error to the user
                     }
@@ -474,7 +477,7 @@ fun EditTransactionDialog(
 
     if (showDatePickerDialog) {
         // Initialize DatePickerState with the transaction's date if available
-        val initialDateMillis = selectedDate?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
+        val initialDateMillis = LocalDate.now().atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDateMillis)
 
         val confirmEnabled = remember {

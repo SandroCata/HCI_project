@@ -285,7 +285,7 @@ fun AddTransactionDialog(
     var selectedCategory = remember(categories, selectedCategoryId) {
         categories.firstOrNull { it.id == selectedCategoryId }
     }
-    var selectedDate by remember { mutableStateOf<LocalDate?>(null) } // State for selected date
+    var selectedDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) } // State for selected date
     var selectedType by remember { mutableStateOf<TransactionType>(TransactionType.EXPENSE) } // State for transaction type (Expense/Income)
     val accounts by viewModel.allAccounts.collectAsStateWithLifecycle()
     var accountExpanded by remember { mutableStateOf(false) }
@@ -476,7 +476,8 @@ fun AddTransactionDialog(
 
 
     if (showDatePickerDialog) {
-        val datePickerState = rememberDatePickerState()
+        val initialDateMillis = LocalDate.now().atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDateMillis)
         val confirmEnabled = remember {
             derivedStateOf { datePickerState.selectedDateMillis != null }
         }
@@ -523,7 +524,7 @@ fun AddObjectiveDialog(
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var type by remember { mutableStateOf("Expense") } // Or use a dropdown/radio buttons
-    var selectedDate by remember { mutableStateOf<LocalDate?>(null) } // State for selected date
+    var selectedDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) } // State for selected date
     var selectedType by remember { mutableStateOf(ObjectiveType.EXPENSE) } // State for objective type (Expense/Income)
     var showDatePickerDialog by remember { mutableStateOf(false) }
     val objectiveTypes = ObjectiveType.entries.toList()
@@ -634,7 +635,8 @@ fun AddObjectiveDialog(
     }
 
     if (showDatePickerDialog) {
-        val datePickerState = rememberDatePickerState()
+        val initialDateMillis = LocalDate.now().atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDateMillis)
         val confirmEnabled = remember {
             derivedStateOf { datePickerState.selectedDateMillis != null }
         }
