@@ -63,16 +63,19 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.entities.Account
 import com.example.budgify.entities.Category
+import com.example.budgify.entities.CategoryType
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.TransactionType
 import com.example.budgify.routes.ScreenRoutes
+import com.example.budgify.screen.AddCategoryDialog
 import com.example.budgify.screen.items
 import com.example.budgify.screen.smallTextStyle
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -285,6 +288,7 @@ fun AddTransactionDialog(
     var selectedCategory = remember(categories, selectedCategoryId) {
         categories.firstOrNull { it.id == selectedCategoryId }
     }
+    // var selectedCategory by remember { mutableStateOf<Category?>(null) }
     var selectedDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) } // State for selected date
     var selectedType by remember { mutableStateOf<TransactionType>(TransactionType.EXPENSE) } // State for transaction type (Expense/Income)
     val accounts by viewModel.allAccounts.collectAsStateWithLifecycle()
@@ -298,6 +302,8 @@ fun AddTransactionDialog(
     // State for showing the DatePickerDialog
     var showDatePickerDialog by remember { mutableStateOf(false) }
 
+    var showAddCategoryDialog by remember { mutableStateOf(false) }
+    
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
@@ -368,6 +374,14 @@ fun AddTransactionDialog(
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                         )
                     }
+                    DropdownMenuItem(
+                        text = { Text("Add New Category...") },
+                        onClick = {
+                            categoryExpanded = false // Close the category dropdown
+                            showAddCategoryDialog = true // Show the Add Category dialog
+                        },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                    )
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -412,7 +426,7 @@ fun AddTransactionDialog(
 
 
             TextField(
-                value = selectedDate?.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
+                value = selectedDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
                 onValueChange = {},
                 label = { Text("Date") },
                 readOnly = true,
@@ -425,28 +439,37 @@ fun AddTransactionDialog(
                 },
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text("Type:")
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    transactionTypes.forEach { type ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { selectedType = type }
-                        ) {
-                            RadioButton(
-                                selected = selectedType == type,
-                                onClick = { selectedType = type }
-                            )
-                            Text(type.toString())
+            if (selectedCategory == null) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text("Type:")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        transactionTypes.forEach { type ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { selectedType = type }
+                            ) {
+                                RadioButton(
+                                    selected = selectedType == type,
+                                    onClick = { selectedType = type }
+                                )
+                                Text(type.toString())
+                            }
                         }
                     }
                 }
+            } else {
+                selectedType = when (selectedCategory!!.type) {
+                    CategoryType.EXPENSE -> TransactionType.EXPENSE
+                    CategoryType.INCOME -> TransactionType.INCOME
+                }
             }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(
@@ -518,6 +541,19 @@ fun AddTransactionDialog(
             DatePicker(state = datePickerState)
         }
     }
+
+    if (showAddCategoryDialog) {
+        AddCategoryDialog(
+            viewModel = viewModel,
+            onDismiss = { showAddCategoryDialog = false },
+            initialType = null,
+            onCategoryAdded = { newCategory ->
+                selectedCategoryId = newCategory.id // Update the state in AddTransactionDialog
+                selectedCategory = newCategory // Update the state in AddTransactionDialog
+                showAddCategoryDialog = false
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -565,7 +601,7 @@ fun AddObjectiveDialog(
 
             // Date Selection TextField (opens DatePickerDialog)
             TextField(
-                value = selectedDate?.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "", // Format the selected date for display
+                value = selectedDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "", // Format the selected date for display
                 onValueChange = {}, // Value is set by the DatePickerDialog
                 label = { Text("Date") },
                 readOnly = true, // Make it read-only so the keyboard doesn't show
