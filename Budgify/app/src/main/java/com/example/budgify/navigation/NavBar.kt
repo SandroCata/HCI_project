@@ -339,7 +339,7 @@ fun AddTransactionDialog(
                         .menuAnchor()
                         .fillMaxWidth(),
                     readOnly = true,
-                    value = selectedCategory?.desc ?: "Select Category", // Display description or placeholder
+                    value = selectedCategory?.desc ?: "No Category", // Display description or placeholder
                     onValueChange = {},
                     label = { Text("Category") },
                     trailingIcon = {
@@ -352,6 +352,12 @@ fun AddTransactionDialog(
                     expanded = categoryExpanded,
                     onDismissRequest = { categoryExpanded = false }
                 ) {
+                    DropdownMenuItem(text = { Text("No Category") }, onClick = {
+                        selectedCategoryId = null
+                        categoryExpanded = false
+                    },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                    )
                     categories.forEach { category ->
                         DropdownMenuItem(
                             text = { Text(category.desc) },
@@ -445,15 +451,15 @@ fun AddTransactionDialog(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.Center
             ) {
-                Button(onClick = onDismiss) {
-                    Text("Cancel")
-                }
+//                Button(onClick = onDismiss) {
+//                    Text("Cancel")
+//                }
                 Button(onClick = {
                     val amountDouble = amount.toDoubleOrNull()
                     // Add validation for selectedAccountId, selectedCategoryId, selectedDate, etc.
-                    if (description.isNotBlank() && amountDouble != null && selectedDate != null && selectedAccountId != null && selectedCategoryId != null) {
+                    if (description.isNotBlank() && amountDouble != null && selectedDate != null && selectedAccountId != null) {
                         val newTransaction = MyTransaction(
                             accountId = selectedAccountId!!, // Use the selected ID
                             type = selectedType,
@@ -499,15 +505,15 @@ fun AddTransactionDialog(
                     Text("OK")
                 }
             },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showDatePickerDialog = false
-                    }
-                ) {
-                    Text("Cancel")
-                }
-            }
+//            dismissButton = {
+//                TextButton(
+//                    onClick = {
+//                        showDatePickerDialog = false
+//                    }
+//                ) {
+//                    Text("Cancel")
+//                }
+//            }
         ) {
             DatePicker(state = datePickerState)
         }
@@ -603,11 +609,11 @@ fun AddObjectiveDialog(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.Center
             ) {
-                Button(onClick = onDismiss) {
-                    Text("Cancel")
-                }
+//                Button(onClick = onDismiss) {
+//                    Text("Cancel")
+//                }
                 Button(onClick = {
                     // **Validation (Add your validation logic here)**
                     val amountDouble = amount.toDoubleOrNull()
@@ -658,15 +664,15 @@ fun AddObjectiveDialog(
                     Text("OK")
                 }
             },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showDatePickerDialog = false
-                    }
-                ) {
-                    Text("Cancel")
-                }
-            }
+//            dismissButton = {
+//                TextButton(
+//                    onClick = {
+//                        showDatePickerDialog = false
+//                    }
+//                ) {
+//                    Text("Cancel")
+//                }
+//            }
         ) {
             DatePicker(state = datePickerState)
         }

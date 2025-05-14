@@ -443,15 +443,15 @@ fun EditTransactionDialog(
 
                 Spacer(modifier = Modifier.width(8.dp)) // Add spacing
 
-                Button(onClick = onDismiss) {
-                    Text("Cancel")
-                }
+//                Button(onClick = onDismiss) {
+//                    Text("Cancel")
+//                }
                 Button(onClick = {
                     // Log.d("EditTransactionDialog", "Button clicked")
                     // Implement save logic
                     val amountDouble = amount.toDoubleOrNull()
                     // Add validation
-                    if (description.isNotBlank() && amountDouble != null && selectedDate != null && selectedAccountId != null && selectedCategoryId != null) {
+                    if (description.isNotBlank() && amountDouble != null && selectedDate != null && selectedAccountId != null) {
                         // Log.d("EditTransactionDialog", "Saving updated transaction")
                         val updatedTransaction = transaction.copy( // Use copy to create a new instance with updated values
                             accountId = selectedAccountId!!,
@@ -500,15 +500,15 @@ fun EditTransactionDialog(
                     Text("OK")
                 }
             },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showDatePickerDialog = false
-                    }
-                ) {
-                    Text("Cancel")
-                }
-            }
+//            dismissButton = {
+//                TextButton(
+//                    onClick = {
+//                        showDatePickerDialog = false
+//                    }
+//                ) {
+//                    Text("Cancel")
+//                }
+//            }
         ) {
             DatePicker(state = datePickerState)
         }
@@ -715,11 +715,11 @@ fun AddAccountDialog(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.Center
             ) {
-                Button(onClick = onDismiss) {
-                    Text("Cancel")
-                }
+//                Button(onClick = onDismiss) {
+//                    Text("Cancel")
+//                }
                 Button(onClick = {
                     val balanceDouble = initialBalance.toDoubleOrNull()
                     // Basic validation
