@@ -216,7 +216,7 @@ fun LastTransactionBox(viewModel: FinanceViewModel) { // Pass the ViewModel
             Spacer(modifier = Modifier.height(8.dp))
             Column(modifier = Modifier.fillMaxWidth()) {
                 // Iterate through the collected list of TransactionWithDetails
-                transactionsWithDetails.take(5).forEach { transactionWithDetails ->
+                transactionsWithDetails.takeLast(5).reversed().forEach { transactionWithDetails ->
                     // Pass the TransactionWithDetails object to the updated TransactionItem
                     TransactionItem(
                         transactionWithDetails = transactionWithDetails,

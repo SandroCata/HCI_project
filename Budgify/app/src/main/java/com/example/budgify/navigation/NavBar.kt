@@ -141,7 +141,7 @@ fun BottomBar(navController: NavController, viewModel: FinanceViewModel) {
         NavigationBar(modifier = Modifier.align(Alignment.BottomCenter)) {
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
-            val desc = ""
+            // val desc = ""
             items.forEach { screen ->
                 val iconModifier = if (screen == ScreenRoutes.Adding) {
                     Modifier.size(45.dp)// Icona ingrandita per "Add"
@@ -572,7 +572,7 @@ fun AddObjectiveDialog(
 ) {
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
-    var type by remember { mutableStateOf("Expense") } // Or use a dropdown/radio buttons
+    // var type by remember { mutableStateOf("Expense") } // Or use a dropdown/radio buttons
     var selectedDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) } // State for selected date
     var selectedType by remember { mutableStateOf(ObjectiveType.EXPENSE) } // State for objective type (Expense/Income)
     var showDatePickerDialog by remember { mutableStateOf(false) }

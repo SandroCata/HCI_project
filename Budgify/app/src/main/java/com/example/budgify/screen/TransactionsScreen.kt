@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.Icon
@@ -128,7 +130,7 @@ fun MonthlyCalendar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { currentMonth = currentMonth.minusMonths(1) }) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Mese Precedente")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Mese Precedente")
             }
             Text(
                 text = currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
@@ -136,7 +138,7 @@ fun MonthlyCalendar(
                 fontWeight = FontWeight.Bold
             )
             IconButton(onClick = { currentMonth = currentMonth.plusMonths(1) }) {
-                Icon(Icons.Default.ArrowForward, contentDescription = "Mese Successivo")
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Mese Successivo")
             }
         }
 
@@ -246,7 +248,7 @@ fun TransactionBox(selectedDate: LocalDate?, viewModel: FinanceViewModel) {
         // If no date is selected, maybe show the latest transactions
         // or an empty list, depending on your desired behavior.
         // For now, let's show the latest 10 transactions if no date is selected.
-        allTransactionsWithDetails.sortedByDescending { it.transaction.date }.take(10)
+        allTransactionsWithDetails.takeLast(5).reversed()
     }
 
     // State to hold the transaction to be edited and control dialog visibility
@@ -267,7 +269,7 @@ fun TransactionBox(selectedDate: LocalDate?, viewModel: FinanceViewModel) {
                 .padding(16.dp)
         ) {
             Text(
-                text = if (selectedDate != null) "${selectedDate.format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))}" else "Latest",
+                text = if (selectedDate != null) selectedDate.format(DateTimeFormatter.ofPattern("dd MMMM yyyy")) else "Latest",
                 style = MaterialTheme.typography.titleLarge
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -275,7 +277,7 @@ fun TransactionBox(selectedDate: LocalDate?, viewModel: FinanceViewModel) {
                 // Display filtered transactions
                 if (transactionsForSelectedDate.isEmpty() && selectedDate != null) {
                     Text("No transactions for this date.", style = MaterialTheme.typography.bodyMedium)
-                } else if (transactionsForSelectedDate.isEmpty() && selectedDate == null) {
+                } else if (transactionsForSelectedDate.isEmpty()) {
                     Text("No transactions found.", style = MaterialTheme.typography.bodyMedium)
                 }
                 else {
