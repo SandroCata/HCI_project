@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -40,7 +39,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,10 +53,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.budgify.applicationlogic.FinanceViewModel
-import com.example.budgify.navigation.BottomBar
-import com.example.budgify.navigation.TopBar
 import com.example.budgify.entities.Category
 import com.example.budgify.entities.CategoryType
+import com.example.budgify.navigation.BottomBar
+import com.example.budgify.navigation.TopBar
+import com.example.budgify.navigation.XButton
 import com.example.budgify.routes.ScreenRoutes
 
 // Define the possible sections for categories
@@ -300,15 +299,7 @@ fun AddCategoryDialog(
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.weight(1f) // Allow text to take available space
                     )
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .size(24.dp) // Set a fixed size for the IconButton
-                            .clip(CircleShape) // Clip the IconButton to a circle shape
-                            .background(MaterialTheme.colorScheme.surfaceContainerHighest) // Add a background color to the circle
-                    ) { // X button
-                        Icon(Icons.Filled.Close, contentDescription = "Close")
-                    }
+                    XButton(onDismiss)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 

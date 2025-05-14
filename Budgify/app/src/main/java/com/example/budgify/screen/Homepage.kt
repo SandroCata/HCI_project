@@ -73,6 +73,7 @@ import com.example.budgify.entities.TransactionType
 import com.example.budgify.entities.TransactionWithDetails
 import com.example.budgify.navigation.BottomBar
 import com.example.budgify.navigation.TopBar
+import com.example.budgify.navigation.XButton
 import com.example.budgify.routes.ScreenRoutes
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -289,11 +290,19 @@ fun EditTransactionDialog(
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(16.dp)
         ) {
-            Text(
-                "Edit Transaction",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Edit Transaction",
+                    style = MaterialTheme.typography.titleLarge,
+                    //modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+                XButton(onDismiss)
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             TextField(
@@ -500,15 +509,15 @@ fun EditTransactionDialog(
                     Text("OK")
                 }
             },
-//            dismissButton = {
-//                TextButton(
-//                    onClick = {
-//                        showDatePickerDialog = false
-//                    }
-//                ) {
-//                    Text("Cancel")
-//                }
-//            }
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDatePickerDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
         ) {
             DatePicker(state = datePickerState)
         }
@@ -690,10 +699,18 @@ fun AddAccountDialog(
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(16.dp)
         ) {
-            Text("Add New Account",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Add New Account",
+                    style = MaterialTheme.typography.titleLarge,
+                    //modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+                XButton(onDismiss)
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             TextField(

@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -61,12 +63,10 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.budgify.applicationlogic.FinanceViewModel
-import com.example.budgify.entities.Account
-import com.example.budgify.entities.Category
 import com.example.budgify.entities.CategoryType
+import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
-import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.TransactionType
 import com.example.budgify.routes.ScreenRoutes
 import com.example.budgify.screen.AddCategoryDialog
@@ -311,10 +311,17 @@ fun AddTransactionDialog(
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(16.dp)
         ) {
-            Text("Add Transaction",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Add Transaction",
+                    style = MaterialTheme.typography.titleLarge,
+                    //modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+                XButton(onDismiss)
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
             TextField(
@@ -528,15 +535,15 @@ fun AddTransactionDialog(
                     Text("OK")
                 }
             },
-//            dismissButton = {
-//                TextButton(
-//                    onClick = {
-//                        showDatePickerDialog = false
-//                    }
-//                ) {
-//                    Text("Cancel")
-//                }
-//            }
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDatePickerDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
         ) {
             DatePicker(state = datePickerState)
         }
@@ -578,7 +585,14 @@ fun AddObjectiveDialog(
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(16.dp)
         ) {
-            Text("Add Objective", style = MaterialTheme.typography.titleLarge)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Add Objective", style = MaterialTheme.typography.titleLarge)
+                XButton(onDismiss)
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
              // Input fields for transaction details
@@ -700,15 +714,15 @@ fun AddObjectiveDialog(
                     Text("OK")
                 }
             },
-//            dismissButton = {
-//                TextButton(
-//                    onClick = {
-//                        showDatePickerDialog = false
-//                    }
-//                ) {
-//                    Text("Cancel")
-//                }
-//            }
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDatePickerDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
         ) {
             DatePicker(state = datePickerState)
         }
@@ -766,5 +780,18 @@ fun AddLoanDialog(onDismiss: () -> Unit, onTransactionAdded: (MyTransaction) -> 
                 }
             }
         }
+    }
+}
+
+@Composable
+fun XButton(onDismiss: () -> Unit) {
+    IconButton(
+        onClick = onDismiss,
+        modifier = Modifier
+            .size(24.dp) // Set a fixed size for the IconButton
+            .clip(CircleShape) // Clip the IconButton to a circle shape
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest) // Add a background color to the circle
+    ) { // X button
+        Icon(Icons.Filled.Close, contentDescription = "Close")
     }
 }

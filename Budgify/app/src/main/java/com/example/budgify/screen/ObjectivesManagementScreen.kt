@@ -61,6 +61,7 @@ import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.navigation.BottomBar
 import com.example.budgify.navigation.TopBar
+import com.example.budgify.navigation.XButton
 import com.example.budgify.routes.ScreenRoutes
 import java.time.Instant
 import java.time.LocalDate
@@ -255,7 +256,15 @@ fun EditObjectiveDialog(
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(16.dp)
         ) {
-            Text("Edit Objective", style = MaterialTheme.typography.titleLarge)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Edit Objective", style = MaterialTheme.typography.titleLarge)
+                XButton(onDismiss)
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             TextField(
