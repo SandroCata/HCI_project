@@ -223,7 +223,7 @@ fun AddCategoryButton(
             .width(150.dp)
             .height(80.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.onSurface)
+            .background(MaterialTheme.colorScheme.onTertiary)
             .clickable(onClick = onClick), // Call the provided lambda on click
         contentAlignment = Alignment.Center // Center the content (Icon)
     ) {

@@ -620,7 +620,7 @@ fun AddAccountItem(viewModel: FinanceViewModel) {
             .clickable {
                 showAddAccountDialog = true // Show the dialog on click
             }
-            .background(MaterialTheme.colorScheme.onSurface),
+            .background(MaterialTheme.colorScheme.onTertiary),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -673,7 +673,7 @@ fun AccountItem(account: Account, viewModel: FinanceViewModel) { // Add ViewMode
             modifier = Modifier
                 .width(150.dp)
                 .height(65.dp)
-                .background(MaterialTheme.colorScheme.onSurface),
+                .background(MaterialTheme.colorScheme.onTertiary),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {

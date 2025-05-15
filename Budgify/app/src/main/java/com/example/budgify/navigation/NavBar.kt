@@ -96,8 +96,8 @@ fun TopBar(navController: NavController, currentRoute: String) {
     CenterAlignedTopAppBar(
         title = { Text(title, fontSize = 30.sp) },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = MaterialTheme.colorScheme.onSurface,
-            titleContentColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface
         ),
         navigationIcon = {
             if (currentRoute != ScreenRoutes.Home.route) {
@@ -110,7 +110,7 @@ fun TopBar(navController: NavController, currentRoute: String) {
                         restoreState = true
                     }
                 }) {
-                    Icon(Icons.Filled.Home, contentDescription = "Home", modifier = Modifier.size(50.dp), tint = MaterialTheme.colorScheme.surface)
+                    Icon(Icons.Filled.Home, contentDescription = "Home", modifier = Modifier.size(50.dp), tint = MaterialTheme.colorScheme.onSurface)
                 }
             }
         },
@@ -124,7 +124,7 @@ fun TopBar(navController: NavController, currentRoute: String) {
                     restoreState = true
                 }
             }) {
-                Icon( Icons.Filled.Settings, contentDescription = "Settings", modifier = Modifier.size(50.dp), tint = MaterialTheme.colorScheme.surface)
+                Icon( Icons.Filled.Settings, contentDescription = "Settings", modifier = Modifier.size(50.dp), tint = MaterialTheme.colorScheme.onSurface)
             }
 
         }
