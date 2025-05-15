@@ -620,14 +620,15 @@ fun AddAccountItem(viewModel: FinanceViewModel) {
             .clickable {
                 showAddAccountDialog = true // Show the dialog on click
             }
-            .background(Color.White),
+            .background(MaterialTheme.colorScheme.onSurface),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Filled.Add,
+            Icons.Filled.Add,
             contentDescription = "Add Account",
-            modifier = Modifier.size(40.dp)
+            modifier = Modifier.size(40.dp),
+            tint = MaterialTheme.colorScheme.surface
         )
     }
 
@@ -672,13 +673,13 @@ fun AccountItem(account: Account, viewModel: FinanceViewModel) { // Add ViewMode
             modifier = Modifier
                 .width(150.dp)
                 .height(65.dp)
-                .background(Color.White),
+                .background(MaterialTheme.colorScheme.onSurface),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
         ) {
-            Text(text = account.title, fontWeight = FontWeight.Bold)
+            Text(text = account.title, fontWeight = FontWeight.Bold, color= MaterialTheme.colorScheme.surface)
 
-            Text(text = "${account.amount}€", color = Color.Gray)
+            Text(text = "${account.amount}€", color= MaterialTheme.colorScheme.surface)
         }
 
         if (isLongPressed) {

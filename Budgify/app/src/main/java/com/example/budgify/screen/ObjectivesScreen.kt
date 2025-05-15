@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter.Companion.tint
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -145,7 +146,8 @@ fun ProfileAndLevelSection(profilePicture: Painter, currentLevel: Int, progressT
             Image(
                 painter = profilePicture,
                 contentDescription = "Profile Picture",
-                modifier = Modifier.size(96.dp) // Adjust size as needed
+                modifier = Modifier.size(96.dp), // Adjust size as needed
+                colorFilter = tint(MaterialTheme.colorScheme.onSurface)
                 // You might add clipping (e.g., CircleShape) and other modifiers here
             )
 

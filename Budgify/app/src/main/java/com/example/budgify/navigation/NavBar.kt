@@ -96,8 +96,8 @@ fun TopBar(navController: NavController, currentRoute: String) {
     CenterAlignedTopAppBar(
         title = { Text(title, fontSize = 30.sp) },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = Color.LightGray,
-            titleContentColor = Color.Black
+            containerColor = MaterialTheme.colorScheme.onSurface,
+            titleContentColor = MaterialTheme.colorScheme.surface
         ),
         navigationIcon = {
             if (currentRoute != ScreenRoutes.Home.route) {
@@ -110,7 +110,7 @@ fun TopBar(navController: NavController, currentRoute: String) {
                         restoreState = true
                     }
                 }) {
-                    Icon(Icons.Filled.Home, contentDescription = "Home", modifier = Modifier.size(50.dp))
+                    Icon(Icons.Filled.Home, contentDescription = "Home", modifier = Modifier.size(50.dp), tint = MaterialTheme.colorScheme.surface)
                 }
             }
         },
@@ -124,7 +124,7 @@ fun TopBar(navController: NavController, currentRoute: String) {
                     restoreState = true
                 }
             }) {
-                Icon( Icons.Filled.Settings, contentDescription = "Settings", modifier = Modifier.size(50.dp), tint = MaterialTheme.colorScheme.onSurface)
+                Icon( Icons.Filled.Settings, contentDescription = "Settings", modifier = Modifier.size(50.dp), tint = MaterialTheme.colorScheme.surface)
             }
 
         }
@@ -353,7 +353,7 @@ fun AddTransactionDialog(
                         .menuAnchor()
                         .fillMaxWidth(),
                     readOnly = true,
-                    value = selectedCategory?.desc ?: "No Category", // Display description or placeholder
+                    value = selectedCategory?.desc ?: "", // Display description or placeholder
                     onValueChange = {},
                     label = { Text("Category") },
                     trailingIcon = {
@@ -366,7 +366,7 @@ fun AddTransactionDialog(
                     expanded = categoryExpanded,
                     onDismissRequest = { categoryExpanded = false }
                 ) {
-                    DropdownMenuItem(text = { Text("No Category") }, onClick = {
+                    DropdownMenuItem(text = { Text("-") }, onClick = {
                         selectedCategoryId = null
                         selectedCategory = null
                         categoryExpanded = false
