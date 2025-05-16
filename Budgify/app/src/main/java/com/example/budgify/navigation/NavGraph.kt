@@ -33,6 +33,7 @@ import androidx.security.crypto.MasterKey
 import com.example.budgify.screen.CategoriesScreen
 import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.routes.ScreenRoutes
+import com.example.budgify.screen.CreditsDebitsScreen
 import com.example.budgify.screen.Homepage
 import com.example.budgify.screen.ObjectivesManagementScreen
 import com.example.budgify.screen.ObjectivesScreen
@@ -88,12 +89,11 @@ fun NavGraph(
             )}
         composable(ScreenRoutes.Transactions.route) { TransactionsScreen(navController, viewModel) }
 
-        /*
+
         // Keep your commented out composables if you plan to use them later
-        composable("cred_deb_screen") { CredDeb() }
-        composable("credits_screen") { Credits() }
-        composable("debits_screen") { Debits() }
-         */
+        composable(ScreenRoutes.CredDeb.route) { CreditsDebitsScreen(navController, viewModel) }
+        //composable(ScreenRoutes.CredDebManagement.route) { CredDebManagement() }
+
     }
 }
 

@@ -11,8 +11,7 @@ enum class ScreenRoutes(val route: String, val title: String, val icon: Int) {
     ObjectivesManagement("objectives_management_screen", "Manage Objectives", 999999997),
     Adding("adding_screen", "Add", R.drawable.add),
     CredDeb("cred_deb_screen", "Loans", R.drawable.cred),
-    Credits("credits_screen", "Credits", 999999996),
-    Debits("debits_screen", "Debits", 999999995),
+    CredDebManagement("cred_deb_management_screen", "Manage Loans", 999999995),
     Categories("categories_screen", "Categories", R.drawable.categories),
     AccessPin("access_pin", "Pin", 999999994)
 }

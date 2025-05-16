@@ -3,10 +3,12 @@ package com.example.budgify.applicationlogic
 import android.util.Log
 import com.example.budgify.dataaccessobjects.AccountDao
 import com.example.budgify.dataaccessobjects.CategoryDao
+import com.example.budgify.dataaccessobjects.LoanDao
 import com.example.budgify.dataaccessobjects.ObjectiveDao
 import com.example.budgify.dataaccessobjects.TransactionDao
 import com.example.budgify.entities.Account
 import com.example.budgify.entities.Category
+import com.example.budgify.entities.Loan
 import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.TransactionType
@@ -17,7 +19,8 @@ class FinanceRepository(
     private val transactionDao: TransactionDao,
     private val accountDao: AccountDao,
     private val objectiveDao: ObjectiveDao,
-    private val categoryDao: CategoryDao
+    private val categoryDao: CategoryDao,
+    private val loanDao: LoanDao
 ) {
 
     // TRANSACTIONS
@@ -110,4 +113,22 @@ class FinanceRepository(
             accountDao.update(updatedAccount)
         }
     }
+
+    // LOANS --- Nuova sezione per i Prestiti ---
+    fun getAllLoans(): Flow<List<Loan>> {
+        return loanDao.getAllLoans()
+    }
+
+    suspend fun insertLoan(loan: Loan) {
+        loanDao.insert(loan)
+    }
+
+    suspend fun updateLoan(loan: Loan) {
+        loanDao.update(loan)
+    }
+
+    suspend fun deleteLoan(loan: Loan) {
+        loanDao.delete(loan)
+    }
+    // --- Fine sezione LOANS ---
 }

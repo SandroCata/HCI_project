@@ -67,6 +67,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.entities.Category
 import com.example.budgify.entities.CategoryType
+import com.example.budgify.entities.Loan
+import com.example.budgify.entities.LoanType
 import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
@@ -269,7 +271,7 @@ fun BottomBar(navController: NavController, viewModel: FinanceViewModel) {
 
         // Dialog for adding a loan
         if (showAddLoanDialog) {
-            AddLoanDialog(onDismiss = { showAddLoanDialog = false }) {
+            AddLoanDialog(onDismiss = { showAddLoanDialog = false }, viewModel = viewModel) {
                 // Handle loan added
             }
         }
@@ -736,12 +738,23 @@ fun AddObjectiveDialog(
     }
 }
 
-// TODO: Add loans management and loans screen
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddLoanDialog(onDismiss: () -> Unit, onTransactionAdded: (MyTransaction) -> Unit) {
+fun AddLoanDialog(
+    onDismiss: () -> Unit,
+    viewModel: FinanceViewModel,
+    onLoanAdded: (Loan) -> Unit
+) {
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
-    var type by remember { mutableStateOf("Expense") } // Or use a dropdown/radio buttons
+    var selectedStartDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) }
+    var selectedEndDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) } // Inizializza anche endDate se necessario
+    var selectedType by remember { mutableStateOf(LoanType.DEBT) }
+    val loanTypes = LoanType.entries.toList()
+
+    var showDatePickerDialog by remember { mutableStateOf(false) }
+    // Stato per tracciare quale campo data si sta modificando: "START" o "END"
+    var datePickerTarget by remember { mutableStateOf<String?>(null) }
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -750,43 +763,187 @@ fun AddLoanDialog(onDismiss: () -> Unit, onTransactionAdded: (MyTransaction) -> 
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(16.dp)
         ) {
-            Text("Add Transaction", style = MaterialTheme.typography.titleLarge)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Add Loan", style = MaterialTheme.typography.titleLarge)
+                XButton(onDismiss)
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Input fields for transaction details
-            // For example, using TextField:
-            // TextField(
-            //     value = description,
-            //     onValueChange = { description = it },
-            //     label = { Text("Description") }
-            // )
-            // Spacer(modifier = Modifier.height(8.dp))
-            // TextField(
-            //     value = amount,
-            //     onValueChange = { amount = it },
-            //     label = { Text("Amount") },
-            //     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            // )
+            TextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Description") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
 
+            TextField(
+                value = amount,
+                onValueChange = { amount = it },
+                label = { Text("Amount") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Start Date Selection TextField
+            TextField(
+                value = selectedStartDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
+                onValueChange = {},
+                label = { Text("Start Date") },
+                readOnly = true,
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.CalendarToday,
+                        contentDescription = "Select Start Date",
+                        modifier = Modifier.clickable {
+                            datePickerTarget = "START" // Imposta il target
+                            showDatePickerDialog = true
+                        }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // End Date Selection TextField
+            TextField(
+                value = selectedEndDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
+                onValueChange = {},
+                label = { Text("End Date") },
+                readOnly = true,
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.CalendarToday,
+                        contentDescription = "Select End Date",
+                        modifier = Modifier.clickable {
+                            datePickerTarget = "END" // Imposta il target
+                            showDatePickerDialog = true
+                        }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Loan Type (Radio Buttons)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("Type:")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    loanTypes.forEach { type ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { selectedType = type }
+                        ) {
+                            RadioButton(
+                                selected = selectedType == type,
+                                onClick = { selectedType = type }
+                            )
+                            Text(type.name)
+                        }
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.Center
             ) {
-                Button(onClick = onDismiss) {
-                    Text("Cancel")
-                }
-                Button(onClick = {
-                    // Create Transaction object and pass it back
-                    // Valdate input first
-                    // val newTransaction = Transaction(...)
-                    // onTransactionAdded(newTransaction)
-                    onDismiss() // Close the dialog after adding
-                }) {
-                    Text("Add")
+                Button(
+                    enabled = description.isNotBlank() && amount.isNotBlank() && selectedStartDate != null && selectedEndDate != null,
+                    onClick = {
+                        val amountDouble = amount.toDoubleOrNull()
+                        if (description.isNotBlank() && amountDouble != null && selectedStartDate != null && selectedEndDate != null) {
+                            // Aggiungi un controllo per assicurarti che endDate non sia prima di startDate
+                            if (selectedEndDate!!.isBefore(selectedStartDate!!)) {
+                                // Mostra un errore o gestisci questo caso
+                                // Ad esempio, potresti mostrare un Toast
+                                // Toast.makeText(LocalContext.current, "End date cannot be before start date", Toast.LENGTH_LONG).show()
+                                return@Button // Esce dall'onClick
+                            }
+
+                            val newLoan = Loan(
+                                desc = description,
+                                amount = amountDouble,
+                                type = selectedType,
+                                startDate = selectedStartDate!!,
+                                endDate = selectedEndDate!!
+                            )
+                            viewModel.addLoan(newLoan)
+                            onLoanAdded(newLoan)
+                            onDismiss()
+                        } else {
+                            // Mostra un errore di validazione
+                        }
+                    }
+                ) {
+                    Text("Add Loan")
                 }
             }
+        }
+    }
+
+    if (showDatePickerDialog) {
+        // Determina la data iniziale per il DatePicker in base al target
+        val initialDateForPicker = when (datePickerTarget) {
+            "START" -> selectedStartDate
+            "END" -> selectedEndDate
+            else -> LocalDate.now() // Fallback, anche se non dovrebbe accadere
+        }
+
+        val initialDateMillis = initialDateForPicker?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
+            ?: LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDateMillis)
+        val confirmEnabled = remember {
+            derivedStateOf { datePickerState.selectedDateMillis != null }
+        }
+        DatePickerDialog(
+            onDismissRequest = {
+                showDatePickerDialog = false
+                datePickerTarget = null // Resetta il target
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDatePickerDialog = false
+                        val newSelectedDate = datePickerState.selectedDateMillis?.let {
+                            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+                        }
+                        // Aggiorna la variabile di stato corretta in base al target
+                        if (newSelectedDate != null) {
+                            when (datePickerTarget) {
+                                "START" -> selectedStartDate = newSelectedDate
+                                "END" -> selectedEndDate = newSelectedDate
+                            }
+                        }
+                        datePickerTarget = null // Resetta il target
+                    },
+                    enabled = confirmEnabled.value
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDatePickerDialog = false
+                        datePickerTarget = null // Resetta il target
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

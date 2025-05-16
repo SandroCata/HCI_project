@@ -8,11 +8,13 @@ import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import com.example.budgify.dataaccessobjects.AccountDao
 import com.example.budgify.dataaccessobjects.CategoryDao
+import com.example.budgify.dataaccessobjects.LoanDao
 import com.example.budgify.dataaccessobjects.ObjectiveDao
 import com.example.budgify.dataaccessobjects.TransactionDao
 import com.example.budgify.entities.Account
 import com.example.budgify.entities.Category
 import com.example.budgify.entities.CategoryType
+import com.example.budgify.entities.Loan
 import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
@@ -72,9 +74,10 @@ class Converters {
         MyTransaction::class,
         Account::class,
         Objective::class,
-        Category::class
+        Category::class,
+        Loan::class
    ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class) // Se hai bisogno di TypeConverters
@@ -83,6 +86,8 @@ abstract class FinanceDatabase : RoomDatabase() {
     abstract fun accountDao(): AccountDao
     abstract fun goalDao(): ObjectiveDao
     abstract fun categoryDao(): CategoryDao
+    abstract fun loanDao(): LoanDao
+
 
 
     companion object {

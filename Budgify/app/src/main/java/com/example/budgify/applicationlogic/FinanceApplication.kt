@@ -16,7 +16,7 @@ class FinanceApplication : Application() {
     // Inizializza il repository, passandogli i DAO ottenuti dall'istanza del database.
     // Anche qui usiamo lazy per inizializzare il repository solo quando necessario.
     val repository: FinanceRepository by lazy {
-        FinanceRepository(database.transactionDao(), database.accountDao(), database.goalDao(), database.categoryDao())
+        FinanceRepository(database.transactionDao(), database.accountDao(), database.goalDao(), database.categoryDao(), database.loanDao())
     }
 
     // Potresti aggiungere qui altre inizializzazioni a livello di applicazione se necessario.

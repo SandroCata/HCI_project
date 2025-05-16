@@ -1,15 +1,18 @@
 package com.example.budgify.applicationlogic
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.budgify.entities.Account
 import com.example.budgify.entities.Category
+import com.example.budgify.entities.Loan
+import com.example.budgify.entities.LoanType
 import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.Objective
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -147,6 +150,67 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
             repository.deleteAccount(account)
         }
     }
+
+
+    // LOANS --- Nuova sezione per i Prestiti ---
+    val allLoans: StateFlow<List<Loan>> = repository.getAllLoans()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val totalCreditLoans: StateFlow<Double> = allLoans
+        .map { loans ->
+            loans.filter { it.type == LoanType.CREDIT }.sumOf { it.amount }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0.0
+        )
+
+    val totalDebtLoans: StateFlow<Double> = allLoans
+        .map { loans ->
+            loans.filter { it.type == LoanType.DEBT }.sumOf { it.amount }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0.0
+        )
+
+    val lastThreeLoans: StateFlow<List<Loan>> = allLoans
+        .map { loans ->
+            // Il DAO già ordina per startDate DESC, quindi prendiamo solo i primi 3
+            loans.take(3)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun addLoan(loan: Loan) {
+        viewModelScope.launch {
+            repository.insertLoan(loan)
+            // Qui potresti voler aggiornare qualche altro stato se i prestiti influenzano
+            // altri aspetti, come il saldo generale, ma per ora ci concentriamo solo sui prestiti.
+        }
+    }
+
+    fun updateLoan(loan: Loan) {
+        viewModelScope.launch {
+            repository.updateLoan(loan)
+        }
+    }
+
+    fun deleteLoan(loan: Loan) {
+        viewModelScope.launch {
+            repository.deleteLoan(loan)
+        }
+    }
+    // --- Fine sezione LOANS ---
 
     // Factory per creare l'istanza del ViewModel
     class FinanceViewModelFactory(private val repository: FinanceRepository) : ViewModelProvider.Factory {

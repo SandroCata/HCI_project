@@ -11,6 +11,7 @@ import com.example.budgify.entities.Account
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.Category
+import com.example.budgify.entities.Loan
 import com.example.budgify.entities.TransactionWithDetails
 import kotlinx.coroutines.flow.Flow
 
@@ -92,4 +93,20 @@ interface CategoryDao {
 
     @Query("SELECT * FROM objectives WHERE id = :id")
     fun getCategoryById(id: Int): Flow<Category>
+}
+
+
+@Dao
+interface LoanDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(loan: Loan)
+
+    @Update
+    suspend fun update(loan: Loan)
+
+    @Delete
+    suspend fun delete(loan: Loan)
+
+    @Query("SELECT * FROM loans ORDER BY startDate DESC")
+    fun getAllLoans(): Flow<List<Loan>>
 }
