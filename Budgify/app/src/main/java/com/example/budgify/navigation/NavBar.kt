@@ -353,7 +353,7 @@ fun AddTransactionDialog(
                         .menuAnchor()
                         .fillMaxWidth(),
                     readOnly = true,
-                    value = selectedCategory?.desc ?: "", // Display description or placeholder
+                    value = selectedCategory?.desc ?: "No category", // Display description or placeholder
                     onValueChange = {},
                     label = { Text("Category") },
                     trailingIcon = {
@@ -366,7 +366,7 @@ fun AddTransactionDialog(
                     expanded = categoryExpanded,
                     onDismissRequest = { categoryExpanded = false }
                 ) {
-                    DropdownMenuItem(text = { Text("-") }, onClick = {
+                    DropdownMenuItem(text = { Text("No category", style = TextStyle(fontWeight = FontWeight.Bold)) }, onClick = {
                         selectedCategoryId = null
                         selectedCategory = null
                         categoryExpanded = false
