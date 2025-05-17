@@ -301,7 +301,7 @@ fun AddCategoryDialog(
     onCategoryAdded: (Category) -> Unit
 ) {
     var description by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf(initialType) }
+    var selectedType by remember { mutableStateOf(initialType?: CategoryType.EXPENSE) }
     val categoryTypes = CategoryType.entries.toList()
     val coroutineScope = rememberCoroutineScope()
 
@@ -407,8 +407,8 @@ fun EditCategoryDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp,
+            //color = MaterialTheme.colorScheme.surface,
+            //tonalElevation = 8.dp,
             modifier = Modifier.padding(16.dp)
         ) {
             Column(
