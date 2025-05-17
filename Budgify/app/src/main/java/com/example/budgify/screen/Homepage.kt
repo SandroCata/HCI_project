@@ -842,7 +842,7 @@ fun AddAccountDialog(
                         onAccountAdded(newAccount)
                         //onDismiss() // Close the dialog
                     } else {
-
+                        Log.d("AddAccountDialog", "Validation failed")
                     }
                 }) {
                     Text("Add")

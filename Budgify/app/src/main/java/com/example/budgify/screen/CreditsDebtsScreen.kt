@@ -52,6 +52,8 @@ import com.example.budgify.routes.ScreenRoutes // Assumi il percorso corretto
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
+//TODO: edit loan on hold (per renderlo consistente con le altre schermate)
+
 @Composable
 fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewModel) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.CredDeb.route) }

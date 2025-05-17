@@ -46,11 +46,11 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Transparent
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -74,6 +74,7 @@ import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.entities.TransactionType
 import com.example.budgify.routes.ScreenRoutes
+import com.example.budgify.screen.AddAccountDialog
 import com.example.budgify.screen.AddCategoryDialog
 import com.example.budgify.screen.items
 import com.example.budgify.screen.smallTextStyle
@@ -143,6 +144,8 @@ fun BottomBar(
     var showAddTransactionDialog by remember { mutableStateOf(false) }
     var showAddObjectiveDialog by remember { mutableStateOf(false) }
     var showAddLoanDialog by remember { mutableStateOf(false) }
+    var showForceAddAccountDialog by rememberSaveable { mutableStateOf(false) }
+    val hasAccounts by viewModel.hasAccounts.collectAsStateWithLifecycle(initialValue = null)
 
     Box(
         modifier = Modifier
@@ -209,8 +212,20 @@ fun BottomBar(
                     ) {
                         Button(
                             onClick = {
-                                showAddTransactionDialog = true
-                                showDialog = false
+                                when (hasAccounts) {
+                                    true -> {
+                                        showAddTransactionDialog = true
+                                        showDialog = false
+                                    }
+                                    false -> {
+                                        showSnackbar("Please add an account first")
+                                        showForceAddAccountDialog = true
+                                        showDialog = false
+                                    }
+                                    null -> {
+                                        showSnackbar("Checking for accounts...")
+                                    }
+                                }
                             },
                             modifier = Modifier
                                 .padding(0.dp)
@@ -286,6 +301,18 @@ fun BottomBar(
                 onLoanAdded = { loan ->
                     showAddLoanDialog = false
                     showSnackbar("Loan '${loan.desc}' added!")
+                }
+            )
+        }
+
+        if (showForceAddAccountDialog) {
+            AddAccountDialog(
+                viewModel = viewModel,
+                onDismiss = { showForceAddAccountDialog = false },
+                onAccountAdded = { account ->
+                    showForceAddAccountDialog = false
+                    showSnackbar("Account '${account.title}' added!")
+                    showAddTransactionDialog = true
                 }
             )
         }

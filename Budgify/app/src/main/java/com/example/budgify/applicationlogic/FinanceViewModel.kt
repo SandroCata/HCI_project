@@ -10,6 +10,7 @@ import com.example.budgify.entities.LoanType
 import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.Objective
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -37,7 +38,6 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
             repository.updateAccountBalance(myTransaction.accountId)
         }
     }
-    // TODO: fix the balance update after transaction edit
     suspend fun updateTransaction(myTransaction: MyTransaction) {
         val oldTransaction = withContext(Dispatchers.IO) {
             repository.getTransactionById(myTransaction.id)
@@ -150,6 +150,12 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
             repository.deleteAccount(account)
         }
     }
+    val hasAccounts: Flow<Boolean> = allAccounts.map { it.isNotEmpty() }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false // Or true, depending on your initial state logic
+        )
 
 
     // LOANS --- Nuova sezione per i Prestiti ---
