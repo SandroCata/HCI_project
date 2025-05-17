@@ -25,6 +25,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -68,17 +69,19 @@ fun TransactionsScreen(navController: NavController, viewModel: FinanceViewModel
     val scope = rememberCoroutineScope()
     // State to hold the selected date
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+    val showSnackbar: (String) -> Unit = { message ->
+        scope.launch {
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     Scaffold (
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { TopBar(navController, currentRoute) },
         bottomBar = { BottomBar(
             navController,
             viewModel,
-            showSnackbar = { message ->
-                scope.launch {
-                    snackbarHostState.showSnackbar(message)
-                }
-            }
+            showSnackbar = showSnackbar
         ) }
     ){
             innerPadding ->
@@ -101,7 +104,11 @@ fun TransactionsScreen(navController: NavController, viewModel: FinanceViewModel
 
                 item {
                     // Pass the selected date to TransactionBox
-                    TransactionBox(selectedDate = selectedDate, viewModel = viewModel)
+                    TransactionBox(
+                        selectedDate = selectedDate,
+                        viewModel = viewModel,
+                        showSnackbar = showSnackbar
+                    )
                 }
             }
 
@@ -249,7 +256,11 @@ fun MonthlyCalendar(
 // Composbale per visualizzare gli ultimi movimenti
 @OptIn(ExperimentalFoundationApi::class) // Opt-in for ExperimentalFoundationApi
 @Composable
-fun TransactionBox(selectedDate: LocalDate?, viewModel: FinanceViewModel) {
+fun TransactionBox(
+    selectedDate: LocalDate?,
+    viewModel: FinanceViewModel,
+    showSnackbar: (String) -> Unit
+) {
     // Collect all transactions with details from the ViewModel
     val allTransactionsWithDetails by viewModel.allTransactionsWithDetails.collectAsState(initial = emptyList())
 
@@ -297,6 +308,9 @@ fun TransactionBox(selectedDate: LocalDate?, viewModel: FinanceViewModel) {
                         // Pass the TransactionWithDetails object to the updated TransactionItem
                         TransactionItem1(
                             transactionWithDetails = transactionWithDetails,
+                            onClick = { transaction ->
+                                showSnackbar("Hold to edit the transaction")
+                            },
                             onLongClick = { transaction ->
                                 // Set the transaction to be edited and show the dialog
                                 transactionToEdit = transaction
@@ -327,6 +341,7 @@ fun TransactionBox(selectedDate: LocalDate?, viewModel: FinanceViewModel) {
 @Composable
 fun TransactionItem1(
     transactionWithDetails: TransactionWithDetails,
+    onClick: (MyTransaction) -> Unit,
     onLongClick: (MyTransaction) -> Unit // Add a long click lambda parameter
 ) {
     val myTransaction = transactionWithDetails.transaction
@@ -339,7 +354,7 @@ fun TransactionItem1(
             .padding(vertical = 4.dp)
             .combinedClickable( // Use combinedClickable
                 onClick = {
-                    // Handle regular click if needed (e.g., view details)
+                    onClick(myTransaction)
                 },
                 onLongClick = {
                     onLongClick(myTransaction) // Call the lambda on long click

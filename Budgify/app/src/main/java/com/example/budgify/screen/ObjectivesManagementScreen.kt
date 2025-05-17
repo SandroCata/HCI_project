@@ -34,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -83,6 +84,11 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
     val scope = rememberCoroutineScope()
     // State variable to track the selected section
     var selectedSection by remember { mutableStateOf(ObjectivesManagementSection.Active) }
+    val showSnackbar: (String) -> Unit = { message ->
+        scope.launch {
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     val listState = rememberLazyListState()
     val showButton by remember {
@@ -94,15 +100,12 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { TopBar(navController, currentRoute) },
         bottomBar = { BottomBar(
             navController,
             viewModel,
-            showSnackbar = { message ->
-                scope.launch {
-                    snackbarHostState.showSnackbar(message)
-                }
-            }
+            showSnackbar = showSnackbar
         ) },
         containerColor = Color.Transparent
     ) { innerPadding ->
@@ -137,11 +140,11 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                 ) {
                     when (selectedSection) {
                         ObjectivesManagementSection.Active -> {
-                            ObjectivesSection(ObjectiveSectionType.ACTIVE, listState, viewModel)
+                            ObjectivesSection(ObjectiveSectionType.ACTIVE, listState, viewModel, showSnackbar)
                         }
 
                         ObjectivesManagementSection.Expired -> {
-                            ObjectivesSection(ObjectiveSectionType.EXPIRED, listState, viewModel)
+                            ObjectivesSection(ObjectiveSectionType.EXPIRED, listState, viewModel, showSnackbar)
                         }
                     }
                 }
@@ -176,7 +179,11 @@ enum class ObjectivesManagementSection(val title: String) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ObjectiveItem(obj: Objective, viewModel: FinanceViewModel) {
+fun ObjectiveItem(
+    obj: Objective,
+    viewModel: FinanceViewModel,
+    showSnackbar: (String) -> Unit
+) {
 
     // State to control dialog visibility
     var showEditDialog by remember { mutableStateOf(false) }
@@ -195,7 +202,7 @@ fun ObjectiveItem(obj: Objective, viewModel: FinanceViewModel) {
             .clip(RoundedCornerShape(8.dp)) // Angoli arrotondati per la box dell'item
             .background(backgroundColor) // Applica il colore di sfondo
             .combinedClickable( // Use combinedClickable for long press
-                onClick = { /* Handle normal click if needed */ },
+                onClick = { showSnackbar("Hold to edit the objective") },
                 onLongClick = {
                     showEditDialog = true // Or show a menu with Edit/Delete options
                     // For simplicity, we'll show the edit dialog directly.
@@ -491,7 +498,12 @@ fun DeleteConfirmationDialog(
 }
 
 @Composable
-fun ObjectivesSection(type: ObjectiveSectionType, listState: LazyListState, viewModel: FinanceViewModel) {
+fun ObjectivesSection(
+    type: ObjectiveSectionType,
+    listState: LazyListState,
+    viewModel: FinanceViewModel,
+    showSnackbar: (String) -> Unit
+) {
     val objectives by viewModel.allObjectives.collectAsStateWithLifecycle()
     val filteredObjectives = remember(objectives, type) {
         when (type) {
@@ -513,7 +525,7 @@ fun ObjectivesSection(type: ObjectiveSectionType, listState: LazyListState, view
         // Use the items extension function to efficiently display the list
         items(filteredObjectives) { objective ->
             Box {
-                ObjectiveItem(objective, viewModel)
+                ObjectiveItem(objective, viewModel, showSnackbar)
             }
         }
     }

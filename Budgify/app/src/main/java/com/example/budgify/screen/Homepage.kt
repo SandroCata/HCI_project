@@ -100,6 +100,11 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Home.route) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val showSnackbar: (String) -> Unit = { message ->
+        scope.launch {
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     Scaffold (
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -107,11 +112,7 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
         bottomBar = { BottomBar(
             navController,
             viewModel,
-            showSnackbar = { message ->
-                scope.launch {
-                    snackbarHostState.showSnackbar(message)
-                }
-            }
+            showSnackbar = showSnackbar
         ) }
     ){
         innerPadding ->
@@ -140,7 +141,8 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
 
                 item {
                     LastTransactionBox(
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        showSnackbar = showSnackbar
                     )
                 }
             }
@@ -152,6 +154,7 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
 @Composable
 fun TransactionItem(
     transactionWithDetails: TransactionWithDetails,
+    onClick: (MyTransaction) -> Unit,
     onLongClick: (MyTransaction) -> Unit
 ) {
     val myTransaction = transactionWithDetails.transaction
@@ -164,8 +167,7 @@ fun TransactionItem(
             .padding(8.dp)
             .combinedClickable( // Use combinedClickable
                 onClick = {
-                    // Handle regular click if needed (e.g., view details)
-                    // Log.d("TransactionItem", "Transaction clicked: ${myTransaction.id}")
+                    onClick(myTransaction)
                 },
                 onLongClick = {
                     onLongClick(myTransaction) // Call the lambda on long click
@@ -212,7 +214,10 @@ fun TransactionItem(
 
 // Composbale per visualizzare gli ultimi movimenti
 @Composable
-fun LastTransactionBox(viewModel: FinanceViewModel) { // Pass the ViewModel
+fun LastTransactionBox(
+    viewModel: FinanceViewModel,
+    showSnackbar: (String) -> Unit
+) { // Pass the ViewModel
     // Collect the flow of transactions with details
     val transactionsWithDetails by viewModel.allTransactionsWithDetails.collectAsStateWithLifecycle()
     // State to hold the transaction to be edited, and control dialog visibility
@@ -242,6 +247,9 @@ fun LastTransactionBox(viewModel: FinanceViewModel) { // Pass the ViewModel
                     // Pass the TransactionWithDetails object to the updated TransactionItem
                     TransactionItem(
                         transactionWithDetails = transactionWithDetails,
+                        onClick = { transaction ->
+                            showSnackbar("Hold to edit the transaction")
+                        },
                         onLongClick = { transaction ->
                             // Set the transaction to be edited and show the dialog
                             transactionToEdit = transaction
@@ -622,7 +630,11 @@ fun ContiBox(
             ) {
                 // Iterate through the collected accounts
                 accounts.forEach { account ->
-                    AccountItem(account = account, viewModel = viewModel) // Pass ViewModel to AccountItem
+                    AccountItem(
+                        account = account,
+                        viewModel = viewModel,
+                        showSnackbar = showSnackbar
+                    )
                 }
                 // Aggiungi l'item con il "+"
                 AddAccountItem(
@@ -681,7 +693,8 @@ fun AddAccountItem(
 @Composable
 fun AccountItem(
     account: Account,
-    viewModel: FinanceViewModel
+    viewModel: FinanceViewModel,
+    showSnackbar: (String) -> Unit
 ) { // Add ViewModel as a parameter
     var isLongPressed by remember { mutableStateOf(false) }
     // State to control the visibility of the delete confirmation dialog
@@ -697,6 +710,7 @@ fun AccountItem(
         .clip(RoundedCornerShape(16.dp))
         .combinedClickable(
             onClick = {
+                showSnackbar("Hold to delete the account")
                 if (isLongPressed) {
                     isLongPressed = false // Reset if long pressed and clicked again
                 } else {
