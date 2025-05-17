@@ -39,6 +39,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -96,9 +98,21 @@ val items = listOf(
 @Composable
 fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Home.route) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     Scaffold (
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { TopBar(navController, currentRoute) },
-        bottomBar = { BottomBar(navController, viewModel) }
+        bottomBar = { BottomBar(
+            navController,
+            viewModel,
+            showSnackbar = { message ->
+                scope.launch {
+                    snackbarHostState.showSnackbar(message)
+                }
+            }
+        ) }
     ){
         innerPadding ->
             LazyColumn(
@@ -113,7 +127,15 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
 
                 // Box per i conti e il saldo totale
                 item {
-                    ContiBox(viewModel)
+                    ContiBox(
+                        viewModel,
+                        showSnackbar = { message ->
+                            scope.launch {
+                                snackbarHostState.showSnackbar(message)
+                            }
+
+                        }
+                    )
                 }
 
                 item {
@@ -564,7 +586,10 @@ fun EditTransactionDialog(
 
 // Composbale per visualizzare la box dei conti
 @Composable
-fun ContiBox(viewModel: FinanceViewModel) {
+fun ContiBox(
+    viewModel: FinanceViewModel,
+    showSnackbar: (String) -> Unit
+) {
 
     // Collect the flow of accounts from the ViewModel
     val accounts by viewModel.allAccounts.collectAsStateWithLifecycle()
@@ -600,14 +625,20 @@ fun ContiBox(viewModel: FinanceViewModel) {
                     AccountItem(account = account, viewModel = viewModel) // Pass ViewModel to AccountItem
                 }
                 // Aggiungi l'item con il "+"
-                AddAccountItem(viewModel = viewModel) // Pass ViewModel to AddAccountItem
+                AddAccountItem(
+                    viewModel = viewModel,
+                    showSnackbar = showSnackbar
+                ) // Pass ViewModel to AddAccountItem
             }
         }
     }
 }
 
 @Composable
-fun AddAccountItem(viewModel: FinanceViewModel) {
+fun AddAccountItem(
+    viewModel: FinanceViewModel,
+    showSnackbar: (String) -> Unit
+) {
     // State to control the visibility of the Add Account dialog
     var showAddAccountDialog by remember { mutableStateOf(false) }
 
@@ -636,7 +667,11 @@ fun AddAccountItem(viewModel: FinanceViewModel) {
     if (showAddAccountDialog) {
         AddAccountDialog(
             viewModel = viewModel,
-            onDismiss = { showAddAccountDialog = false }, // Hide dialog on dismiss
+            onDismiss = { showAddAccountDialog = false },
+            onAccountAdded = { account ->
+                    showAddAccountDialog = false
+                    showSnackbar("Account '${account.title}' added!")
+            }
         )
     }
 }
@@ -644,7 +679,10 @@ fun AddAccountItem(viewModel: FinanceViewModel) {
 //Composbale per visualizzare le sezioni di ogni account
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AccountItem(account: Account, viewModel: FinanceViewModel) { // Add ViewModel as a parameter
+fun AccountItem(
+    account: Account,
+    viewModel: FinanceViewModel
+) { // Add ViewModel as a parameter
     var isLongPressed by remember { mutableStateOf(false) }
     // State to control the visibility of the delete confirmation dialog
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
@@ -734,7 +772,8 @@ fun AccountItem(account: Account, viewModel: FinanceViewModel) { // Add ViewMode
 @Composable
 fun AddAccountDialog(
     viewModel: FinanceViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onAccountAdded: (Account) -> Unit
 ) {
     // State for input fields
     var accountTitle by remember { mutableStateOf("") }
@@ -752,7 +791,8 @@ fun AddAccountDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Add New Account",
+                Text(
+                    "Add New Account",
                     style = MaterialTheme.typography.titleLarge,
                     //modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
@@ -799,9 +839,10 @@ fun AddAccountDialog(
                         )
                         // Insert the new account using the ViewModel
                         viewModel.addAccount(newAccount)
-                        onDismiss() // Close the dialog
+                        onAccountAdded(newAccount)
+                        //onDismiss() // Close the dialog
                     } else {
-                        // TODO: Show validation error message to the user
+
                     }
                 }) {
                     Text("Add")

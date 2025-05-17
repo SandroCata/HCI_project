@@ -134,11 +134,16 @@ fun TopBar(navController: NavController, currentRoute: String) {
 }
 
 @Composable
-fun BottomBar(navController: NavController, viewModel: FinanceViewModel) {
+fun BottomBar(
+    navController: NavController,
+    viewModel: FinanceViewModel,
+    showSnackbar: (String) -> Unit
+) {
     var showDialog by remember { mutableStateOf(false) }
     var showAddTransactionDialog by remember { mutableStateOf(false) }
     var showAddObjectiveDialog by remember { mutableStateOf(false) }
     var showAddLoanDialog by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .padding(bottom = 0.dp)
@@ -253,27 +258,36 @@ fun BottomBar(navController: NavController, viewModel: FinanceViewModel) {
         if (showAddTransactionDialog) {
             AddTransactionDialog(
                 onDismiss = { showAddTransactionDialog = false },
-                viewModel = viewModel
-            ) {
-                // Handle transaction added
-            }
+                viewModel = viewModel ,
+                onTransactionAdded = { transaction ->
+                    showAddTransactionDialog = false // Dismiss dialog first
+                    showSnackbar("Transaction '${transaction.description}' added!") // <--- Call showSnackbar
+                }
+            )
         }
 
         // Dialog for adding an objective
         if (showAddObjectiveDialog) {
             AddObjectiveDialog(
                 onDismiss = { showAddObjectiveDialog = false },
-                viewModel = viewModel
-            ) {
-                // Handle objective added
-            }
+                viewModel = viewModel,
+                onObjectiveAdded = { objective ->
+                    showAddObjectiveDialog = false
+                    showSnackbar("Objective '${objective.desc}' added!")
+                }
+            )
         }
 
         // Dialog for adding a loan
         if (showAddLoanDialog) {
-            AddLoanDialog(onDismiss = { showAddLoanDialog = false }, viewModel = viewModel) {
-                // Handle loan added
-            }
+            AddLoanDialog(
+                onDismiss = { showAddLoanDialog = false },
+                viewModel = viewModel,
+                onLoanAdded = { loan ->
+                    showAddLoanDialog = false
+                    showSnackbar("Loan '${loan.desc}' added!")
+                }
+            )
         }
     }
 }
@@ -506,7 +520,8 @@ fun AddTransactionDialog(
                             categoryId = selectedCategoryId // Use the selected ID
                         )
                         viewModel.addTransaction(newTransaction)
-                        onDismiss()
+                        //onDismiss()
+                        onTransactionAdded(newTransaction)
                     } else {
                         // Show validation error to the user
                     }
@@ -689,8 +704,8 @@ fun AddObjectiveDialog(
 
                         // Insert objective using the ViewModel
                         viewModel.addObjective(newObjective)
-
-                        onDismiss() // Close the dialog after adding
+                        //onDismiss() // Close the dialog after adding
+                        onObjectiveAdded(newObjective)
                     }
                 }) {
                     Text("Add")
@@ -879,7 +894,7 @@ fun AddLoanDialog(
                             )
                             viewModel.addLoan(newLoan)
                             onLoanAdded(newLoan)
-                            onDismiss()
+                            //onDismiss()
                         } else {
                             // Mostra un errore di validazione
                         }

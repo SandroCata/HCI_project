@@ -32,6 +32,7 @@ import com.example.budgify.navigation.getSavedPinFromContext
 import com.example.budgify.routes.ScreenRoutes
 import com.example.budgify.userpreferences.AppTheme
 import com.example.budgify.userpreferences.rememberThemePreferenceManager
+import kotlinx.coroutines.launch
 
 // Enum per rappresentare le opzioni delle impostazioni selezionate
 enum class SettingsOptionType {
@@ -41,12 +42,22 @@ enum class SettingsOptionType {
 @Composable
 fun Settings(navController: NavController, viewModel: FinanceViewModel, onThemeChange: (AppTheme) -> Unit) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Settings.route) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     // Stato per tenere traccia dell'opzione selezionata
     var selectedOption by remember { mutableStateOf(SettingsOptionType.NONE) }
 
     Scaffold(
         topBar = { TopBar(navController, currentRoute) },
-        bottomBar = { BottomBar(navController, viewModel) }
+        bottomBar = { BottomBar(
+            navController,
+            viewModel,
+            showSnackbar = { message ->
+                scope.launch {
+                    snackbarHostState.showSnackbar(message)
+                }
+            }
+        ) }
     ) { innerPadding ->
         Column(
             modifier = Modifier

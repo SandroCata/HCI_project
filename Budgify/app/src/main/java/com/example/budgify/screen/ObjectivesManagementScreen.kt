@@ -34,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -45,6 +46,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +65,7 @@ import com.example.budgify.navigation.BottomBar
 import com.example.budgify.navigation.TopBar
 import com.example.budgify.navigation.XButton
 import com.example.budgify.routes.ScreenRoutes
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -76,6 +79,8 @@ enum class ObjectiveSectionType {
 @Composable
 fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceViewModel) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.ObjectivesManagement.route) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     // State variable to track the selected section
     var selectedSection by remember { mutableStateOf(ObjectivesManagementSection.Active) }
 
@@ -90,7 +95,15 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
 
     Scaffold(
         topBar = { TopBar(navController, currentRoute) },
-        bottomBar = { BottomBar(navController, viewModel) },
+        bottomBar = { BottomBar(
+            navController,
+            viewModel,
+            showSnackbar = { message ->
+                scope.launch {
+                    snackbarHostState.showSnackbar(message)
+                }
+            }
+        ) },
         containerColor = Color.Transparent
     ) { innerPadding ->
         Box(

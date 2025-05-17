@@ -32,6 +32,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -71,6 +73,8 @@ enum class CategoriesTab(val title: String) {
 @Composable
 fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Categories.route) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     // State variable to track the selected tab
     var selectedTab by remember { mutableStateOf(CategoriesTab.Expenses) }
 
@@ -89,10 +93,20 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
     val incomeCategories = remember(allCategories) {
         allCategories.filter { it.type == CategoryType.INCOME }
     }
+    val showSnackbar: (String) -> Unit = { message ->
+        scope.launch {
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { TopBar(navController, currentRoute) },
-        bottomBar = { BottomBar(navController, viewModel) }
+        bottomBar = { BottomBar(
+            navController,
+            viewModel,
+            showSnackbar = showSnackbar
+            ) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -155,7 +169,10 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
                 }
             },
             onDismiss = { showAddDialog = false },
-            onCategoryAdded = { }
+            onCategoryAdded = { category ->
+                showAddDialog = false // Dismiss dialog first
+                showSnackbar("Category '${category.desc}' added")
+            }
         )
     }
 
@@ -352,7 +369,7 @@ fun AddCategoryDialog(
                                 )
                                 viewModel.addCategory(newCategory)
                                 onCategoryAdded(newCategory)
-                                onDismiss()
+                                //onDismiss()
                             }
                         } else {
                             // Optional: Show an error message if description is empty
