@@ -243,7 +243,7 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
     val lastThreeLoans: StateFlow<List<Loan>> = allLoans
         .map { loans ->
             // Il DAO già ordina per startDate DESC, quindi prendiamo solo i primi 3
-            loans.take(3)
+            loans.takeLast(6).reversed()
         }
         .stateIn(
             scope = viewModelScope,

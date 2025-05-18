@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -63,6 +62,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -417,7 +417,22 @@ fun TransactionBox(
                 showTransactionActionChoiceDialog = false
                 transactionToAction = null
             },
-            title = { Text("Transaction: '${transactionToAction?.description}'") },
+            title = { Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Transaction: '${transactionToAction?.description}'",
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                XButton({
+                    showTransactionActionChoiceDialog = false
+                    transactionToAction = null
+                })
+            }
+                    },
             text = { Text("What would you like to do?") },
             confirmButton = {
                 Row(
@@ -441,14 +456,6 @@ fun TransactionBox(
                         }
                     ) {
                         Text("Edit")
-                    }
-                    TextButton(
-                        onClick = {
-                            showTransactionActionChoiceDialog = false
-                            transactionToAction = null
-                        }
-                    ) {
-                        Text("Cancel")
                     }
                 }
             },
@@ -720,7 +727,7 @@ fun EditTransactionDialog2(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End // Align save button to the end
+                horizontalArrangement = Arrangement.Center// Align save button to the end
             ) {
                 // REMOVED Delete Button from here
                 // Spacer(modifier = Modifier.width(8.dp)) // REMOVED
@@ -809,52 +816,6 @@ fun EditTransactionDialog2(
     }
 }
 
-@Composable
-fun EditDeleteCancelDialog(
-    onDismiss: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Choose Action", style = MaterialTheme.typography.titleLarge)
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        onEdit()
-                        onDismiss()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Edit Transaction")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        onDelete()
-                        onDismiss()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Delete Transaction")
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel")
-                }
-            }
-        }
-    }
-}
 
 
 

@@ -19,16 +19,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -444,7 +440,15 @@ fun CategoryActionChoiceDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Category: '${category.desc}'") },
+        title = {
+            Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically) {
+            Text("Category: '${category.desc}'")
+            XButton(onDismiss)
+        }
+                },
         text = { Text("What would you like to do?") },
         confirmButton = { // Questo blocco contiene i pulsanti di azione
             Row(
@@ -456,9 +460,6 @@ fun CategoryActionChoiceDialog(
                 }
                 TextButton(onClick = onEditClick) {
                     Text("Edit")
-                }
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel")
                 }
             }
         },
@@ -518,14 +519,9 @@ fun EditCategoryDialog(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = onDeleteClick, // Questa azione ora mostra il dialog di conferma
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Delete")
-                    }
 
                     Button(
                         onClick = {
@@ -539,7 +535,7 @@ fun EditCategoryDialog(
                         },
                         enabled = description.isNotBlank() && description != category.desc
                     ) {
-                        Text("Save")
+                        Text("Save changes")
                     }
                 }
             }

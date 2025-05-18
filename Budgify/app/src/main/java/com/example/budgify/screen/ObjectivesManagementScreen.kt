@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -82,7 +84,6 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
     val currentRoute by remember { mutableStateOf(ScreenRoutes.ObjectivesManagement.route) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    // State variable to track the selected section
     var selectedSection by remember { mutableStateOf(ObjectivesManagementSection.Active) }
     val showSnackbar: (String) -> Unit = { message ->
         scope.launch {
@@ -93,33 +94,37 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
     val listState = rememberLazyListState()
     val showButton by remember {
         derivedStateOf {
-            val isAtTop = listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-            val isAtBottom = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index == listState.layoutInfo.totalItemsCount - 1 && listState.layoutInfo.totalItemsCount > 0
-            isAtTop || isAtBottom
+            // Mostra il pulsante se non stiamo scrollando o se siamo in cima/fondo con pochi elementi
+            if (listState.layoutInfo.totalItemsCount <= listState.layoutInfo.visibleItemsInfo.size) {
+                true // Sempre visibile se tutti gli elementi sono visibili
+            } else {
+                val isAtTop = listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+                val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
+                val isAtBottom = lastVisibleItem?.index == listState.layoutInfo.totalItemsCount - 1 && listState.layoutInfo.totalItemsCount > 0
+                isAtTop || isAtBottom || !listState.isScrollInProgress
+            }
         }
     }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { TopBar(navController, currentRoute) },
-        bottomBar = { BottomBar(
-            navController,
-            viewModel,
-            showSnackbar = showSnackbar
-        ) },
-        containerColor = Color.Transparent
+        bottomBar = {
+            BottomBar(
+                navController,
+                viewModel,
+                showSnackbar = showSnackbar
+            )
+        },
+        containerColor = Color.Transparent // O il colore di sfondo desiderato per lo Scaffold
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding) // Apply Scaffold's padding
-            // Optional: If you want a background *behind* the scrollable content but not the button
-            // .background(MaterialTheme.colorScheme.background) // or a specific color
+                .padding(innerPadding)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                //.padding(innerPadding)
+                modifier = Modifier.fillMaxSize()
             ) {
                 TabRow(selectedTabIndex = selectedSection.ordinal) {
                     ObjectivesManagementSection.entries.forEach { section ->
@@ -131,12 +136,11 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                     }
                 }
 
-                // Section 2: Content based on the selected section
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 0.dp) // Add padding around the content within the selected section
+                    // Rimuovi padding orizzontale qui se lo applichi in ObjectivesSection
                 ) {
                     when (selectedSection) {
                         ObjectivesManagementSection.Active -> {
@@ -150,19 +154,19 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                 }
             }
             AnimatedVisibility(
-                visible = showButton,
-                enter = slideInVertically(initialOffsetY = { fullHeight -> fullHeight }), // Slide in from bottom
-                exit = slideOutVertically(targetOffsetY = { fullHeight -> fullHeight }), // Slide out to bottom
+                visible = showButton, // La visibilità è ora gestita dal LazyListState
+                enter = slideInVertically(initialOffsetY = { fullHeight -> fullHeight }),
+                exit = slideOutVertically(targetOffsetY = { fullHeight -> fullHeight }),
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) {
                 Button(
                     onClick = {
-                        navController.navigate("objectives_screen")
+                        navController.navigate(ScreenRoutes.Objectives.route)
                     },
                     modifier = Modifier
-                        //.align(Alignment.BottomCenter)
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 16.dp)
+                        .fillMaxWidth() // Fallo largo quanto il contenitore per centrarlo meglio con padding
+                        .padding(horizontal = 16.dp) // Padding orizzontale
+                        .padding(bottom = 16.dp) // Padding dal fondo
                 ) {
                     Text("Back to Objectives")
                 }
@@ -171,7 +175,6 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
     }
 }
 
-// Define the possible sections
 enum class ObjectivesManagementSection(val title: String) {
     Active("Active Objectives"),
     Expired("Expired Objectives")
@@ -184,73 +187,126 @@ fun ObjectiveItem(
     viewModel: FinanceViewModel,
     showSnackbar: (String) -> Unit
 ) {
-
-    // State to control dialog visibility
+    var showActionChoiceDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
 
-    // Determina il colore di sfondo in base al tipo di obiettivo
     val backgroundColor = when (obj.type) {
-        ObjectiveType.INCOME -> Color(0xff0db201) // Verde semi-trasparente per profitto
-        ObjectiveType.EXPENSE -> Color(0xffff6f51) // Rosso semi-trasparente per spesa
+        ObjectiveType.INCOME -> Color(0xff0db201)
+        ObjectiveType.EXPENSE -> Color(0xffff6f51)
     }
 
-    Column (
+    Column(
         modifier = Modifier
-            //.width(150.dp) // Aggiunto una larghezza fissa per un migliore allineamento
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp)) // Angoli arrotondati per la box dell'item
-            .background(backgroundColor) // Applica il colore di sfondo
-            .combinedClickable( // Use combinedClickable for long press
-                onClick = { showSnackbar("Hold to edit the objective") },
+            .clip(RoundedCornerShape(8.dp))
+            .background(backgroundColor)
+            .combinedClickable(
+                onClick = { showSnackbar("Hold to edit or delete the objective") },
                 onLongClick = {
-                    showEditDialog = true // Or show a menu with Edit/Delete options
-                    // For simplicity, we'll show the edit dialog directly.
-                    // You might want to show a small context menu instead.
+                    showActionChoiceDialog = true // Mostra il dialogo di scelta azione
                 }
             )
             .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally // Allinea orizzontalmente al centro
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Text(text = obj.desc, textAlign = TextAlign.Center)
         Text(
-            text = obj.desc,
-            textAlign = TextAlign.Center // Allinea il testo al centro
+            text = "Start: ${obj.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}",
+            textAlign = TextAlign.Center
         )
         Text(
-            text = "Start: ${obj.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", // Formatta la data"obj.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), // Formatta la data
-            textAlign = TextAlign.Center // Allinea il testo al centro
+            text = "End: ${obj.endDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}",
+            textAlign = TextAlign.Center
         )
-        Text(
-            text = "End: ${obj.endDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", // Formatta la data"obj.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), // Formatta la data
-            textAlign = TextAlign.Center // Allinea il testo al centro
-        )
-        Text(
-            text = "${obj.amount}€", // Aggiunto l'euro
-            textAlign = TextAlign.Center // Allinea il testo al centro
+        Text(text = "${obj.amount}€", textAlign = TextAlign.Center)
+    }
+
+    // Dialogo di Scelta Azione
+    if (showActionChoiceDialog) {
+        ObjectiveActionChoiceDialog(
+            objective = obj,
+            onDismiss = { showActionChoiceDialog = false },
+            onEditClick = {
+                showEditDialog = true
+                showActionChoiceDialog = false
+            },
+            onDeleteClick = {
+                showDeleteConfirmationDialog = true
+                showActionChoiceDialog = false
+            }
         )
     }
-    // Edit Objective Dialog
+
+    // Dialogo di Modifica Obiettivo
     if (showEditDialog) {
         EditObjectiveDialog(
             objective = obj,
             viewModel = viewModel,
             onDismiss = { showEditDialog = false },
-            onDeleteClick = {
-                showEditDialog = false // Dismiss edit dialog
-                showDeleteConfirmationDialog = true // Show delete confirmation
+            // onDeleteClick in EditObjectiveDialog ora chiama il dialogo di conferma
+            onDeleteRequest = {
+                showEditDialog = false // Chiudi il dialogo di modifica
+                showDeleteConfirmationDialog = true // Mostra il dialogo di conferma eliminazione
             }
         )
     }
 
-    // Delete Confirmation Dialog
+    // Dialogo di Conferma Eliminazione
     if (showDeleteConfirmationDialog) {
-        DeleteConfirmationDialog(
+        DeleteObjectiveConfirmationDialog( // Rinominato per coerenza
             objective = obj,
             viewModel = viewModel,
-            onDismiss = { showDeleteConfirmationDialog = false }
+            onDismiss = { showDeleteConfirmationDialog = false },
+            onConfirmDelete = {
+                viewModel.deleteObjective(obj) // Logica di eliminazione
+                showDeleteConfirmationDialog = false
+                showSnackbar("Objective '${obj.desc}' deleted")
+            }
         )
     }
 }
+
+@Composable
+fun ObjectiveActionChoiceDialog(
+    objective: Objective,
+    onDismiss: () -> Unit,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Objective: '${objective.desc}'",
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            XButton(onDismiss)
+        } },
+        text = { Text("What would you like to do?")
+            },
+        confirmButton = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                TextButton(onClick = onDeleteClick) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+                TextButton(onClick = onEditClick) {
+                    Text("Edit")
+                }
+            }
+        },
+        dismissButton = null
+    )
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -258,16 +314,19 @@ fun EditObjectiveDialog(
     objective: Objective,
     viewModel: FinanceViewModel,
     onDismiss: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteRequest: () -> Unit // Modificato da onDeleteClick a onDeleteRequest
 ) {
     var description by remember { mutableStateOf(objective.desc) }
-    var amount by remember { mutableStateOf(objective.amount.toString()) }
+    var amount by remember { mutableStateOf(objective.amount.toString().replace('.',',')) }
     var selectedStartDate by remember { mutableStateOf(objective.startDate) }
     var selectedEndDate by remember { mutableStateOf(objective.endDate) }
     var selectedType by remember { mutableStateOf(objective.type) }
     var showStartDatePickerDialog by remember { mutableStateOf(false) }
     var showEndDatePickerDialog by remember { mutableStateOf(false) }
     val objectiveTypes = ObjectiveType.entries.toList()
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -291,19 +350,20 @@ fun EditObjectiveDialog(
                 value = description,
                 onValueChange = { description = it },
                 label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = description.isBlank() && errorMessage != null
             )
             Spacer(modifier = Modifier.height(8.dp))
             TextField(
                 value = amount,
                 onValueChange = { amount = it },
-                label = { Text("Amount") },
+                label = { Text("Amount (€)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = amount.replace(',','.').toDoubleOrNull() == null && errorMessage != null
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Start Date Selection
             TextField(
                 value = selectedStartDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
                 onValueChange = {},
@@ -316,11 +376,11 @@ fun EditObjectiveDialog(
                         modifier = Modifier.clickable { showStartDatePickerDialog = true }
                     )
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = errorMessage != null && selectedStartDate.isAfter(selectedEndDate) // Aggiunto controllo data
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // End Date Selection
             TextField(
                 value = selectedEndDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
                 onValueChange = {},
@@ -333,11 +393,11 @@ fun EditObjectiveDialog(
                         modifier = Modifier.clickable { showEndDatePickerDialog = true }
                     )
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = errorMessage != null && selectedEndDate.isBefore(selectedStartDate) // Aggiunto controllo data
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Objective Type (Radio Buttons)
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text("Type:")
                 Row(
@@ -352,29 +412,47 @@ fun EditObjectiveDialog(
                             RadioButton(
                                 selected = selectedType == type,
                                 onClick = { selectedType = type })
-                            Text(type.name)
+                            Text(type.name.replaceFirstChar { it.titlecase() })
                         }
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
+
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.Center
             ) {
                 Button(
-                    onClick = onDeleteClick,
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Red)
-                ) {
-                    Text("Delete")
-                }
-                Button(
-                    enabled = description.isNotBlank() && amount.isNotBlank(),
                     onClick = {
-                    // **Validation (Add your validation logic here)**
-                    val amountDouble = amount.toDoubleOrNull()
-                    if (description.isNotBlank() && amountDouble != null) {
+                        errorMessage = null // Reset error
+                        val amountDouble = amount.replace(',', '.').toDoubleOrNull()
+
+                        if (description.isBlank()) {
+                            errorMessage = "Description cannot be empty."
+                            return@Button
+                        }
+                        if (amountDouble == null || amountDouble <= 0) {
+                            errorMessage = "Please enter a valid positive amount."
+                            return@Button
+                        }
+                        if (selectedStartDate.isAfter(selectedEndDate)) {
+                            errorMessage = "Start date cannot be after end date."
+                            return@Button
+                        }
+
                         val updatedObjective = objective.copy(
                             desc = description,
                             amount = amountDouble,
@@ -382,98 +460,78 @@ fun EditObjectiveDialog(
                             endDate = selectedEndDate,
                             type = selectedType
                         )
-                        viewModel.updateObjective(updatedObjective)
+                        coroutineScope.launch {
+                            viewModel.updateObjective(updatedObjective)
+                        }
                         onDismiss()
-                    } else {
-                        // Show error
-                    }
-                }) {
-                    Text("Save")
+                    }) {
+                    Text("Save changes")
                 }
             }
         }
     }
 
+    // DatePickerDialog per la data di inizio
     if (showStartDatePickerDialog) {
-        val datePickerState = rememberDatePickerState()
-        val confirmEnabled = remember {
-            derivedStateOf { datePickerState.selectedDateMillis != null }
+        val initialStartDateMillis = remember(objective.startDate) {
+            objective.startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         }
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialStartDateMillis)
+        val confirmEnabled by remember { derivedStateOf { datePickerState.selectedDateMillis != null } }
+
         DatePickerDialog(
-            onDismissRequest = {
-                showStartDatePickerDialog = false
-            },
+            onDismissRequest = { showStartDatePickerDialog = false },
             confirmButton = {
                 TextButton(
                     onClick = {
+                        datePickerState.selectedDateMillis?.let {
+                            selectedStartDate = Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+                        }
                         showStartDatePickerDialog = false
-                        // Convert the selected date from milliseconds to LocalDate
-                        selectedStartDate = datePickerState.selectedDateMillis?.let {
-                            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
-                        }!!
                     },
-                    enabled = confirmEnabled.value // Enable OK button only if a date is selected
-                ) {
-                    Text("OK")
-                }
+                    enabled = confirmEnabled
+                ) { Text("OK") }
             },
             dismissButton = {
-                TextButton(
-                    onClick = {
-                        showStartDatePickerDialog = false
-                    }
-                ) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showStartDatePickerDialog = false }) { Text("Cancel") }
             }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+        ) { DatePicker(state = datePickerState) }
     }
 
+    // DatePickerDialog per la data di fine
     if (showEndDatePickerDialog) {
-        val datePickerState = rememberDatePickerState()
-        val confirmEnabled = remember {
-            derivedStateOf { datePickerState.selectedDateMillis != null }
+        val initialEndDateMillis = remember(objective.endDate) {
+            objective.endDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         }
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialEndDateMillis)
+        val confirmEnabled by remember { derivedStateOf { datePickerState.selectedDateMillis != null } }
+
         DatePickerDialog(
-            onDismissRequest = {
-                showEndDatePickerDialog = false
-            },
+            onDismissRequest = { showEndDatePickerDialog = false },
             confirmButton = {
                 TextButton(
                     onClick = {
+                        datePickerState.selectedDateMillis?.let {
+                            selectedEndDate = Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+                        }
                         showEndDatePickerDialog = false
-                        // Convert the selected date from milliseconds to LocalDate
-                        selectedEndDate = datePickerState.selectedDateMillis?.let {
-                            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
-                        }!!
                     },
-                    enabled = confirmEnabled.value // Enable OK button only if a date is selected
-                ) {
-                    Text("OK")
-                }
+                    enabled = confirmEnabled
+                ) { Text("OK") }
             },
             dismissButton = {
-                TextButton(
-                    onClick = {
-                        showEndDatePickerDialog = false
-                    }
-                ) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showEndDatePickerDialog = false }) { Text("Cancel") }
             }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+        ) { DatePicker(state = datePickerState) }
     }
 }
 
 @Composable
-fun DeleteConfirmationDialog(
+fun DeleteObjectiveConfirmationDialog( // Rinominato per coerenza
     objective: Objective,
     viewModel: FinanceViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onConfirmDelete: () -> Unit // Aggiunto callback per conferma
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -482,11 +540,11 @@ fun DeleteConfirmationDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    viewModel.deleteObjective(objective)
-                    onDismiss()
+                    onConfirmDelete() // Chiama il callback fornito
+                    // La logica di eliminazione e lo snackbar sono ora gestiti dal chiamante (ObjectiveItem)
                 }
             ) {
-                Text("Delete", color = Color.Red)
+                Text("Delete", color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
@@ -506,36 +564,47 @@ fun ObjectivesSection(
 ) {
     val objectives by viewModel.allObjectives.collectAsStateWithLifecycle()
     val filteredObjectives = remember(objectives, type) {
+        val now = LocalDate.now()
         when (type) {
-            ObjectiveSectionType.ACTIVE -> objectives.filter { !isObjectiveExpired(it) }
-            ObjectiveSectionType.EXPIRED -> objectives.filter { isObjectiveExpired(it) }
+            // Gli obiettivi attivi hanno data di fine uguale o successiva a oggi E non sono completati (se hai un flag `isCompleted`)
+            ObjectiveSectionType.ACTIVE -> objectives.filter { !it.endDate.isBefore(now) /* && !it.isCompleted */ }
+            // Gli obiettivi scaduti hanno data di fine precedente a oggi OPPURE sono completati
+            ObjectiveSectionType.EXPIRED -> objectives.filter { it.endDate.isBefore(now) /* || it.isCompleted */ }
         }
     }
 
-    LazyColumn(
-        state = listState,
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            top = 16.dp,
-            end = 16.dp,
-            bottom = 65.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        // Use the items extension function to efficiently display the list
-        items(filteredObjectives) { objective ->
-            Box {
+    if (filteredObjectives.isEmpty()){
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "No ${type.name.lowercase()} objectives found.",
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+    } else {
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(
+                start = 16.dp, // Padding laterale
+                top = 16.dp,
+                end = 16.dp,   // Padding laterale
+                bottom = if (listState.layoutInfo.totalItemsCount > 0) 72.dp else 16.dp // Più spazio sotto se c'è il bottone "Back"
+            ),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(filteredObjectives, key = { it.id }) { objective -> // Aggiunta key per performance
                 ObjectiveItem(objective, viewModel, showSnackbar)
             }
         }
     }
 }
 
-fun isObjectiveExpired(objective: Objective): Boolean {
-    // Replace with your actual completion logic based on your Objective data
-    // For example, if you have a `isCompleted` flag:
-    // return objective.isCompleted
-
-    // Or if based on date:
-    return objective.endDate.isBefore(LocalDate.now())
+fun isObjectiveExpired(objective: Objective): Boolean { // Questa funzione potrebbe non essere più necessaria se la logica è in filteredObjectives
+    return objective.endDate.isBefore(LocalDate.now()) // O include logica di completamento
 }

@@ -5,13 +5,16 @@ import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,59 +48,55 @@ import com.example.budgify.userpreferences.ThemePreferenceManager
 @Composable
 fun NavGraph(
     viewModel: FinanceViewModel,
-    navController: NavHostController = rememberNavController(),
+    // Rimuovi il valore di default per navController per assicurarti che sia sempre passato
+    // se MainActivity lo gestisce, o mantienilo se questo NavGraph può essere usato altrove
+    // con un controller di default. Per coerenza con il passaggio da MainActivity:
+    // navController: NavHostController,
+    themePreferenceManager: ThemePreferenceManager,
     onThemeChange: (AppTheme) -> Unit,
-    themePreferenceManager: ThemePreferenceManager
+    startDestination: String, // Riceve la start destination da MainActivity
+    onForgotPinClicked: () -> Unit, // Callback per PIN dimenticato
+    // Aggiungiamo un NavController opzionale con valore di default se MainActivity non lo passa ancora
+    navController: NavHostController = rememberNavController()
 ) {
-    // Read the PIN state once when the NavGraph is created
-    val context = LocalContext.current
-    val initialPinSet = remember { getSavedPinFromContext(context) != null }
-
-    // Determine the start destination based on whether a PIN is set
-    val startDestination = if (initialPinSet) {
-        ScreenRoutes.AccessPin.route
-    } else {
-        ScreenRoutes.Home.route
-    }
+    // La logica per determinare initialPinSet e startDestination è ora in MainActivity
+    // Quindi NavHost usa direttamente il parametro startDestination.
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable(ScreenRoutes.AccessPin.route) {
-            // Composable for PIN entry screen
             PinEntryScreen(
                 onPinCorrect = {
-                    // Navigate to the home screen after correct PIN
                     navController.navigate(ScreenRoutes.Home.route) {
-                        // Pop up the PIN entry screen so the user can't go back to it
                         popUpTo(ScreenRoutes.AccessPin.route) { inclusive = true }
                     }
-                }
-                // PinEntryScreen will handle reading the saved PIN for verification
+                },
+                onForgotPin = onForgotPinClicked // Passa il callback qui
             )
         }
 
-        // Your existing screens
         composable(ScreenRoutes.Categories.route) { CategoriesScreen(navController, viewModel) }
         composable(ScreenRoutes.Home.route) { Homepage(navController, viewModel) }
         composable(ScreenRoutes.Objectives.route) { ObjectivesScreen(navController, viewModel) }
         composable(ScreenRoutes.ObjectivesManagement.route) { ObjectivesManagementScreen(navController, viewModel) }
         composable(ScreenRoutes.Settings.route) {
-            // Passa il callback onThemeChange alla schermata delle impostazioni
             Settings(
+                // Assicurati che la tua Settings screen sia Settings e non SettingsScreen se hai cambiato nome
                 navController = navController,
                 viewModel = viewModel,
-                onThemeChange = onThemeChange // Passa il callback qui
-            )}
+                //themePreferenceManager = themePreferenceManager, // Passa themePreferenceManager
+                onThemeChange = onThemeChange, // Passa il callback
+                // Dovresti aggiungere anche callbacks per onPinSuccessfullySet e onPinCleared
+                // se vuoi che Settings possa comunicare questi cambiamenti a MainActivity
+                // per un aggiornamento UI immediato senza riavvio. Esempio:
+                // onPinSettingsChanged = { requiresPinEntry -> /* callback a MainActivity */ }
+            )
+        }
         composable(ScreenRoutes.Transactions.route) { TransactionsScreen(navController, viewModel) }
-
-
-        // Keep your commented out composables if you plan to use them later
         composable(ScreenRoutes.CredDeb.route) { CreditsDebitsScreen(navController, viewModel) }
-        //composable(ScreenRoutes.CredDebManagement.route) { CredDebManagement() }
-
     }
 }
 
-// Helper function to read PIN within a Composable (consider moving this for better separation)
+// Helper function to read PIN (può rimanere qui o essere spostata in un file utility se usata altrove)
 fun getSavedPinFromContext(context: Context): String? {
     return try {
         val masterKey = MasterKey.Builder(context)
@@ -106,53 +105,54 @@ fun getSavedPinFromContext(context: Context): String? {
 
         val sharedPreferences = EncryptedSharedPreferences.create(
             context,
-            "AppSettings",
+            "AppSettings", // Nome consistente con MainActivity
             masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
         sharedPreferences.getString("access_pin", null)
     } catch (e: Exception) {
-        Log.e("NavGraph", "Error reading PIN in Composable", e)
+        Log.e("NavGraph", "Error reading PIN", e)
         null
     }
 }
 
-
-// Example placeholder Composable for PIN entry (you need to create this)
 @Composable
-fun PinEntryScreen(onPinCorrect: () -> Unit) {
+fun PinEntryScreen(
+    onPinCorrect: () -> Unit,
+    onForgotPin: () -> Unit // Nuovo callback
+) {
     var enteredPin by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) } // State for error message
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
 
-    // Use a Box to center the content
     Box(
         modifier = Modifier
-            .fillMaxSize() // Fill the entire screen
-            .padding(16.dp), // Add some padding
-        contentAlignment = Alignment.Center // Center the content within the Box
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally, // Center items horizontally in the Column
-            verticalArrangement = Arrangement.spacedBy(16.dp), // Add vertical spacing
-            modifier = Modifier.fillMaxWidth() // Make the column fill the width
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text("Enter Access PIN", style = MaterialTheme.typography.headlineSmall)
 
             TextField(
                 value = enteredPin,
                 onValueChange = {
-                    enteredPin = it
-                    errorMessage = null // Clear error when user types
+                    if (it.length <= 6) { // Esempio: limita la lunghezza del PIN se necessario
+                        enteredPin = it
+                    }
+                    errorMessage = null
                 },
                 label = { Text("PIN") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                visualTransformation = PasswordVisualTransformation(), // Hide the text
-                modifier = Modifier.fillMaxWidth() // Fill the width
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
             )
 
-            // Show error message if present
             errorMessage?.let { message ->
                 Text(
                     text = message,
@@ -163,16 +163,24 @@ fun PinEntryScreen(onPinCorrect: () -> Unit) {
 
             Button(
                 onClick = {
-                    val savedPin = getSavedPinFromContext(context) // Use the helper function
+                    val savedPin = getSavedPinFromContext(context)
                     if (enteredPin == savedPin && savedPin != null) {
                         onPinCorrect()
                     } else {
-                        errorMessage = "Incorrect PIN" // Set error message
+                        errorMessage = "Incorrect PIN"
+                        enteredPin = "" // Opzionale: cancella il campo dopo un tentativo errato
                     }
                 },
-                modifier = Modifier.fillMaxWidth() // Fill the width
+                modifier = Modifier.fillMaxWidth(),
+                enabled = enteredPin.isNotBlank() // Disabilita il pulsante se il PIN è vuoto
             ) {
                 Text("Submit")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp)) // Aggiungi uno spacer
+
+            TextButton(onClick = onForgotPin) { // Pulsante per PIN Dimenticato
+                Text("Forgot PIN?")
             }
         }
     }

@@ -24,10 +24,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -35,7 +33,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -62,6 +59,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -267,7 +265,23 @@ fun LastTransactionBox(
                 showTransactionActionChoiceDialog = false
                 transactionToAction = null
             },
-            title = { Text("Transaction: '${transactionToAction?.description}'") },
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Transaction: '${transactionToAction?.description}'",
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    XButton({
+                        showTransactionActionChoiceDialog = false
+                        transactionToAction = null
+                    })
+                }
+                    },
             text = { Text("What would you like to do?") },
             confirmButton = {
                 Row(
@@ -291,14 +305,6 @@ fun LastTransactionBox(
                         }
                     ) {
                         Text("Edit")
-                    }
-                    TextButton(
-                        onClick = {
-                            showTransactionActionChoiceDialog = false
-                            transactionToAction = null
-                        }
-                    ) {
-                        Text("Cancel")
                     }
                 }
             },
@@ -570,7 +576,7 @@ fun EditTransactionDialog(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End // Align save button to the end
+                horizontalArrangement = Arrangement.Center // Align save button to the end
             ) {
                 // REMOVED Delete Button from here
                 // Spacer(modifier = Modifier.width(8.dp)) // REMOVED
@@ -804,7 +810,19 @@ fun AccountItem(
     if (showActionChoiceDialog) {
         AlertDialog(
             onDismissRequest = { showActionChoiceDialog = false },
-            title = { Text("Account: '${account.title}'") },
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Account: '${account.title}'",
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    XButton({ showActionChoiceDialog = false })
+                }},
             text = { Text("What would you like to do?") },
             confirmButton = {
                 Row(
@@ -826,11 +844,6 @@ fun AccountItem(
                         }
                     ) {
                         Text("Edit")
-                    }
-                    TextButton(
-                        onClick = { showActionChoiceDialog = false }
-                    ) {
-                        Text("Cancel")
                     }
                 }
             },
