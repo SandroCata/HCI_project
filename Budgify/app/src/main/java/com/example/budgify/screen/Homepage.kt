@@ -695,12 +695,12 @@ fun AccountItem(
     account: Account,
     viewModel: FinanceViewModel,
     showSnackbar: (String) -> Unit
-) { // Add ViewModel as a parameter
-    var isLongPressed by remember { mutableStateOf(false) }
-    // State to control the visibility of the delete confirmation dialog
+) {
+    // var isLongPressed by remember { mutableStateOf(false) } // Non più necessario direttamente per l'icona
+    var showActionChoiceDialog by remember { mutableStateOf(false) } // Nuovo: per il dialogo di scelta
+    var showEditAccountDialog by remember { mutableStateOf(false) }  // Nuovo: per il dialogo di modifica
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
 
-    // Obtain a CoroutineScope to launch suspend functions
     val coroutineScope = rememberCoroutineScope()
 
     Box(modifier = Modifier
@@ -710,49 +710,73 @@ fun AccountItem(
         .clip(RoundedCornerShape(16.dp))
         .combinedClickable(
             onClick = {
-                showSnackbar("Hold to delete the account")
-                if (isLongPressed) {
-                    isLongPressed = false // Reset if long pressed and clicked again
-                } else {
-                    // TODO: Handle regular click logic (e.g., show account details or transactions)
-                }
+                // Puoi mantenere lo snackbar o rimuoverlo se il long press ha un'azione chiara
+                showSnackbar("Hold to edit or delete the account")
             },
             onLongClick = {
-                isLongPressed = true // Set state on long press
+                showActionChoiceDialog = true // Mostra il dialogo di scelta azione
             }
-        )){
+        )) {
         Column(
             modifier = Modifier
-                .width(150.dp)
-                .height(65.dp)
+                .fillMaxSize() // Usa fillMaxSize per occupare tutto lo spazio del Box
                 .background(MaterialTheme.colorScheme.onTertiary),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Text(text = account.title, fontWeight = FontWeight.Bold, color= MaterialTheme.colorScheme.surface)
-
-            Text(text = "${account.amount}€", color= MaterialTheme.colorScheme.surface)
+            Text(text = account.title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
+            Text(text = "${account.amount}€", color = MaterialTheme.colorScheme.surface)
         }
 
-        if (isLongPressed) {
-            IconButton(
-                onClick = {
-                    showDeleteConfirmationDialog = true
-                },
-                modifier = Modifier.align(Alignment.TopEnd)
-            ) {
-                Icon(Icons.Filled.Delete, contentDescription = "Remove Account")
-            }
-        }
+        // L'icona di eliminazione non è più mostrata direttamente qui,
+        // la scelta avverrà tramite il dialogo.
+        // if (isLongPressed) { ... }
     }
 
-    // Delete Confirmation Dialog
+    // Dialogo di Scelta Azione (Nuovo)
+    if (showActionChoiceDialog) {
+        AlertDialog(
+            onDismissRequest = { showActionChoiceDialog = false },
+            title = { Text("Account: '${account.title}'") },
+            text = { Text("What would you like to do?") },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly // O Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = {
+                            showDeleteConfirmationDialog = true
+                            showActionChoiceDialog = false
+                        }
+                    ) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(
+                        onClick = {
+                            showEditAccountDialog = true
+                            showActionChoiceDialog = false
+                        }
+                    ) {
+                        Text("Edit")
+                    }
+                    TextButton(
+                        onClick = { showActionChoiceDialog = false }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            },
+            dismissButton = null // O un TextButton per "Cancel" se preferisci separarlo
+        )
+    }
+
+
+    // Dialogo di Conferma Eliminazione (esistente, ma ora chiamato da showActionChoiceDialog)
     if (showDeleteConfirmationDialog) {
         AlertDialog(
             onDismissRequest = {
-                // Dismiss the dialog if the user clicks outside or presses back
                 showDeleteConfirmationDialog = false
-                isLongPressed = false // Also reset long press state
             },
             title = { Text("Confirm Deletion") },
             text = { Text("Are you sure you want to delete the account \"${account.title}\"?\nAll transactions related to this account will also be deleted") },
@@ -760,9 +784,8 @@ fun AccountItem(
                 TextButton(
                     onClick = {
                         coroutineScope.launch {
-                            viewModel.deleteAccount(account) // Delete the account
-                            showDeleteConfirmationDialog = false // Dismiss the confirmation dialog
-                            isLongPressed = false // Reset long press state
+                            viewModel.deleteAccount(account)
+                            showDeleteConfirmationDialog = false
                         }
                     }
                 ) {
@@ -772,12 +795,24 @@ fun AccountItem(
             dismissButton = {
                 TextButton(
                     onClick = {
-                        showDeleteConfirmationDialog = false // Dismiss the confirmation dialog
-                        isLongPressed = false // Reset long press state
+                        showDeleteConfirmationDialog = false
                     }
                 ) {
                     Text("Cancel")
                 }
+            }
+        )
+    }
+
+    // Dialogo di Modifica Account (Nuovo)
+    if (showEditAccountDialog) {
+        EditAccountDialog(
+            accountToEdit = account,
+            viewModel = viewModel,
+            onDismiss = { showEditAccountDialog = false },
+            onAccountUpdated = { updatedAccount ->
+                showEditAccountDialog = false
+                showSnackbar("Account '${updatedAccount.title}' updated!")
             }
         )
     }
@@ -826,7 +861,7 @@ fun AddAccountDialog(
             TextField(
                 value = initialBalance,
                 onValueChange = { initialBalance = it },
-                label = { Text("Initial Balance") },
+                label = { Text("Balance") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -860,6 +895,121 @@ fun AddAccountDialog(
                     }
                 }) {
                     Text("Add")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EditAccountDialog(
+    accountToEdit: Account,
+    viewModel: FinanceViewModel,
+    onDismiss: () -> Unit,
+    onAccountUpdated: (Account) -> Unit // Potresti anche rimuovere il parametro Account qui se non lo usi più
+) {
+    var accountTitle by remember { mutableStateOf(accountToEdit.title) }
+
+    // Mostra l'amount ATTUALE nel TextField, ma ricorda l'initialAmount originale
+    // per calcolare la DIFFERENZA che l'utente vuole applicare all'initialAmount.
+    var currentBalanceDisplayString by remember {
+        mutableStateOf(accountToEdit.amount.toString().replace('.', ','))
+    }
+    val originalInitialAmount = accountToEdit.initialAmount // Conserva l'initialAmount originale
+
+    val coroutineScope = rememberCoroutineScope()
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Edit Account", style = MaterialTheme.typography.titleLarge)
+                XButton(onDismiss)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextField(
+                value = accountTitle,
+                onValueChange = { accountTitle = it },
+                label = { Text("Account Name") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = accountTitle.isBlank() && errorMessage != null
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // L'utente vede e modifica questo campo, che inizialmente mostra l'AMOUNT attuale
+            TextField(
+                value = currentBalanceDisplayString,
+                onValueChange = { currentBalanceDisplayString = it },
+                label = { Text("Balance") }, // Etichetta cambiata per chiarezza
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                isError = currentBalanceDisplayString.replace(',', '.').toDoubleOrNull() == null && errorMessage != null
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Button(
+                    onClick = {
+                        errorMessage = null
+                        if (accountTitle.isBlank()) {
+                            errorMessage = "Account name cannot be empty."
+                            return@Button
+                        }
+
+                        val newDisplayedBalanceDouble = currentBalanceDisplayString.replace(',', '.').toDoubleOrNull()
+
+                        if (newDisplayedBalanceDouble == null) {
+                            errorMessage = "Please enter a valid balance."
+                            return@Button
+                        }
+
+                        // Calcola la differenza tra il saldo attuale originale e quello nuovo visualizzato
+                        // Questo delta verrà applicato all'initialAmount originale.
+                        val balanceDifference = newDisplayedBalanceDouble - accountToEdit.amount
+                        val newCalculatedInitialAmount = originalInitialAmount + balanceDifference
+
+                        coroutineScope.launch {
+                            val success = viewModel.updateAccountAndRecalculateBalance(
+                                accountId = accountToEdit.id,
+                                newTitle = accountTitle,
+                                newInitialAmount = newCalculatedInitialAmount // Passa il NUOVO initialAmount calcolato
+                            )
+                            if (success) {
+                                // La UI si aggiornerà tramite il Flow.
+                                // onAccountUpdated è ancora utile per lo snackbar/chiusura.
+                                // Passiamo dati indicativi, poiché il vero aggiornamento è nel ViewModel.
+                                onAccountUpdated(accountToEdit.copy(title = accountTitle, initialAmount = newCalculatedInitialAmount, amount = newDisplayedBalanceDouble))
+                                onDismiss()
+                            } else {
+                                errorMessage = "Failed to update account. Please try again."
+                            }
+                        }
+                    }
+                ) {
+                    Text("Save Changes")
                 }
             }
         }

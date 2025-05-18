@@ -87,6 +87,9 @@ class FinanceRepository(
     }
     // Inside your FinanceRepository class
     suspend fun getAccountById(accountId: Int): Account? = accountDao.getAccountById(accountId)
+    suspend fun getTransactionsForAccount(accountId: Int): List<MyTransaction> {
+        return transactionDao.getTransactionsForAccount(accountId)
+    }
     suspend fun updateAccount(account: Account) {
         accountDao.update(account)
     }

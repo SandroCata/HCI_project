@@ -1,5 +1,6 @@
 package com.example.budgify.applicationlogic
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -9,7 +10,9 @@ import com.example.budgify.entities.Loan
 import com.example.budgify.entities.LoanType
 import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.Objective
+import com.example.budgify.entities.TransactionType
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -156,6 +159,57 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = false // Or true, depending on your initial state logic
         )
+
+    /**
+     * Updates an account's title and initial amount, then recalculates its current balance
+     * based on all its associated transactions.
+     *
+     * @return true if the update and recalculation were successful, false otherwise.
+     */
+    suspend fun updateAccountAndRecalculateBalance(
+        accountId: Int,
+        newTitle: String,
+        newInitialAmount: Double
+    ): Boolean {
+        return viewModelScope.async { // Usa async se vuoi restituire un risultato
+            // 1. Recupera l'account esistente (opzionale, potresti passare l'account intero)
+            val accountToUpdate = repository.getAccountById(accountId) // Dovrai aggiungere getAccountById al DAO e Repository
+            if (accountToUpdate == null) {
+                Log.e("FinanceViewModel", "Account with ID $accountId not found for update.")
+                return@async false
+            }
+
+            // 2. Recupera tutte le transazioni per questo account
+            //    Assicurati che transactionsByAccountId restituisca un List<MyTransaction> e non un Flow per questo uso specifico,
+            //    oppure raccogli il primo valore dal Flow.
+            val transactionsForAccount = repository.getTransactionsForAccount(accountId) // Dovrai creare questo metodo
+
+            // 3. Calcola il delta delle transazioni
+            var transactionsDelta = 0.0
+            transactionsForAccount.forEach { transaction ->
+                if (transaction.type == TransactionType.INCOME) {
+                    transactionsDelta += transaction.amount
+                } else {
+                    transactionsDelta -= transaction.amount
+                }
+            }
+
+            // 4. Calcola il nuovo 'amount' (saldo corrente)
+            val newCurrentAmount = newInitialAmount + transactionsDelta
+
+            // 5. Crea l'oggetto Account aggiornato
+            val updatedAccount = accountToUpdate.copy(
+                title = newTitle,
+                initialAmount = newInitialAmount,
+                amount = newCurrentAmount // Imposta l'amount ricalcolato
+            )
+
+            // 6. Aggiorna l'account nel database
+            repository.updateAccount(updatedAccount)
+            Log.d("FinanceViewModel", "Account $accountId updated. New Initial: $newInitialAmount, New Current: $newCurrentAmount")
+            true
+        }.await() // Aspetta il risultato dell'operazione asincrona
+    }
 
 
     // LOANS --- Nuova sezione per i Prestiti ---
