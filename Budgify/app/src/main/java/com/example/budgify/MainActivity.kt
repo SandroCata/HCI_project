@@ -4,9 +4,14 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -16,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -25,13 +31,13 @@ import com.example.budgify.applicationlogic.FinanceRepository
 import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.navigation.NavGraph
 import com.example.budgify.routes.ScreenRoutes
+import com.example.budgify.screen.SecurityQuestionAnswer
+import com.example.budgify.screen.getSavedSecurityQuestionAnswer
+import com.example.budgify.screen.securityQuestions
 import com.example.budgify.ui.theme.BudgifyTheme
 import com.example.budgify.userpreferences.ThemePreferenceManager
 
 class MainActivity : ComponentActivity() {
-
-    // Non è più necessario spostare themePreferenceManager qui se non serve in clearSavedPin
-    // private lateinit var themePreferenceManager: ThemePreferenceManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,22 +46,28 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var currentTheme by remember { mutableStateOf(themePreferenceManager.getSavedTheme()) }
-            val navController = rememberNavController() // Crea il NavController qui
+            val navController = rememberNavController()
 
-            // Stato per determinare se il PIN è necessario.
-            // Questo stato verrà aggiornato e causerà la ricomposizione,
-            // influenzando la startDestination del NavGraph.
             var requiresPinEntry by remember { mutableStateOf(getSavedPin() != null) }
-            var showPinResetConfirmationDialog by remember { mutableStateOf(false) }
 
-            // Determina la startDestination dinamicamente
+            // State for Dialogs
+            var showDirectPinResetDialog by remember { mutableStateOf(false) } // For the original PinResetConfirmationDialog
+            var showSecurityQuestionDialog by remember { mutableStateOf(false) }
+            var showSecurityQuestionNotSetDialog by remember { mutableStateOf(false) }
+
+            // State for Security Question Data
+            var securityQuestionToAsk by remember { mutableStateOf<String?>(null) }
+            var correctSecurityAnswer by remember { mutableStateOf<String?>(null) }
+            var securityAnswerInput by remember { mutableStateOf("") }
+            var securityQuestionErrorMessage by remember { mutableStateOf<String?>(null) }
+
+
             val startDestination = if (requiresPinEntry) {
-                ScreenRoutes.AccessPin.route // La tua route per la schermata di inserimento PIN
+                ScreenRoutes.AccessPin.route
             } else {
-                ScreenRoutes.Home.route // La tua route per la schermata principale
+                ScreenRoutes.Home.route
             }
 
-            // ViewModel
             val application = application as FinanceApplication
             val database = application.database
             val repository = FinanceRepository(
@@ -73,45 +85,109 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // Mostra il dialogo di conferma reset PIN se necessario
-                    if (showPinResetConfirmationDialog) {
+                    // Dialog for direct PIN reset
+                    if (showDirectPinResetDialog) {
                         PinResetConfirmationDialog(
                             onConfirm = {
                                 clearSavedPin()
-                                requiresPinEntry = false // Aggiorna lo stato per riflettere che il PIN non è più richiesto
-                                showPinResetConfirmationDialog = false
-                                // Dopo il reset, naviga alla home e pulisci lo stack di navigazione
-                                // relativo alla schermata del PIN.
+                                requiresPinEntry = false
+                                showDirectPinResetDialog = false
                                 navController.navigate(ScreenRoutes.Home.route) {
                                     popUpTo(navController.graph.startDestinationId) { inclusive = true }
                                     launchSingleTop = true
                                 }
                             },
                             onDismiss = {
-                                showPinResetConfirmationDialog = false
+                                showDirectPinResetDialog = false
+                            }
+                        )
+                    }
+
+                    // Dialog to input security question answer
+                    if (showSecurityQuestionDialog && securityQuestionToAsk != null && correctSecurityAnswer != null) {
+                        SecurityQuestionInputDialog(
+                            question = securityQuestionToAsk!!,
+                            answerInput = securityAnswerInput,
+                            onAnswerChange = {
+                                securityAnswerInput = it
+                                securityQuestionErrorMessage = null // Clear error on new input
+                            },
+                            errorMessage = securityQuestionErrorMessage,
+                            onConfirm = {
+                                if (securityAnswerInput.equals(correctSecurityAnswer, ignoreCase = true)) {
+                                    // Correct answer
+                                    clearSavedPin()
+                                    requiresPinEntry = false
+                                    showSecurityQuestionDialog = false
+                                    securityAnswerInput = "" // Clear input
+                                    securityQuestionErrorMessage = null // Clear error
+                                    navController.navigate(ScreenRoutes.Home.route) {
+                                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                } else {
+                                    securityQuestionErrorMessage = "Incorrect answer. Please try again."
+                                }
+                            },
+                            onDismiss = {
+                                showSecurityQuestionDialog = false
+                                securityAnswerInput = "" // Clear input
+                                securityQuestionErrorMessage = null // Clear error
+                            }
+                        )
+                    }
+
+                    // Dialog if security question is not set up
+                    if (showSecurityQuestionNotSetDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showSecurityQuestionNotSetDialog = false },
+                            title = { Text("PIN Recovery Not Set Up") },
+                            text = { Text("You have not set up a security question for PIN recovery. You can set one in Settings. Would you like to reset your PIN directly? This will clear your current PIN.") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    showSecurityQuestionNotSetDialog = false
+                                    showDirectPinResetDialog = true // Offer direct PIN reset
+                                }) {
+                                    Text("Reset PIN")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showSecurityQuestionNotSetDialog = false }) {
+                                    Text("Cancel")
+                                }
                             }
                         )
                     }
 
                     NavGraph(
-                        navController = navController, // Passa il NavController
+                        navController = navController,
                         viewModel = financeViewModel,
                         themePreferenceManager = themePreferenceManager,
                         onThemeChange = { newTheme ->
                             themePreferenceManager.saveTheme(newTheme)
                             currentTheme = newTheme
                         },
-                        startDestination = startDestination, // Passa la startDestination dinamica
+                        startDestination = startDestination,
                         onForgotPinClicked = {
-                            showPinResetConfirmationDialog = true
+                            val savedQA: SecurityQuestionAnswer? = getSavedSecurityQuestionAnswer(this@MainActivity)
+
+                            if (savedQA != null && savedQA.answer.isNotBlank()) {
+                                // Check if questionIndex is valid for the list
+                                if (savedQA.questionIndex >= 0 && savedQA.questionIndex < securityQuestions.size) {
+                                    securityQuestionToAsk = securityQuestions[savedQA.questionIndex]
+                                    correctSecurityAnswer = savedQA.answer
+                                    securityAnswerInput = "" // Clear previous input
+                                    securityQuestionErrorMessage = null // Clear previous error message
+                                    showSecurityQuestionDialog = true
+                                } else {
+                                    Log.e("MainActivity", "Invalid security question index: ${savedQA.questionIndex}")
+                                    showSecurityQuestionNotSetDialog = true // Fallback if index is bad
+                                }
+                            } else {
+                                // Security question not set or answer is blank
+                                showSecurityQuestionNotSetDialog = true
+                            }
                         }
-                        // Callback per quando un PIN viene impostato/cancellato da Settings
-                        // Questo permette a MainActivity di aggiornare 'requiresPinEntry'
-                        // e far ricomporre NavGraph con la nuova startDestination se necessario,
-                        // o semplicemente di essere consapevole del cambiamento per il prossimo avvio.
-                        // onPinExistenceChanged = { pinExists ->
-                        //    requiresPinEntry = pinExists
-                        // }
                     )
                 }
             }
@@ -156,6 +232,8 @@ class MainActivity : ComponentActivity() {
                 apply()
             }
             Log.i("MainActivity", "Saved PIN has been cleared.")
+            // Optionally, also clear the security question here if a PIN reset implies that,
+            // or handle it separately. For now, just clearing PIN.
         } catch (e: Exception) {
             Log.e("MainActivity", "Error clearing PIN", e)
         }
@@ -163,14 +241,14 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun PinResetConfirmationDialog(
+fun PinResetConfirmationDialog( // This is for the direct PIN reset
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Reset PIN?") },
-        text = { Text("If you reset the PIN, you will need to set a new one. Any data specifically secured by the old PIN might become inaccessible if not backed up. Are you sure you want to continue?") }, // Testo leggermente modificato
+        text = { Text("If you reset the PIN, you will need to set a new one. This will clear your current PIN. Are you sure you want to continue?") }, // Clarified text
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text("Reset PIN", color = MaterialTheme.colorScheme.error)
@@ -184,3 +262,48 @@ fun PinResetConfirmationDialog(
     )
 }
 
+@Composable
+fun SecurityQuestionInputDialog(
+    question: String,
+    answerInput: String,
+    onAnswerChange: (String) -> Unit,
+    errorMessage: String?,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Forgot PIN - Security Question") },
+        text = {
+            Column {
+                Text(question)
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = answerInput,
+                    onValueChange = onAnswerChange,
+                    label = { Text("Your Answer") },
+                    isError = errorMessage != null,
+                    singleLine = true // Or false if answers can be long
+                )
+                errorMessage?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Submit Answer")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}

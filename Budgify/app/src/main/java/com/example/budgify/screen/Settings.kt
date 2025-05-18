@@ -1,13 +1,19 @@
 package com.example.budgify.screen
 
 import android.util.Log
+import android.util.Patterns
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NightsStay
+import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -34,7 +41,75 @@ import com.example.budgify.userpreferences.AppTheme
 import com.example.budgify.userpreferences.rememberThemePreferenceManager
 import kotlinx.coroutines.launch
 
-// Enum per rappresentare le opzioni delle impostazioni selezionate
+
+// --- Security Question Data ---
+data class SecurityQuestionAnswer(val questionIndex: Int, val answer: String)
+
+val securityQuestions = listOf(
+    "What was the name of your first pet?",
+    "What is your mother's maiden name?",
+    "What was the name of your elementary school?",
+    "In what city were you born?",
+    "What is your favorite book?"
+)
+
+// --- Helper functions for SharedPreferences ---
+
+// Funzione helper per recuperare la domanda e risposta di sicurezza salvate
+fun getSavedSecurityQuestionAnswer(context: android.content.Context): SecurityQuestionAnswer? {
+    try {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        val sharedPreferences = EncryptedSharedPreferences.create(
+            context,
+            "AppSettings",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+        val questionIndex = sharedPreferences.getInt("security_question_index", -1)
+        val answer = sharedPreferences.getString("security_answer", null)
+
+        return if (questionIndex != -1 && answer != null) {
+            SecurityQuestionAnswer(questionIndex, answer)
+        } else {
+            null
+        }
+    } catch (e: Exception) {
+        Log.e("Settings", "Error retrieving saved security question/answer", e)
+        return null
+    }
+}
+
+// Funzione helper per salvare la domanda e risposta di sicurezza
+fun saveSecurityQuestionAnswer(context: android.content.Context, questionIndex: Int, answer: String): Boolean {
+    try {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        val sharedPreferences = EncryptedSharedPreferences.create(
+            context,
+            "AppSettings",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+        with(sharedPreferences.edit()) {
+            putInt("security_question_index", questionIndex)
+            putString("security_answer", answer) // Store the answer directly (it will be encrypted by EncryptedSharedPreferences)
+            apply()
+        }
+        return true
+    } catch (e: Exception) {
+        Log.e("Settings", "Error saving security question/answer", e)
+        return false
+    }
+}
+
+
 enum class SettingsOptionType {
     NONE, PIN, THEME, ABOUT
 }
@@ -44,20 +119,22 @@ fun Settings(navController: NavController, viewModel: FinanceViewModel, onThemeC
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Settings.route) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    // Stato per tenere traccia dell'opzione selezionata
     var selectedOption by remember { mutableStateOf(SettingsOptionType.NONE) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { TopBar(navController, currentRoute) },
-        bottomBar = { BottomBar(
-            navController,
-            viewModel,
-            showSnackbar = { message ->
-                scope.launch {
-                    snackbarHostState.showSnackbar(message)
+        bottomBar = {
+            BottomBar(
+                navController,
+                viewModel,
+                showSnackbar = { message ->
+                    scope.launch {
+                        snackbarHostState.showSnackbar(message)
+                    }
                 }
-            }
-        ) }
+            )
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -66,25 +143,24 @@ fun Settings(navController: NavController, viewModel: FinanceViewModel, onThemeC
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Sezione delle opzioni di impostazione
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp), // Aggiunto padding sotto le opzioni
+                    .padding(bottom = 16.dp),
                 verticalArrangement = Arrangement.Top
             ) {
                 SettingsOption(
                     icon = Icons.Default.Lock,
-                    title = "Set an access PIN",
+                    title = "Access PIN & Security Question", // MODIFIED
                     onClick = { selectedOption = SettingsOptionType.PIN }
                 )
-                Spacer(modifier = Modifier.height(8.dp)) // Spazio ridotto tra le opzioni
+                Spacer(modifier = Modifier.height(8.dp))
                 SettingsOption(
                     icon = Icons.Default.NightsStay,
                     title = "Dark/Light Mode",
                     onClick = { selectedOption = SettingsOptionType.THEME }
                 )
-                Spacer(modifier = Modifier.height(8.dp)) // Spazio ridotto tra le opzioni
+                Spacer(modifier = Modifier.height(8.dp))
                 SettingsOption(
                     icon = Icons.Default.Info,
                     title = "About the app",
@@ -92,21 +168,22 @@ fun Settings(navController: NavController, viewModel: FinanceViewModel, onThemeC
                 )
             }
 
-            // Sezione dei dettagli/azioni dell'opzione selezionata
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f) // Occupa lo spazio rimanente
-                    .padding(top = 16.dp), // Aggiunto padding sopra la sezione dei dettagli
-                contentAlignment = Alignment.Center // Allinea il contenuto al centro
+                    .weight(1f)
+                    .padding(top = 16.dp),
+                contentAlignment = Alignment.Center
             ) {
                 when (selectedOption) {
                     SettingsOptionType.NONE -> {
-                        // Mostra un testo di benvenuto o istruzioni iniziali
-                        Text("Select an option for more details", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                        Text(
+                            "Select an option for more details",
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     }
                     SettingsOptionType.PIN -> {
-                        PinSettingsContent()
+                        PinSettingsContent(snackbarHostState = snackbarHostState)
                     }
                     SettingsOptionType.THEME -> {
                         ThemeSettingsContent(onThemeChange)
@@ -134,277 +211,382 @@ fun SettingsOption(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(24.dp))
+        Icon(imageVector = icon, contentDescription = title, modifier = Modifier.size(24.dp))
         Text(text = title, fontSize = 18.sp, fontWeight = FontWeight.Normal)
     }
     Divider()
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PinSettingsContent() {
-    // Stati per i campi di input del PIN
+fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
     var newPin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) } // Stato per mostrare messaggi di errore
-    // Stato per mostrare messaggi di successo specifici per la rimozione del PIN
-    var removeSuccessMessage by remember { mutableStateOf<String?>(null) }
-    // Stato per mostrare messaggi di successo per il salvataggio del PIN
-    var saveSuccessMessage by remember { mutableStateOf<String?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Obtain the context to access SharedPreferences
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState() // Added for scrolling
 
-    // Stato mutabile per tracciare se un PIN è attualmente impostato
     var isPinSet by remember { mutableStateOf(getSavedPinFromContext(context) != null) }
+    var savedSecurityQA by remember { mutableStateOf(getSavedSecurityQuestionAnswer(context)) }
+
+    // State for security question UI
+    var selectedQuestionIndex by remember { mutableStateOf(savedSecurityQA?.questionIndex ?: 0) }
+    var securityAnswerInput by remember { mutableStateOf(savedSecurityQA?.answer ?: "") }
+    var securityQuestionDropdownExpanded by remember { mutableStateOf(false) }
+
+
+    LaunchedEffect(Unit) { // Load saved security question and answer
+        val loadedQA = getSavedSecurityQuestionAnswer(context)
+        if (loadedQA != null) {
+            selectedQuestionIndex = loadedQA.questionIndex
+            securityAnswerInput = loadedQA.answer
+        } else {
+            // Default to the first question if nothing is saved
+            selectedQuestionIndex = 0
+            securityAnswerInput = ""
+        }
+    }
+
+    // Determine if the security question/answer has been set at least once
+    val isSecurityQASet = remember { mutableStateOf(savedSecurityQA != null) }
+    // If the saved Q&A changes, update isSecurityQASet
+    LaunchedEffect(savedSecurityQA) {
+        isSecurityQASet.value = savedSecurityQA != null
+        if (savedSecurityQA != null && securityAnswerInput.isEmpty()) {
+            // Pre-fill if it was emptied and then saved (though less likely with this setup)
+            securityAnswerInput = savedSecurityQA!!.answer
+            selectedQuestionIndex = savedSecurityQA!!.questionIndex
+        }
+    }
 
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxWidth() // Riempie la larghezza disponibile
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+            .verticalScroll(scrollState)
     ) {
-        Text("PIN Settings", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
+        Text(
+            when {
+                isPinSet && isSecurityQASet.value -> "Manage PIN & Security Question"
+                isPinSet -> "Set Security Question & Manage PIN"
+                isSecurityQASet.value -> "Set PIN & Manage Security Question"
+                else -> "Set PIN & Security Question"
+            },
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
 
-        // Controlla se mostrare il pulsante di rimozione o il messaggio di successo della rimozione
-        if (isPinSet && removeSuccessMessage == null) { // Mostra il pulsante solo se il PIN è impostato E non c'è un messaggio di successo di rimozione
-            Button(
-                onClick = {
-                    try {
-                        val masterKey = MasterKey.Builder(context)
-                            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                            .build()
-
-                        val sharedPreferences = EncryptedSharedPreferences.create(
-                            context,
-                            "AppSettings", // File name for SharedPreferences
-                            masterKey,
-                            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                        )
-
-                        // Remove the PIN key
-                        with(sharedPreferences.edit()) {
-                            remove("access_pin")
-                            apply()
-                        }
-
-                        // Imposta il messaggio di successo per la rimozione
-                        removeSuccessMessage = "PIN removed successfully"
-                        saveSuccessMessage = null // Cancella il messaggio di successo per il salvataggio
-                        errorMessage = null // Clear error message
-                        newPin = "" // Clear input fields
-                        confirmPin = ""
-                        // Aggiorna lo stato isPinSet (opzionale qui se il messaggio prende il suo posto, ma utile per coerenza)
-                        isPinSet = false
-
-
-                    } catch (e: Exception) {
-                        Log.e("PinSettingsContent", "Error removing PIN", e)
-                        errorMessage = "Error removing PIN: ${e.localizedMessage}"
-                        removeSuccessMessage = null // Cancella il messaggio di successo per la rimozione
-                        saveSuccessMessage = null // Cancella il messaggio di successo per il salvataggio
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error), // Use error color for "Remove"
-                modifier = Modifier.fillMaxWidth() // Riempie la larghezza
-            ) {
-                Text("Remove secure access")
-            }
-        } else if (!isPinSet && removeSuccessMessage != null) { // Mostra il messaggio di successo della rimozione se il PIN NON è impostato E c'è un messaggio
-            // Mostra il messaggio di successo specifico per la rimozione al posto del pulsante
-            Text(
-                text = removeSuccessMessage!!, // Usiamo !! perché sappiamo che non è nullo qui
-                color = MaterialTheme.colorScheme.primary, // Colore per i successi
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.fillMaxWidth() // Riempi la larghezza per allineamento
-            )
-        }
-
+        // --- PIN Section ---
         if (isPinSet) {
-            Text("Change your access PIN:", fontWeight = FontWeight.Bold)
+            Text("Change Access PIN", style = MaterialTheme.typography.titleMedium)
         } else {
-            Text("Set an access PIN:", fontWeight = FontWeight.Bold)
+            Text("Set New Access PIN", style = MaterialTheme.typography.titleMedium)
         }
 
-
-        // Campo di input per il nuovo PIN
         TextField(
             value = newPin,
             onValueChange = {
-                newPin = it
-                // Clear messages when user starts typing
+                newPin = it.filter { char -> char.isDigit() }
                 errorMessage = null
-                removeSuccessMessage = null // Cancella messaggi di successo all'input
-                saveSuccessMessage = null
             },
-            label = { Text("New PIN") },
+            label = { Text("New PIN (min 4 digits)") },
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "New PIN") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            visualTransformation = PasswordVisualTransformation(), // Nasconde il testo
-            modifier = Modifier.fillMaxWidth() // Riempie la larghezza
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            isError = errorMessage?.contains("PIN", ignoreCase = true) == true // Make check case-insensitive
         )
 
-        // Campo di input per confermare il PIN
         TextField(
             value = confirmPin,
             onValueChange = {
-                confirmPin = it
-                // Clear messages when user starts typing
+                confirmPin = it.filter { char -> char.isDigit() }
                 errorMessage = null
-                removeSuccessMessage = null // Cancella messaggi di successo all'input
-                saveSuccessMessage = null
             },
-            label = { Text("Confirm New PIN") },
+            label = { Text(if (isPinSet) "Confirm New PIN (if changing)" else "Confirm New PIN") },
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Confirm PIN") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            visualTransformation = PasswordVisualTransformation(), // Nasconde il testo
-            modifier = Modifier.fillMaxWidth() // Riempie la larghezza
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            isError = errorMessage?.contains("PINs do not match", ignoreCase = true) == true
         )
 
-        // Mostra messaggio di errore se presente
+        // --- Security Question Section ---
+        Text("Security Question for Temporary Access", style = MaterialTheme.typography.titleMedium)
+
+        ExposedDropdownMenuBox(
+            expanded = securityQuestionDropdownExpanded,
+            onExpandedChange = { securityQuestionDropdownExpanded = !securityQuestionDropdownExpanded },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            TextField(
+                value = securityQuestions[selectedQuestionIndex],
+                onValueChange = {}, // Not editable directly
+                readOnly = true,
+                label = { Text("Select Security Question") },
+                leadingIcon = { Icon(Icons.Default.QuestionAnswer, contentDescription = "Security Question") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = securityQuestionDropdownExpanded) },
+                colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = securityQuestionDropdownExpanded,
+                onDismissRequest = { securityQuestionDropdownExpanded = false }
+            ) {
+                securityQuestions.forEachIndexed { index, question ->
+                    DropdownMenuItem(
+                        text = { Text(question) },
+                        onClick = {
+                            selectedQuestionIndex = index
+                            securityQuestionDropdownExpanded = false
+                            errorMessage = null
+                        }
+                    )
+                }
+            }
+        }
+
+        TextField(
+            value = securityAnswerInput,
+            onValueChange = {
+                securityAnswerInput = it
+                errorMessage = null
+            },
+            label = { Text("Your Answer") },
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Security Answer") }, // Using Lock icon for answer too
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true, // Or false if answers can be long
+            isError = errorMessage?.contains("answer", ignoreCase = true) == true
+        )
+
+
+        // --- Error Message ---
         errorMessage?.let { message ->
             Text(
                 text = message,
                 color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
 
-        // Mostra messaggio di successo per il salvataggio se presente
-        saveSuccessMessage?.let { message ->
-            Text(
-                text = message,
-                color = MaterialTheme.colorScheme.primary, // Colore per i successi
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-
-        Button(
-            onClick = {
-                // Aggiungi la validazione per la lunghezza minima del PIN
-                if (newPin.isBlank() || confirmPin.isBlank()) {
-                    errorMessage = "PIN cannot be empty"
-                    saveSuccessMessage = null
-                    removeSuccessMessage = null
-                } else if (newPin.length < 4) {
-                    errorMessage = "PIN must be at least 4 digits long"
-                    saveSuccessMessage = null
-                    removeSuccessMessage = null
-                } else if (newPin != confirmPin) {
-                    errorMessage = "PINs do not match"
-                    saveSuccessMessage = null
-                    removeSuccessMessage = null
-                } else {
-                    try {
-                        val masterKey = MasterKey.Builder(context)
-                            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                            .build()
-
-                        val sharedPreferences = EncryptedSharedPreferences.create(
-                            context,
-                            "AppSettings", // File name for SharedPreferences
-                            masterKey,
-                            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                        )
-
-                        with(sharedPreferences.edit()) {
-                            putString("access_pin", newPin)
-                            apply()
-                        }
-
-                        saveSuccessMessage = "PIN saved successfully"
-                        errorMessage = null // Clear error message
-                        removeSuccessMessage = null // Clear success message
-                        newPin = ""
-                        confirmPin = ""
-                        // Aggiorna lo stato isPinSet per mostrare il pulsante di rimozione
-                        isPinSet = true
-
-
-                    } catch (e: Exception) {
-                        Log.e("PinSettingsContent", "Error saving PIN", e)
-                        errorMessage = "Error saving PIN: ${e.localizedMessage}"
-                        saveSuccessMessage = null // Clear success message
-                        removeSuccessMessage = null // Clear success message
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth() // Riempie la larghezza
+        // --- Buttons ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
         ) {
-            Text("Save PIN")
+            if (isPinSet) {
+                Button(
+                    onClick = {
+                        try {
+                            val masterKey = MasterKey.Builder(context)
+                                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+                            val sharedPreferences = EncryptedSharedPreferences.create(
+                                context, "AppSettings", masterKey,
+                                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                            )
+                            with(sharedPreferences.edit()) {
+                                remove("access_pin")
+                                apply()
+                            }
+                            scope.launch { snackbarHostState.showSnackbar("PIN removed successfully.") }
+                            errorMessage = null
+                            newPin = ""
+                            confirmPin = ""
+                            isPinSet = false
+                        } catch (e: Exception) {
+                            Log.e("PinSettingsContent", "Error removing PIN", e)
+                            errorMessage = "Error removing PIN."
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Text("Remove PIN")
+                }
+            }
+
+            Button(
+                onClick = {
+                    errorMessage = null // Reset error
+                    var changesMade = false
+                    var showSuccessMessage = "Settings updated."
+
+                    // 1. Validate Security Answer (Mandatory if not yet set, or if changed)
+                    if (securityAnswerInput.isBlank()) {
+                        errorMessage = "Security answer cannot be empty."
+                        return@Button
+                    }
+                    // Add any other answer validation if needed (e.g., min length)
+
+                    // 2. Validate PIN (if trying to set/change PIN)
+                    val isTryingToSetOrChangePin = newPin.isNotEmpty() || confirmPin.isNotEmpty()
+                    if (isTryingToSetOrChangePin) {
+                        if (newPin.length < 4) {
+                            errorMessage = "New PIN must be at least 4 digits long."
+                            return@Button
+                        }
+                        if (newPin != confirmPin) {
+                            errorMessage = "PINs do not match."
+                            return@Button
+                        }
+                    }
+
+                    // 3. Save Logic
+                    var pinSavedSuccessfully = true
+                    var qaSavedSuccessfully = true
+
+                    // Save PIN if provided and valid
+                    if (isTryingToSetOrChangePin && newPin.isNotBlank()) {
+                        try {
+                            val masterKey = MasterKey.Builder(context)
+                                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+                            val sharedPreferences = EncryptedSharedPreferences.create(
+                                context, "AppSettings", masterKey,
+                                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                            )
+                            with(sharedPreferences.edit()) {
+                                putString("access_pin", newPin)
+                                apply()
+                            }
+                            changesMade = true
+                            isPinSet = true // Update UI state
+                        } catch (e: Exception) {
+                            Log.e("PinSettingsContent", "Error saving PIN", e)
+                            errorMessage = "Error saving PIN."
+                            pinSavedSuccessfully = false
+                        }
+                    }
+
+                    // Save Security Question & Answer if changed or first time
+                    val currentSavedQA = getSavedSecurityQuestionAnswer(context)
+                    val qaChanged = currentSavedQA?.questionIndex != selectedQuestionIndex ||
+                            currentSavedQA?.answer != securityAnswerInput
+                    val isFirstTimeSettingQA = currentSavedQA == null
+
+                    if (qaChanged || isFirstTimeSettingQA) {
+                        if (saveSecurityQuestionAnswer(context, selectedQuestionIndex, securityAnswerInput)) {
+                            savedSecurityQA = SecurityQuestionAnswer(selectedQuestionIndex, securityAnswerInput) // Update UI state
+                            isSecurityQASet.value = true
+                            changesMade = true
+                        } else {
+                            errorMessage = (errorMessage ?: "") + " Error saving security question."
+                            qaSavedSuccessfully = false
+                        }
+                    }
+
+                    // Determine success message
+                    if (changesMade) {
+                        when {
+                            isTryingToSetOrChangePin && newPin.isNotBlank() && (qaChanged || isFirstTimeSettingQA) ->
+                                showSuccessMessage = if (pinSavedSuccessfully && qaSavedSuccessfully) "PIN and security question updated." else "Partial update. Check errors."
+                            isTryingToSetOrChangePin && newPin.isNotBlank() ->
+                                showSuccessMessage = if (pinSavedSuccessfully) "PIN updated." else "Error saving PIN."
+                            qaChanged || isFirstTimeSettingQA ->
+                                showSuccessMessage = if (qaSavedSuccessfully) "Security question updated." else "Error saving security question."
+                        }
+                        scope.launch { snackbarHostState.showSnackbar(showSuccessMessage) }
+                        if (isTryingToSetOrChangePin && pinSavedSuccessfully) {
+                            newPin = "" // Reset PIN fields after successful save
+                            confirmPin = ""
+                        }
+                        // Keep security answer input as is, user might want to see it
+                    } else if (errorMessage == null) { // No changes and no errors from previous steps
+                        scope.launch { snackbarHostState.showSnackbar("No changes were made.") }
+                    }
+
+                    if (!pinSavedSuccessfully || !qaSavedSuccessfully) {
+                        // Error message is already set by individual save attempts
+                    }
+
+                },
+                enabled = securityAnswerInput != (savedSecurityQA?.answer ?: "") ||
+                        selectedQuestionIndex != (savedSecurityQA?.questionIndex ?: 0) ||
+                        newPin.isNotEmpty() || confirmPin.isNotEmpty() ||
+                        (!isSecurityQASet.value && securityAnswerInput.isNotBlank())
+            ) {
+                Text("Save")
+            }
         }
     }
 }
 
 
-// Composbale per i dettagli delle impostazioni del tema
 @Composable
 fun ThemeSettingsContent(onThemeChange: (AppTheme) -> Unit) {
     val themePreferenceManager = rememberThemePreferenceManager()
-
-    // Leggi lo stato del tema corrente per inizializzare la UI di questa Composable
     var currentTheme by remember { mutableStateOf(themePreferenceManager.getSavedTheme()) }
-
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxWidth() // Per centrare i pulsanti
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Text("Choose the theme:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
+        Text("Choose App Theme", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp) // Aggiungi padding
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // Pulsante per il Tema Chiaro
             Button(
                 onClick = {
-                    // * NON salvare la preferenza direttamente qui. *
-                    // La MainActivity salverà la preferenza quando riceve il callback.
-
-                    onThemeChange(AppTheme.LIGHT) // *** CHIAMA IL CALLBACK! ***
-
-                    // Aggiorna lo stato locale per l'UI di questa schermata (es. per disabilitare il pulsante)
+                    onThemeChange(AppTheme.LIGHT)
                     currentTheme = AppTheme.LIGHT
                 },
-                enabled = currentTheme != AppTheme.LIGHT // Disabilita se è già selezionato
+                enabled = currentTheme != AppTheme.LIGHT,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp)
             ) {
-                Icon(imageVector = Icons.Default.WbSunny, contentDescription = "Light Mode")
+                Icon(imageVector = Icons.Default.WbSunny, contentDescription = "Light Theme")
                 Spacer(Modifier.width(4.dp))
-                Text("Light Theme")
+                Text("Light")
             }
 
-            // Pulsante per il Tema Scuro
             Button(
                 onClick = {
-                    // * NON salvare la preferenza direttamente qui. *
-                    // La MainActivity salverà la preferenza quando riceve il callback.
-
-                    onThemeChange(AppTheme.DARK) // *** CHIAMA IL CALLBACK! ***
-
-                    // Aggiorna lo stato locale per l'UI di questa schermata
+                    onThemeChange(AppTheme.DARK)
                     currentTheme = AppTheme.DARK
                 },
-                enabled = currentTheme != AppTheme.DARK // Disabilita se è già selezionato
+                enabled = currentTheme != AppTheme.DARK,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp)
             ) {
-                Icon(imageVector = Icons.Default.NightsStay, contentDescription = "Dark Mode")
+                Icon(imageVector = Icons.Default.NightsStay, contentDescription = "Dark Theme")
                 Spacer(Modifier.width(4.dp))
-                Text("Dark Theme")
+                Text("Dark")
             }
         }
     }
 }
 
-// Composbale per i dettagli delle informazioni sull'app
 @Composable
 fun AboutSettingsContent() {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.padding(16.dp)
     ) {
-        Text("Version: 1.0.0")
-        Text("Developers: A. Catalano, A. Rocchi, O. Iacobelli")
-        Text("Budgify is an app that deals with managing your finances.")
+        Text("Budgify", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Version: 1.0.0", style = MaterialTheme.typography.bodyLarge)
+        Text("Developers: A. Catalano, A. Rocchi, O. Iacobelli", style = MaterialTheme.typography.bodyLarge)
+        Text(
+            "Your personal finance manager.",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
     }
 }
