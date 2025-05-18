@@ -75,22 +75,22 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Categories.route) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    // State variable to track the selected tab
     var selectedTab by remember { mutableStateOf(CategoriesTab.Expenses) }
 
     // State for managing dialogs
     var showAddDialog by remember { mutableStateOf(false) }
-    var showEditDialog by remember { mutableStateOf<Category?>(null) } // Store the category being edited
-    var showDeleteConfirmDialog by remember { mutableStateOf<Category?>(null) } // Store category for deletion confirmation
+    // var showEditDialog by remember { mutableStateOf<Category?>(null) } // Vecchio stato per modifica diretta
+    var categoryToAction by remember { mutableStateOf<Category?>(null) } // Nuovo: categoria per scelta azione
+    var showCategoryActionChoiceDialog by remember { mutableStateOf(false) } // Nuovo: dialog scelta azione
+    var showEditCategoryDialog by remember { mutableStateOf(false) } // Nuovo: per mostrare specificamente il dialog di modifica
+    var showDeleteConfirmDialog by remember { mutableStateOf<Category?>(null) } // Rimane per conferma eliminazione
 
-    // Collect categories from ViewModel
     val allCategories by viewModel.allCategories.collectAsStateWithLifecycle()
 
-    // Filter categories based on type
-    val expenseCategories = remember(allCategories) {
+    val expenseCategories = remember(allCategories, allCategories.size) { // Aggiunto allCategories.size per triggerare la ricomposizione
         allCategories.filter { it.type == CategoryType.EXPENSE }
     }
-    val incomeCategories = remember(allCategories) {
+    val incomeCategories = remember(allCategories, allCategories.size) { // Aggiunto allCategories.size
         allCategories.filter { it.type == CategoryType.INCOME }
     }
     val showSnackbar: (String) -> Unit = { message ->
@@ -106,7 +106,7 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
             navController,
             viewModel,
             showSnackbar = showSnackbar
-            ) }
+        ) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -123,12 +123,11 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
                 }
             }
 
-            // Content based on the selected tab
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp) // Add padding around the grid content
+                    .padding(horizontal = 16.dp)
             ) {
                 when (selectedTab) {
                     CategoriesTab.Expenses -> {
@@ -137,9 +136,12 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
                             categoryType = CategoryType.EXPENSE,
                             backgroundColor = Color(0xffff6f51), // Red
                             onAddClick = { showAddDialog = true },
-                            onCategoryClick = { showSnackbar("Hold to edit the category") },
-                            onCategoryLongClick = { category -> showEditDialog = category },
-                            viewModel = viewModel // Pass viewModel down
+                            onCategoryClick = { showSnackbar("Hold to choose an action for the category") },
+                            onCategoryLongClick = { category ->
+                                categoryToAction = category
+                                showCategoryActionChoiceDialog = true // Mostra il dialog di scelta
+                            },
+                            viewModel = viewModel
                         )
                     }
                     CategoriesTab.Income -> {
@@ -148,9 +150,12 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
                             categoryType = CategoryType.INCOME,
                             backgroundColor = Color(0xff0db201), // Green
                             onAddClick = { showAddDialog = true },
-                            onCategoryClick = { showSnackbar("Hold to edit the category") },
-                            onCategoryLongClick = { category -> showEditDialog = category },
-                            viewModel = viewModel // Pass viewModel down
+                            onCategoryClick = { showSnackbar("Hold to choose an action for the category") },
+                            onCategoryLongClick = { category ->
+                                categoryToAction = category
+                                showCategoryActionChoiceDialog = true // Mostra il dialog di scelta
+                            },
+                            viewModel = viewModel
                         )
                     }
                 }
@@ -160,11 +165,11 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
 
     // --- Dialogs ---
 
-    // Add Category Dialog
+    // Add Category Dialog (invariato)
     if (showAddDialog) {
         AddCategoryDialog(
             viewModel = viewModel,
-            initialType = selectedTab.let { // Determine initial type based on selected tab
+            initialType = selectedTab.let {
                 when (it) {
                     CategoriesTab.Expenses -> CategoryType.EXPENSE
                     CategoriesTab.Income -> CategoryType.INCOME
@@ -172,31 +177,67 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
             },
             onDismiss = { showAddDialog = false },
             onCategoryAdded = { category ->
-                showAddDialog = false // Dismiss dialog first
+                showAddDialog = false
                 showSnackbar("Category '${category.desc}' added")
             }
         )
     }
 
-    // Edit Category Dialog
-    showEditDialog?.let { categoryToEdit ->
-        EditCategoryDialog(
-            category = categoryToEdit,
-            viewModel = viewModel,
-            onDismiss = { showEditDialog = null },
+    // Category Action Choice Dialog (Nuovo)
+    if (showCategoryActionChoiceDialog && categoryToAction != null) {
+        CategoryActionChoiceDialog(
+            category = categoryToAction!!,
+            onDismiss = {
+                showCategoryActionChoiceDialog = false
+                categoryToAction = null
+            },
+            onEditClick = {
+                showEditCategoryDialog = true // Imposta lo stato per mostrare EditCategoryDialog
+                showCategoryActionChoiceDialog = false
+                // categoryToAction rimane impostato per EditCategoryDialog
+            },
             onDeleteClick = {
-                showEditDialog = null // Dismiss edit dialog first
-                showDeleteConfirmDialog = categoryToEdit // Then show delete confirmation
+                showDeleteConfirmDialog = categoryToAction // Imposta la categoria per la conferma eliminazione
+                showCategoryActionChoiceDialog = false
+                // categoryToAction rimane impostato temporaneamente per DeleteCategoryConfirmationDialog
             }
         )
     }
 
-    // Delete Confirmation Dialog
+
+    // Edit Category Dialog (ora attivato da showEditCategoryDialog)
+    if (showEditCategoryDialog && categoryToAction != null) {
+        EditCategoryDialog(
+            category = categoryToAction!!,
+            viewModel = viewModel,
+            onDismiss = {
+                showEditCategoryDialog = false
+                categoryToAction = null // Pulisci dopo la chiusura
+            },
+            onDeleteClick = {
+                // Questa onDeleteClick dentro EditCategoryDialog ora apre il dialog di conferma
+                showDeleteConfirmDialog = categoryToAction
+                showEditCategoryDialog = false // Chiudi il dialog di modifica
+                // categoryToAction rimane per il dialog di conferma
+            }
+        )
+    }
+
+    // Delete Confirmation Dialog (leggermente modificato per resettare categoryToAction alla fine)
     showDeleteConfirmDialog?.let { categoryToDelete ->
         DeleteCategoryConfirmationDialog(
             category = categoryToDelete,
             viewModel = viewModel,
-            onDismiss = { showDeleteConfirmDialog = null }
+            onDismiss = {
+                showDeleteConfirmDialog = null
+                categoryToAction = null // Assicurati di resettare anche categoryToAction
+            },
+            onDeleteConfirmed = {
+                // Azioni dopo la conferma dell'eliminazione
+                showSnackbar("Category '${categoryToDelete.desc}' deleted")
+                showDeleteConfirmDialog = null
+                categoryToAction = null // Assicurati di resettare anche categoryToAction
+            }
         )
     }
 }
@@ -395,26 +436,57 @@ fun AddCategoryDialog(
 }
 
 @Composable
+fun CategoryActionChoiceDialog(
+    category: Category,
+    onDismiss: () -> Unit,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Category: '${category.desc}'") },
+        text = { Text("What would you like to do?") },
+        confirmButton = { // Questo blocco contiene i pulsanti di azione
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly // O Arrangement.End
+            ) {
+                TextButton(onClick = onDeleteClick) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+                TextButton(onClick = onEditClick) {
+                    Text("Edit")
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+            }
+        },
+        dismissButton = null
+    )
+}
+
+
+@Composable
 fun EditCategoryDialog(
     category: Category,
     viewModel: FinanceViewModel,
     onDismiss: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit // Questo ora apre il dialog di conferma
 ) {
     var description by remember { mutableStateOf(category.desc) }
-    // Type is generally not editable for categories, but if needed, add state & UI like in AddCategoryDialog
+    val scope = rememberCoroutineScope() // Per lanciare la coroutine dell'update
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            //color = MaterialTheme.colorScheme.surface,
-            //tonalElevation = 8.dp,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp) // Applica il padding qui se vuoi spazio attorno al Surface
         ) {
             Column(
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(16.dp) // Padding interno per il contenuto
             ) {
-                Row(modifier = Modifier.fillMaxWidth(),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -422,18 +494,18 @@ fun EditCategoryDialog(
                         "Edit Category",
                         style = MaterialTheme.typography.titleLarge,
                     )
-
-                    IconButton(
+                    // Usa XButton se lo hai definito, altrimenti IconButton standard
+                    XButton(onDismiss)
+                    /* IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
-                            .size(24.dp) // Set a fixed size for the IconButton
-                            .clip(CircleShape) // Clip the IconButton to a circle shape
-                            .background(MaterialTheme.colorScheme.surfaceContainerHighest) // Add a background color to the circle
-                    ) { // X button
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    ) {
                         Icon(Icons.Filled.Close, contentDescription = "Close")
-                    }
+                    }*/
                 }
-
                 Spacer(modifier = Modifier.height(16.dp))
 
                 TextField(
@@ -449,8 +521,8 @@ fun EditCategoryDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Button(
-                        onClick = onDeleteClick,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                        onClick = onDeleteClick, // Questa azione ora mostra il dialog di conferma
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) {
                         Text("Delete")
                     }
@@ -458,17 +530,14 @@ fun EditCategoryDialog(
                     Button(
                         onClick = {
                             if (description.isNotBlank()) {
-                                val updatedCategory = category.copy(
-                                    desc = description
-                                    // Keep the original type: type = category.type
-                                )
-                                viewModel.updateCategory(updatedCategory)
-                                onDismiss()
-                            } else {
-                                // Optional: Show error
+                                val updatedCategory = category.copy(desc = description)
+                                scope.launch { // Usa lo scope per chiamare la funzione suspend
+                                    viewModel.updateCategory(updatedCategory)
+                                }
+                                onDismiss() // Chiudi il dialog dopo il salvataggio
                             }
                         },
-                        enabled = description.isNotBlank() && description != category.desc // Enable only if changed and not blank
+                        enabled = description.isNotBlank() && description != category.desc
                     ) {
                         Text("Save")
                     }
@@ -483,24 +552,28 @@ fun EditCategoryDialog(
 fun DeleteCategoryConfirmationDialog(
     category: Category,
     viewModel: FinanceViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onDeleteConfirmed: () -> Unit // Callback aggiuntiva per quando l'eliminazione è confermata
 ) {
+    val scope = rememberCoroutineScope()
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismiss, // Chiamato se si clicca fuori o si preme back
         title = { Text("Confirm Deletion") },
         text = { Text("Are you sure you want to delete the category \"${category.desc}\"? This action cannot be undone.") },
         confirmButton = {
             TextButton(
                 onClick = {
-                    viewModel.deleteCategory(category)
-                    onDismiss()
+                    scope.launch { // Usa lo scope per chiamare la funzione suspend
+                        viewModel.deleteCategory(category)
+                        onDeleteConfirmed() // Chiama la callback dopo l'eliminazione
+                    }
                 }
             ) {
-                Text("Delete", color = Color.Red)
+                Text("Delete", color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss) { // Il pulsante "Cancel" chiama solo onDismiss
                 Text("Cancel")
             }
         }
