@@ -19,9 +19,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DatePicker
@@ -790,13 +792,20 @@ fun AddLoanDialog(
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var selectedStartDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) }
-    var selectedEndDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) } // Inizializza anche endDate se necessario
+    var selectedEndDate by remember { mutableStateOf<LocalDate?>(null) } // Opzionale
     var selectedType by remember { mutableStateOf(LoanType.DEBT) }
     val loanTypes = LoanType.entries.toList()
 
     var showDatePickerDialog by remember { mutableStateOf(false) }
-    // Stato per tracciare quale campo data si sta modificando: "START" o "END"
     var datePickerTarget by remember { mutableStateOf<String?>(null) }
+
+    var showErrorDialog by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+
+    fun triggerError(message: String) {
+        errorMessage = message
+        showErrorDialog = true
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -811,7 +820,6 @@ fun AddLoanDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Add Loan", style = MaterialTheme.typography.titleLarge)
-                XButton(onDismiss)
             }
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -819,7 +827,8 @@ fun AddLoanDialog(
                 value = description,
                 onValueChange = { description = it },
                 label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = description.isBlank() && showErrorDialog // Mostra errore solo se si tenta di salvare e il campo è vuoto
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -828,14 +837,16 @@ fun AddLoanDialog(
                 onValueChange = { amount = it },
                 label = { Text("Amount") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                // L'errore sull'amount viene gestito nella logica del pulsante, non direttamente qui per isError,
+                // a meno che non si voglia un feedback immediato più complesso.
+                // isError = (amount.isBlank() || amount.replace(',', '.').toDoubleOrNull() == null || amount.replace(',', '.').toDoubleOrNull()!! <= 0) && showErrorDialog
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Start Date Selection TextField
             TextField(
                 value = selectedStartDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
-                onValueChange = {},
+                onValueChange = {}, // ReadOnly
                 label = { Text("Start Date") },
                 readOnly = true,
                 trailingIcon = {
@@ -843,36 +854,46 @@ fun AddLoanDialog(
                         imageVector = Icons.Default.CalendarToday,
                         contentDescription = "Select Start Date",
                         modifier = Modifier.clickable {
-                            datePickerTarget = "START" // Imposta il target
+                            datePickerTarget = "START"
                             showDatePickerDialog = true
                         }
                     )
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = selectedStartDate == null && showErrorDialog
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // End Date Selection TextField
             TextField(
-                value = selectedEndDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
-                onValueChange = {},
-                label = { Text("End Date") },
+                value = selectedEndDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "Not set",
+                onValueChange = {}, // ReadOnly
+                label = { Text("End Date (Optional)") },
                 readOnly = true,
                 trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.CalendarToday,
-                        contentDescription = "Select End Date",
-                        modifier = Modifier.clickable {
-                            datePickerTarget = "END" // Imposta il target
-                            showDatePickerDialog = true
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (selectedEndDate != null) {
+                            IconButton(onClick = { selectedEndDate = null }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear End Date"
+                                )
+                            }
                         }
-                    )
+                        IconButton(onClick = {
+                            datePickerTarget = "END"
+                            showDatePickerDialog = true
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarToday,
+                                contentDescription = "Select End Date"
+                            )
+                        }
+                    }
                 },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Loan Type (Radio Buttons)
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text("Type:")
                 Row(
@@ -897,34 +918,46 @@ fun AddLoanDialog(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.Center // O Arrangement.End per allineare i pulsanti a destra
             ) {
+                // Potresti aggiungere un pulsante "Cancel" qui se lo desideri
+                // TextButton(onClick = onDismiss) { Text("Cancel") }
+                // Spacer(modifier = Modifier.width(8.dp))
                 Button(
-                    enabled = description.isNotBlank() && amount.isNotBlank() && selectedStartDate != null && selectedEndDate != null,
                     onClick = {
-                        val amountDouble = amount.toDoubleOrNull()
-                        if (description.isNotBlank() && amountDouble != null && selectedStartDate != null && selectedEndDate != null) {
-                            // Aggiungi un controllo per assicurarti che endDate non sia prima di startDate
-                            if (selectedEndDate!!.isBefore(selectedStartDate!!)) {
-                                // Mostra un errore o gestisci questo caso
-                                // Ad esempio, potresti mostrare un Toast
-                                // Toast.makeText(LocalContext.current, "End date cannot be before start date", Toast.LENGTH_LONG).show()
-                                return@Button // Esce dall'onClick
-                            }
-
-                            val newLoan = Loan(
-                                desc = description,
-                                amount = amountDouble,
-                                type = selectedType,
-                                startDate = selectedStartDate!!,
-                                endDate = selectedEndDate!!
-                            )
-                            viewModel.addLoan(newLoan)
-                            onLoanAdded(newLoan)
-                            //onDismiss()
-                        } else {
-                            // Mostra un errore di validazione
+                        if (description.isBlank()) {
+                            triggerError("Description cannot be empty.")
+                            return@Button
                         }
+
+                        val sanitizedAmount = amount.replace(',', '.') // Sostituisci la virgola
+                        val amountDouble = sanitizedAmount.toDoubleOrNull()
+
+                        if (amountDouble == null || amountDouble <= 0) {
+                            triggerError("Please enter a valid amount greater than zero.")
+                            return@Button
+                        }
+
+                        if (selectedStartDate == null) {
+                            triggerError("Please select a start date.")
+                            return@Button
+                        }
+
+                        if (selectedEndDate != null && selectedStartDate != null && selectedEndDate!!.isBefore(selectedStartDate!!)) {
+                            triggerError("End date cannot be before the start date.")
+                            return@Button
+                        }
+
+                        val newLoan = Loan(
+                            desc = description,
+                            amount = amountDouble, // Usa l'amount convertito
+                            type = selectedType,
+                            startDate = selectedStartDate!!,
+                            endDate = selectedEndDate
+                        )
+                        viewModel.addLoan(newLoan)
+                        onLoanAdded(newLoan) // Callback per notificare l'aggiunta
+                        onDismiss() // Chiudi il dialogo
                     }
                 ) {
                     Text("Add Loan")
@@ -934,40 +967,32 @@ fun AddLoanDialog(
     }
 
     if (showDatePickerDialog) {
-        // Determina la data iniziale per il DatePicker in base al target
         val initialDateForPicker = when (datePickerTarget) {
-            "START" -> selectedStartDate
-            "END" -> selectedEndDate
-            else -> LocalDate.now() // Fallback, anche se non dovrebbe accadere
+            "START" -> selectedStartDate ?: LocalDate.now()
+            "END" -> selectedEndDate ?: selectedStartDate ?: LocalDate.now()
+            else -> LocalDate.now()
         }
-
-        val initialDateMillis = initialDateForPicker?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
-            ?: LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-
+        val initialDateMillis = initialDateForPicker.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDateMillis)
-        val confirmEnabled = remember {
-            derivedStateOf { datePickerState.selectedDateMillis != null }
-        }
+        val confirmEnabled = remember { derivedStateOf { datePickerState.selectedDateMillis != null } }
+
         DatePickerDialog(
             onDismissRequest = {
                 showDatePickerDialog = false
-                datePickerTarget = null // Resetta il target
+                datePickerTarget = null
             },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showDatePickerDialog = false
-                        val newSelectedDate = datePickerState.selectedDateMillis?.let {
-                            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
-                        }
-                        // Aggiorna la variabile di stato corretta in base al target
-                        if (newSelectedDate != null) {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val newSelectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
                             when (datePickerTarget) {
                                 "START" -> selectedStartDate = newSelectedDate
                                 "END" -> selectedEndDate = newSelectedDate
                             }
                         }
-                        datePickerTarget = null // Resetta il target
+                        datePickerTarget = null
                     },
                     enabled = confirmEnabled.value
                 ) {
@@ -978,7 +1003,7 @@ fun AddLoanDialog(
                 TextButton(
                     onClick = {
                         showDatePickerDialog = false
-                        datePickerTarget = null // Resetta il target
+                        datePickerTarget = null
                     }
                 ) {
                     Text("Cancel")
@@ -987,6 +1012,19 @@ fun AddLoanDialog(
         ) {
             DatePicker(state = datePickerState)
         }
+    }
+
+    if (showErrorDialog) {
+        AlertDialog(
+            onDismissRequest = { showErrorDialog = false },
+            title = { Text("Validation Error") },
+            text = { Text(errorMessage) },
+            confirmButton = {
+                TextButton(onClick = { showErrorDialog = false }) {
+                    Text("OK")
+                }
+            }
+        )
     }
 }
 
