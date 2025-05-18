@@ -155,7 +155,7 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
 fun TransactionItem(
     transactionWithDetails: TransactionWithDetails,
     onClick: (MyTransaction) -> Unit,
-    onLongClick: (MyTransaction) -> Unit
+    onLongClick: (MyTransaction) -> Unit // This will now trigger the action choice dialog
 ) {
     val myTransaction = transactionWithDetails.transaction
     val account = transactionWithDetails.account
@@ -217,12 +217,14 @@ fun TransactionItem(
 fun LastTransactionBox(
     viewModel: FinanceViewModel,
     showSnackbar: (String) -> Unit
-) { // Pass the ViewModel
-    // Collect the flow of transactions with details
+) {
     val transactionsWithDetails by viewModel.allTransactionsWithDetails.collectAsStateWithLifecycle()
-    // State to hold the transaction to be edited, and control dialog visibility
-    var transactionToEdit by remember { mutableStateOf<MyTransaction?>(null) }
-    var showEditDialog by remember { mutableStateOf(false) }
+    var transactionToAction by remember { mutableStateOf<MyTransaction?>(null) } // For action choice
+    var showTransactionActionChoiceDialog by remember { mutableStateOf(false) }
+    var showEditTransactionDialog by remember { mutableStateOf(false) }
+    var showDeleteTransactionConfirmationDialog by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
 
     Box(
         modifier = Modifier
@@ -242,35 +244,116 @@ fun LastTransactionBox(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Column(modifier = Modifier.fillMaxWidth()) {
-                // Iterate through the collected list of TransactionWithDetails
                 transactionsWithDetails.takeLast(5).reversed().forEach { transactionWithDetails ->
-                    // Pass the TransactionWithDetails object to the updated TransactionItem
                     TransactionItem(
                         transactionWithDetails = transactionWithDetails,
                         onClick = { transaction ->
-                            showSnackbar("Hold to edit the transaction")
+                            showSnackbar("Hold to edit or delete the transaction")
                         },
                         onLongClick = { transaction ->
-                            // Set the transaction to be edited and show the dialog
-                            transactionToEdit = transaction
-                            showEditDialog = true
+                            transactionToAction = transaction
+                            showTransactionActionChoiceDialog = true
                         }
                     )
                 }
             }
         }
     }
-    // Show the Edit Transaction Dialog if showEditDialog is true and transactionToEdit is not null
-    if (showEditDialog && transactionToEdit != null) {
-        Log.d("LastTransactionBox", "Showing Edit Transaction Dialog")
+
+    // Transaction Action Choice Dialog
+    if (showTransactionActionChoiceDialog && transactionToAction != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showTransactionActionChoiceDialog = false
+                transactionToAction = null
+            },
+            title = { Text("Transaction: '${transactionToAction?.description}'") },
+            text = { Text("What would you like to do?") },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    TextButton(
+                        onClick = {
+                            showDeleteTransactionConfirmationDialog = true
+                            showTransactionActionChoiceDialog = false
+                            // transactionToAction remains set for the delete confirmation
+                        }
+                    ) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(
+                        onClick = {
+                            showEditTransactionDialog = true
+                            showTransactionActionChoiceDialog = false
+                            // transactionToAction remains set for the edit dialog
+                        }
+                    ) {
+                        Text("Edit")
+                    }
+                    TextButton(
+                        onClick = {
+                            showTransactionActionChoiceDialog = false
+                            transactionToAction = null
+                        }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            },
+            dismissButton = null
+        )
+    }
+
+
+    // Show the Edit Transaction Dialog
+    if (showEditTransactionDialog && transactionToAction != null) {
         EditTransactionDialog(
-            transaction = transactionToEdit!!, // Pass the transaction to the dialog
+            transaction = transactionToAction!!,
             viewModel = viewModel,
             onDismiss = {
-                showEditDialog = false
-                transactionToEdit = null // Clear the transaction when dialog is dismissed
+                showEditTransactionDialog = false
+                transactionToAction = null
             }
-            // You would likely need more parameters for the dialog like lists of accounts and categories
+        )
+    }
+
+    // Delete Transaction Confirmation Dialog
+    if (showDeleteTransactionConfirmationDialog && transactionToAction != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteTransactionConfirmationDialog = false
+                // Keep transactionToAction if you want to potentially go back to action choice,
+                // or nullify it if the flow always ends here. For simplicity, let's nullify.
+                // transactionToAction = null
+            },
+            title = { Text("Confirm Deletion") },
+            text = { Text("Are you sure you want to delete this transaction: \"${transactionToAction?.description}\"?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            transactionToAction?.let { viewModel.deleteTransaction(it) }
+                            showDeleteTransactionConfirmationDialog = false
+                            transactionToAction = null // Clear after deletion
+                            showSnackbar("Transaction deleted")
+                        }
+                    }
+                ) {
+                    Text("Delete", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteTransactionConfirmationDialog = false
+                        // transactionToAction = null // Optionally clear here too
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }
@@ -284,33 +367,25 @@ fun EditTransactionDialog(
 ) {
     // Use the existing transaction data as initial state for editing
     var description by remember { mutableStateOf(transaction.description) }
-    var amount by remember { mutableStateOf(transaction.amount.toString()) }
+    var amount by remember { mutableStateOf(transaction.amount.toString().replace('.', ',')) } // Use comma for display
     val categories by viewModel.allCategories.collectAsStateWithLifecycle()
     var categoryExpanded by remember { mutableStateOf(false) }
-    // Initialize selected category ID with the transaction's categoryId
     var selectedCategoryId by remember { mutableStateOf<Int?>(transaction.categoryId) }
-    var selectedCategory = remember(categories, selectedCategoryId) {
+    val selectedCategory = remember(categories, selectedCategoryId) {
         categories.firstOrNull { it.id == selectedCategoryId }
     }
-    // Initialize selected date with the transaction's date
     var selectedDate by remember { mutableStateOf<LocalDate?>(transaction.date) }
-    // Initialize selected type with the transaction's type
     var selectedType by remember { mutableStateOf<TransactionType>(transaction.type) }
     val accounts by viewModel.allAccounts.collectAsStateWithLifecycle()
     var accountExpanded by remember { mutableStateOf(false) }
-    // Initialize selected account ID with the transaction's accountId
     var selectedAccountId by remember { mutableStateOf<Int?>(transaction.accountId) }
     val selectedAccount = remember(accounts, selectedAccountId) {
         accounts.firstOrNull { it.id == selectedAccountId }
     }
     val transactionTypes = listOf(TransactionType.EXPENSE, TransactionType.INCOME)
-
-    // State for showing the DatePickerDialog
     var showDatePickerDialog by remember { mutableStateOf(false) }
-    // State to control the visibility of the delete confirmation dialog
-    var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
-
     val coroutineScope = rememberCoroutineScope()
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
 
     Dialog(onDismissRequest = onDismiss) {
@@ -328,7 +403,6 @@ fun EditTransactionDialog(
                 Text(
                     "Edit Transaction",
                     style = MaterialTheme.typography.titleLarge,
-                    //modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
                 XButton(onDismiss)
             }
@@ -339,7 +413,8 @@ fun EditTransactionDialog(
                 value = description,
                 onValueChange = { description = it },
                 label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = description.isBlank() && errorMessage != null
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -348,7 +423,8 @@ fun EditTransactionDialog(
                 onValueChange = { amount = it },
                 label = { Text("Amount") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = amount.replace(',', '.').toDoubleOrNull() == null && errorMessage != null
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -363,31 +439,35 @@ fun EditTransactionDialog(
                         .menuAnchor()
                         .fillMaxWidth(),
                     readOnly = true,
-                    value = selectedCategory?.desc ?: "Uncategorized", // Display description or placeholder
+                    value = selectedCategory?.desc ?: "Uncategorized",
                     onValueChange = {},
                     label = { Text("Category") },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
                     },
-                    colors = ExposedDropdownMenuDefaults.textFieldColors()
+                    colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                    // No specific error state needed here unless selection is mandatory and not made
                 )
 
                 ExposedDropdownMenu(
                     expanded = categoryExpanded,
                     onDismissRequest = { categoryExpanded = false }
                 ) {
-                    DropdownMenuItem(text = { Text("Uncategorized", style = TextStyle(fontWeight = FontWeight.Bold)) }, onClick = {
-                        selectedCategoryId = null
-                        selectedCategory = null
-                        categoryExpanded = false
-                    },
+                    DropdownMenuItem(
+                        text = { Text("Uncategorized", style = TextStyle(fontWeight = FontWeight.Bold)) },
+                        onClick = {
+                            selectedCategoryId = null
+                            // selectedCategory will update via remember
+                            categoryExpanded = false
+                        },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                     )
                     categories.forEach { category ->
                         DropdownMenuItem(
                             text = { Text(category.desc) },
                             onClick = {
-                                selectedCategoryId = category.id // Store the ID
+                                selectedCategoryId = category.id
+                                // selectedCategory will update via remember
                                 categoryExpanded = false
                             },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
@@ -408,13 +488,14 @@ fun EditTransactionDialog(
                         .menuAnchor()
                         .fillMaxWidth(),
                     readOnly = true,
-                    value = selectedAccount?.title ?: "Select Account", // Display title or placeholder
+                    value = selectedAccount?.title ?: "Select Account",
                     onValueChange = {},
                     label = { Text("Account") },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded)
                     },
-                    colors = ExposedDropdownMenuDefaults.textFieldColors()
+                    colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                    isError = selectedAccountId == null && errorMessage != null // Account selection is mandatory
                 )
 
                 ExposedDropdownMenu(
@@ -425,7 +506,8 @@ fun EditTransactionDialog(
                         DropdownMenuItem(
                             text = { Text(account.title) },
                             onClick = {
-                                selectedAccountId = account.id // Store the ID
+                                selectedAccountId = account.id
+                                // selectedAccount will update via remember
                                 accountExpanded = false
                             },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
@@ -447,7 +529,8 @@ fun EditTransactionDialog(
                         modifier = Modifier.clickable { showDatePickerDialog = true }
                     )
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = selectedDate == null && errorMessage != null // Date selection is mandatory
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -471,62 +554,75 @@ fun EditTransactionDialog(
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
+
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.End // Align save button to the end
             ) {
+                // REMOVED Delete Button from here
+                // Spacer(modifier = Modifier.width(8.dp)) // REMOVED
 
                 Button(
+                    // The enabled state logic is now part of the validation check before saving
                     onClick = {
-                        showDeleteConfirmationDialog = true
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red) // Optional: Red color for delete
-                ) {
-                    Text("Delete")
-                }
+                        errorMessage = null // Reset error message at the start of save attempt
+                        val amountDouble = amount.replace(',', '.').toDoubleOrNull()
 
-                Spacer(modifier = Modifier.width(8.dp)) // Add spacing
+                        if (description.isBlank()) {
+                            errorMessage = "Description cannot be empty."
+                            return@Button
+                        }
+                        if (amountDouble == null || amountDouble <= 0) { // Also check if positive
+                            errorMessage = "Please enter a valid positive amount."
+                            return@Button
+                        }
+                        if (selectedAccountId == null) {
+                            errorMessage = "Please select an account."
+                            return@Button
+                        }
+                        if (selectedDate == null) {
+                            errorMessage = "Please select a date."
+                            return@Button
+                        }
 
-//                Button(onClick = onDismiss) {
-//                    Text("Cancel")
-//                }
-                Button(
-                    enabled = description.isNotBlank() && amount.isNotBlank() && selectedDate != null && selectedAccountId != null,
-                    onClick = {
-                    // Log.d("EditTransactionDialog", "Button clicked")
-                    // Implement save logic
-                    val amountDouble = amount.toDoubleOrNull()
-                    // Add validation
-                    if (description.isNotBlank() && amountDouble != null && selectedDate != null && selectedAccountId != null) {
-                        // Log.d("EditTransactionDialog", "Saving updated transaction")
-                        val updatedTransaction = transaction.copy( // Use copy to create a new instance with updated values
-                            accountId = selectedAccountId!!,
+                        // All checks passed, proceed to update
+                        val updatedTransaction = transaction.copy(
+                            accountId = selectedAccountId!!, // Not null due to check above
                             type = selectedType,
-                            date = selectedDate!!,
+                            date = selectedDate!!, // Not null due to check above
                             description = description,
-                            amount = amountDouble,
+                            amount = amountDouble, // Not null due to check above
                             categoryId = selectedCategoryId
                         )
                         coroutineScope.launch {
                             viewModel.updateTransaction(updatedTransaction)
                             onDismiss() // Close the dialog after updating
                         }
-                    } else {
-                        // Show validation error to the user
-                    }
-                }) {
-                    Text("Save")
+                    }) {
+                    Text("Save Changes")
                 }
             }
         }
     }
 
     if (showDatePickerDialog) {
-        // Initialize DatePickerState with the transaction's date if available
-        val initialDateMillis = LocalDate.now().atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDateMillis)
+        val initialDatePickerMillis = remember(transaction.date) { // Ensure this re-calculates if transaction.date changes
+            transaction.date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        }
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDatePickerMillis)
 
         val confirmEnabled = remember {
             derivedStateOf { datePickerState.selectedDateMillis != null }
@@ -560,35 +656,6 @@ fun EditTransactionDialog(
         ) {
             DatePicker(state = datePickerState)
         }
-    }
-
-    // Delete Confirmation Dialog
-    if (showDeleteConfirmationDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmationDialog = false },
-            title = { Text("Confirm Deletion") },
-            text = { Text("Are you sure you want to delete this transaction?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        coroutineScope.launch {
-                            viewModel.deleteTransaction(transaction) // Delete the transaction
-                            onDismiss() // Dismiss the Edit dialog
-                        }
-                        showDeleteConfirmationDialog = false // Dismiss the confirmation dialog
-                    }
-                ) {
-                    Text("Delete", color = Color.Red)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showDeleteConfirmationDialog = false } // Dismiss the confirmation dialog
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 }
 
