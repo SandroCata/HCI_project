@@ -358,30 +358,6 @@ fun EditLoanDialog(
                 isError = amount.replace(',','.').toDoubleOrNull() == null && errorMessage != null
             )
             Spacer(modifier = Modifier.height(8.dp))
-
-            // Loan Type Radio Buttons
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text("Type:")
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    loanTypes.forEach { type ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { selectedLoanType = type }
-                        ) {
-                            RadioButton(
-                                selected = selectedLoanType == type,
-                                onClick = { selectedLoanType = type })
-                            Text(type.name.replaceFirstChar { it.titlecase() })
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-
-
             TextField(
                 value = selectedStartDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
                 onValueChange = {},
@@ -414,6 +390,26 @@ fun EditLoanDialog(
                 isError = errorMessage != null && selectedEndDate != null && selectedStartDate.isAfter(selectedEndDate)
             )
             Spacer(modifier = Modifier.height(8.dp))
+            // Loan Type Radio Buttons
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("Type:")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    loanTypes.forEach { type ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { selectedLoanType = type }
+                        ) {
+                            RadioButton(
+                                selected = selectedLoanType == type,
+                                onClick = { selectedLoanType = type })
+                            Text(type.name.replaceFirstChar { it.titlecase() })
+                        }
+                    }
+                }
+            }
 
 
             if (errorMessage != null) {
@@ -503,7 +499,7 @@ fun EditLoanDialog(
                 TextButton(onClick = {
                     selectedEndDate = null // Clear if canceling from a set date
                     showEndDatePickerDialog = false
-                }) { Text("Clear & Cancel") }
+                }) { Text("Cancel") }
             }
         ) { DatePicker(state = datePickerState) }
     }

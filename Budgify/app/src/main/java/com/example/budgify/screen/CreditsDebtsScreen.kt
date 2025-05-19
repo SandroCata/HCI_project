@@ -341,7 +341,7 @@ fun ClickableAmountArea(
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = currencyFormat.format(amount), // Usa il formattatore di valuta
+            text = "${amount}€", // Usa il formattatore di valuta
             style = MaterialTheme.typography.bodyLarge, // Rimosso fontSize per coerenza con il tema
         )
     }
@@ -356,7 +356,6 @@ fun LoanRow(
     val amountColor = if (loan.type == LoanType.CREDIT) Color(0xFF4CAF50) else Color(0xFFF44336) // Considera i colori del tema
     val sign = if (loan.type == LoanType.CREDIT) "+" else "-"
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd MMM yyyy") }
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance() }
 
 
     Card(
@@ -409,7 +408,7 @@ fun LoanRow(
                 }
             }
             Text(
-                text = "$sign${currencyFormat.format(loan.amount)}", // Usa il formattatore
+                text = "$sign${loan.amount}€", // Usa il formattatore
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 color = amountColor
