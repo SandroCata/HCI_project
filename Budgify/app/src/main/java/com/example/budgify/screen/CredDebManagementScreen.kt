@@ -1,6 +1,7 @@
 package com.example.budgify.screen
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.copy
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -53,7 +54,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.isEmpty
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,6 +65,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.budgify.applicationlogic.FinanceViewModel
+import com.example.budgify.entities.Loan
+import com.example.budgify.entities.LoanType
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.navigation.BottomBar
@@ -73,18 +78,31 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.text.forEach
+import kotlin.text.lowercase
+import kotlin.text.toList
 
-enum class ObjectiveSectionType {
-    ACTIVE,
-    EXPIRED
+// Enum for the sections in LoanManagementScreen, aligning with LoanType
+enum class LoanSectionType(val title: String, val loanType: LoanType) {
+    DEBTS("Debts", LoanType.DEBT),
+    CREDITS("Credits", LoanType.CREDIT); // Semicolon needed if you add functions/companion object
+
+    companion object {
+        fun fromLoanType(loanType: LoanType?): LoanSectionType {
+            return entries.find { it.loanType == loanType } ?: DEBTS // Default to DEBTS if null or not found
+        }
+    }
 }
 
 @Composable
-fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceViewModel) {
-    val currentRoute by remember { mutableStateOf(ScreenRoutes.ObjectivesManagement.route) }
+fun CredDebManagementScreen(navController: NavController, viewModel: FinanceViewModel, initialSelectedLoanType: LoanType? = null) {
+    val currentRoute by remember { mutableStateOf(ScreenRoutes.CredDebManagement.route) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var selectedSection by remember { mutableStateOf(ObjectivesManagementSection.Active) }
+    var selectedSection by remember {
+        mutableStateOf(LoanSectionType.fromLoanType(initialSelectedLoanType))
+    }
+
     val showSnackbar: (String) -> Unit = { message ->
         scope.launch {
             snackbarHostState.showSnackbar(message)
@@ -94,9 +112,8 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
     val listState = rememberLazyListState()
     val showButton by remember {
         derivedStateOf {
-            // Mostra il pulsante se non stiamo scrollando o se siamo in cima/fondo con pochi elementi
             if (listState.layoutInfo.totalItemsCount <= listState.layoutInfo.visibleItemsInfo.size) {
-                true // Sempre visibile se tutti gli elementi sono visibili
+                true
             } else {
                 val isAtTop = listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
                 val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
@@ -116,7 +133,7 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                 showSnackbar = showSnackbar
             )
         },
-        containerColor = Color.Transparent // O il colore di sfondo desiderato per lo Scaffold
+        containerColor = Color.Transparent
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -127,11 +144,11 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                 modifier = Modifier.fillMaxSize()
             ) {
                 TabRow(selectedTabIndex = selectedSection.ordinal) {
-                    ObjectivesManagementSection.entries.forEach { section ->
+                    LoanSectionType.entries.forEach { sectionType ->
                         Tab(
-                            selected = selectedSection == section,
-                            onClick = { selectedSection = section },
-                            text = { Text(section.title) }
+                            selected = selectedSection == sectionType,
+                            onClick = { selectedSection = sectionType },
+                            text = { Text(sectionType.title) }
                         )
                     }
                 }
@@ -140,50 +157,81 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
-                    // Rimuovi padding orizzontale qui se lo applichi in ObjectivesSection
                 ) {
-                    when (selectedSection) {
-                        ObjectivesManagementSection.Active -> {
-                            ObjectivesSection(ObjectiveSectionType.ACTIVE, listState, viewModel, showSnackbar)
-                        }
-
-                        ObjectivesManagementSection.Expired -> {
-                            ObjectivesSection(ObjectiveSectionType.EXPIRED, listState, viewModel, showSnackbar)
-                        }
-                    }
+                    // Pass the selected LoanType for filtering
+                    LoansSection(
+                        loanType = selectedSection.loanType,
+                        listState = listState,
+                        viewModel = viewModel,
+                        showSnackbar = showSnackbar
+                    )
                 }
             }
             AnimatedVisibility(
-                visible = showButton, // La visibilità è ora gestita dal LazyListState
+                visible = showButton,
                 enter = slideInVertically(initialOffsetY = { fullHeight -> fullHeight }),
                 exit = slideOutVertically(targetOffsetY = { fullHeight -> fullHeight }),
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) {
                 Button(
                     onClick = {
-                        navController.navigate(ScreenRoutes.Objectives.route)
+                        navController.navigate(ScreenRoutes.CredDeb.route)
                     },
                     modifier = Modifier
-                        .fillMaxWidth() // Fallo largo quanto il contenitore per centrarlo meglio con padding
-                        .padding(horizontal = 16.dp) // Padding orizzontale
-                        .padding(bottom = 16.dp) // Padding dal fondo
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 16.dp)
                 ) {
-                    Text("Back to Objectives")
+                    Text("Back to Loans overview")
                 }
             }
         }
     }
 }
 
-enum class ObjectivesManagementSection(val title: String) {
-    Active("Active Objectives"),
-    Expired("Expired Objectives")
+@Composable
+fun LoansSection(
+    loanType: LoanType, // To filter which loans to display
+    listState: LazyListState,
+    viewModel: FinanceViewModel,
+    showSnackbar: (String) -> Unit
+) {
+    val allLoans by viewModel.allLoans.collectAsStateWithLifecycle() // Assuming viewModel.allLoans
+    val filteredLoans = remember(allLoans, loanType) {
+        allLoans.filter { it.type == loanType }
+    }
+
+    if (filteredLoans.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "No ${loanType.name.lowercase()}s found.",
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+    } else {
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 72.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(filteredLoans, key = { it.id }) { loan ->
+                LoanItem(loan = loan, viewModel = viewModel, showSnackbar = showSnackbar)
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ObjectiveItem(
-    obj: Objective,
+fun LoanItem(
+    loan: Loan,
     viewModel: FinanceViewModel,
     showSnackbar: (String) -> Unit
 ) {
@@ -191,9 +239,9 @@ fun ObjectiveItem(
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
 
-    val backgroundColor = when (obj.type) {
-        ObjectiveType.INCOME -> Color(0xff0db201)
-        ObjectiveType.EXPENSE -> Color(0xffff6f51)
+    val backgroundColor = when (loan.type) {
+        LoanType.CREDIT -> Color(0xFF4CAF50).copy(alpha = 0.8f) // Greenish for credit
+        LoanType.DEBT -> Color(0xFFF44336).copy(alpha = 0.8f)   // Reddish for debt
     }
 
     Column(
@@ -202,30 +250,26 @@ fun ObjectiveItem(
             .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
             .combinedClickable(
-                onClick = { showSnackbar("Hold to edit or delete the objective") },
-                onLongClick = {
-                    showActionChoiceDialog = true // Mostra il dialogo di scelta azione
-                }
+                onClick = { showSnackbar("Hold to edit or delete the ${loan.type.name.lowercase()}") },
+                onLongClick = { showActionChoiceDialog = true }
             )
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(16.dp),
     ) {
-        Text(text = obj.desc, textAlign = TextAlign.Center)
         Text(
-            text = "Start: ${obj.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}",
-            textAlign = TextAlign.Center
+            text = "${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }}: ${loan.desc}",
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.White
         )
-        Text(
-            text = "End: ${obj.endDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}",
-            textAlign = TextAlign.Center
-        )
-        Text(text = "${obj.amount}€", textAlign = TextAlign.Center)
+        Text(text = "Amount: ${loan.amount}€", color = Color.White)
+        Text(text = "Start Date: ${loan.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", color = Color.White)
+        loan.endDate?.let {
+            Text(text = "End Date: ${it.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", color = Color.White)
+        }
     }
 
-    // Dialogo di Scelta Azione
     if (showActionChoiceDialog) {
-        ObjectiveActionChoiceDialog(
-            objective = obj,
+        LoanActionChoiceDialog(
+            loan = loan,
             onDismiss = { showActionChoiceDialog = false },
             onEditClick = {
                 showEditDialog = true
@@ -238,94 +282,47 @@ fun ObjectiveItem(
         )
     }
 
-    // Dialogo di Modifica Obiettivo
     if (showEditDialog) {
-        EditObjectiveDialog(
-            objective = obj,
+        EditLoanDialog(
+            loan = loan,
             viewModel = viewModel,
             onDismiss = { showEditDialog = false },
-            // onDeleteClick in EditObjectiveDialog ora chiama il dialogo di conferma
-            onDeleteRequest = {
-                showEditDialog = false // Chiudi il dialogo di modifica
-                showDeleteConfirmationDialog = true // Mostra il dialogo di conferma eliminazione
-            }
+            showSnackbar = showSnackbar
         )
     }
 
-    // Dialogo di Conferma Eliminazione
     if (showDeleteConfirmationDialog) {
-        DeleteObjectiveConfirmationDialog( // Rinominato per coerenza
-            objective = obj,
+        ConfirmLoanDeleteDialog(
+            loan = loan,
             onDismiss = { showDeleteConfirmationDialog = false },
             onConfirmDelete = {
-                viewModel.deleteObjective(obj) // Logica di eliminazione
+                viewModel.deleteLoan(loan) // ViewModel handles deletion
                 showDeleteConfirmationDialog = false
-                showSnackbar("Objective '${obj.desc}' deleted")
+                showSnackbar("${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }} '${loan.desc}' deleted")
             }
         )
     }
-}
-
-@Composable
-fun ObjectiveActionChoiceDialog(
-    objective: Objective,
-    onDismiss: () -> Unit,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Objective: '${objective.desc}'",
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            XButton(onDismiss)
-        } },
-        text = { Text("What would you like to do?")
-            },
-        confirmButton = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                TextButton(onClick = onDeleteClick) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
-                TextButton(onClick = onEditClick) {
-                    Text("Edit")
-                }
-            }
-        },
-        dismissButton = null
-    )
 }
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditObjectiveDialog(
-    objective: Objective,
+fun EditLoanDialog(
+    loan: Loan,
     viewModel: FinanceViewModel,
     onDismiss: () -> Unit,
-    onDeleteRequest: () -> Unit // Modificato da onDeleteClick a onDeleteRequest
+    showSnackbar: (String) -> Unit
 ) {
-    var description by remember { mutableStateOf(objective.desc) }
-    var amount by remember { mutableStateOf(objective.amount.toString().replace('.',',')) }
-    var selectedStartDate by remember { mutableStateOf(objective.startDate) }
-    var selectedEndDate by remember { mutableStateOf(objective.endDate) }
-    var selectedType by remember { mutableStateOf(objective.type) }
+    var description by remember { mutableStateOf(loan.desc) }
+    var amount by remember { mutableStateOf(loan.amount.toString().replace('.',',')) }
+    var selectedStartDate by remember { mutableStateOf(loan.startDate) }
+    var selectedEndDate by remember { mutableStateOf(loan.endDate) } // Nullable
+    var selectedLoanType by remember { mutableStateOf(loan.type) } // Type can be edited
     var showStartDatePickerDialog by remember { mutableStateOf(false) }
     var showEndDatePickerDialog by remember { mutableStateOf(false) }
-    val objectiveTypes = ObjectiveType.entries.toList()
+    val loanTypes = LoanType.entries.toList()
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
-
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -339,10 +336,9 @@ fun EditObjectiveDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Edit Objective", style = MaterialTheme.typography.titleLarge)
+                Text("Edit Loan", style = MaterialTheme.typography.titleLarge)
                 XButton(onDismiss)
             }
-
             Spacer(modifier = Modifier.height(16.dp))
 
             TextField(
@@ -363,6 +359,29 @@ fun EditObjectiveDialog(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Loan Type Radio Buttons
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("Type:")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    loanTypes.forEach { type ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { selectedLoanType = type }
+                        ) {
+                            RadioButton(
+                                selected = selectedLoanType == type,
+                                onClick = { selectedLoanType = type })
+                            Text(type.name.replaceFirstChar { it.titlecase() })
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+
             TextField(
                 value = selectedStartDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
                 onValueChange = {},
@@ -376,14 +395,13 @@ fun EditObjectiveDialog(
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                isError = errorMessage != null && selectedStartDate.isAfter(selectedEndDate) // Aggiunto controllo data
+                isError = errorMessage != null && selectedEndDate != null && selectedStartDate.isAfter(selectedEndDate)
             )
             Spacer(modifier = Modifier.height(8.dp))
-
             TextField(
-                value = selectedEndDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                value = selectedEndDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "Optional",
                 onValueChange = {},
-                label = { Text("End Date") },
+                label = { Text("End Date (Optional)") },
                 readOnly = true,
                 trailingIcon = {
                     Icon(
@@ -393,30 +411,10 @@ fun EditObjectiveDialog(
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                isError = errorMessage != null && selectedEndDate.isBefore(selectedStartDate) // Aggiunto controllo data
+                isError = errorMessage != null && selectedEndDate != null && selectedStartDate.isAfter(selectedEndDate)
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text("Type:")
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    objectiveTypes.forEach { type ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { selectedType = type }
-                        ) {
-                            RadioButton(
-                                selected = selectedType == type,
-                                onClick = { selectedType = type })
-                            Text(type.name.replaceFirstChar { it.titlecase() })
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
 
             if (errorMessage != null) {
                 Text(
@@ -426,10 +424,7 @@ fun EditObjectiveDialog(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
@@ -447,37 +442,32 @@ fun EditObjectiveDialog(
                             errorMessage = "Please enter a valid positive amount."
                             return@Button
                         }
-                        if (selectedStartDate.isAfter(selectedEndDate)) {
+                        if (selectedEndDate != null && selectedStartDate.isAfter(selectedEndDate)) {
                             errorMessage = "Start date cannot be after end date."
                             return@Button
                         }
 
-                        val updatedObjective = objective.copy(
+                        val updatedLoan = loan.copy(
                             desc = description,
                             amount = amountDouble,
                             startDate = selectedStartDate,
                             endDate = selectedEndDate,
-                            type = selectedType
+                            type = selectedLoanType
                         )
                         coroutineScope.launch {
-                            viewModel.updateObjective(updatedObjective)
+                            viewModel.updateLoan(updatedLoan)
                         }
+                        showSnackbar("${updatedLoan.type.name.lowercase().replaceFirstChar { it.titlecase() }} '${updatedLoan.desc}' updated")
                         onDismiss()
                     }) {
-                    Text("Save changes")
+                    Text("Save Changes")
                 }
             }
         }
     }
 
-    // DatePickerDialog per la data di inizio
     if (showStartDatePickerDialog) {
-        val initialStartDateMillis = remember(objective.startDate) {
-            objective.startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        }
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialStartDateMillis)
-        val confirmEnabled by remember { derivedStateOf { datePickerState.selectedDateMillis != null } }
-
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedStartDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
         DatePickerDialog(
             onDismissRequest = { showStartDatePickerDialog = false },
             confirmButton = {
@@ -488,117 +478,33 @@ fun EditObjectiveDialog(
                         }
                         showStartDatePickerDialog = false
                     },
-                    enabled = confirmEnabled
+                    enabled = datePickerState.selectedDateMillis != null
                 ) { Text("OK") }
             },
-            dismissButton = {
-                TextButton(onClick = { showStartDatePickerDialog = false }) { Text("Cancel") }
-            }
+            dismissButton = { TextButton(onClick = { showStartDatePickerDialog = false }) { Text("Cancel") } }
         ) { DatePicker(state = datePickerState) }
     }
-
-    // DatePickerDialog per la data di fine
     if (showEndDatePickerDialog) {
-        val initialEndDateMillis = remember(objective.endDate) {
-            objective.endDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        }
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialEndDateMillis)
-        val confirmEnabled by remember { derivedStateOf { datePickerState.selectedDateMillis != null } }
-
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedEndDate?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli())
         DatePickerDialog(
             onDismissRequest = { showEndDatePickerDialog = false },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        datePickerState.selectedDateMillis?.let {
-                            selectedEndDate = Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+                        selectedEndDate = datePickerState.selectedDateMillis?.let {
+                            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
                         }
                         showEndDatePickerDialog = false
                     },
-                    enabled = confirmEnabled
+                    enabled = true // Allow null selection
                 ) { Text("OK") }
             },
             dismissButton = {
-                TextButton(onClick = { showEndDatePickerDialog = false }) { Text("Cancel") }
+                TextButton(onClick = {
+                    selectedEndDate = null // Clear if canceling from a set date
+                    showEndDatePickerDialog = false
+                }) { Text("Clear & Cancel") }
             }
         ) { DatePicker(state = datePickerState) }
-    }
-}
-
-@Composable
-fun DeleteObjectiveConfirmationDialog( // Rinominato per coerenza
-    objective: Objective,
-    onDismiss: () -> Unit,
-    onConfirmDelete: () -> Unit // Aggiunto callback per conferma
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Confirm Deletion") },
-        text = { Text("Are you sure you want to delete the objective \"${objective.desc}\"?") },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onConfirmDelete() // Chiama il callback fornito
-                    // La logica di eliminazione e lo snackbar sono ora gestiti dal chiamante (ObjectiveItem)
-                }
-            ) {
-                Text("Delete", color = MaterialTheme.colorScheme.error)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-@Composable
-fun ObjectivesSection(
-    type: ObjectiveSectionType,
-    listState: LazyListState,
-    viewModel: FinanceViewModel,
-    showSnackbar: (String) -> Unit
-) {
-    val objectives by viewModel.allObjectives.collectAsStateWithLifecycle()
-    val filteredObjectives = remember(objectives, type) {
-        val now = LocalDate.now()
-        when (type) {
-            // Gli obiettivi attivi hanno data di fine uguale o successiva a oggi E non sono completati (se hai un flag `isCompleted`)
-            ObjectiveSectionType.ACTIVE -> objectives.filter { !it.endDate.isBefore(now) /* && !it.isCompleted */ }
-            // Gli obiettivi scaduti hanno data di fine precedente a oggi OPPURE sono completati
-            ObjectiveSectionType.EXPIRED -> objectives.filter { it.endDate.isBefore(now) /* || it.isCompleted */ }
-        }
-    }
-
-    if (filteredObjectives.isEmpty()){
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "No ${type.name.lowercase()} objectives found.",
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-        }
-    } else {
-        LazyColumn(
-            state = listState,
-            contentPadding = PaddingValues(
-                start = 16.dp, // Padding laterale
-                top = 16.dp,
-                end = 16.dp,   // Padding laterale
-                bottom = if (listState.layoutInfo.totalItemsCount > 0) 72.dp else 16.dp // Più spazio sotto se c'è il bottone "Back"
-            ),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(filteredObjectives, key = { it.id }) { objective -> // Aggiunta key per performance
-                ObjectiveItem(objective, viewModel, showSnackbar)
-            }
-        }
     }
 }

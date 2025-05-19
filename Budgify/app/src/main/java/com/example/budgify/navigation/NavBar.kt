@@ -75,6 +75,7 @@ import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.entities.TransactionType
+import com.example.budgify.routes.ARG_INITIAL_LOAN_TYPE
 import com.example.budgify.routes.ScreenRoutes
 import com.example.budgify.screen.AddAccountDialog
 import com.example.budgify.screen.AddCategoryDialog
@@ -95,6 +96,7 @@ fun TopBar(navController: NavController, currentRoute: String) {
         "settings_screen" -> "Settings"
         "transactions_screen" -> "Transactions"
         "cred_deb_screen" -> "Loans"
+        "cred_deb_management_screen/{$ARG_INITIAL_LOAN_TYPE}?" -> "Manage Loans"
         "categories_screen" -> "Categories"
         else -> ""
     }

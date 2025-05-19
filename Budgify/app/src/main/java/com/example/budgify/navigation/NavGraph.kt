@@ -28,14 +28,18 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.example.budgify.screen.CategoriesScreen
 import com.example.budgify.applicationlogic.FinanceViewModel
+import com.example.budgify.entities.LoanType
 import com.example.budgify.routes.ScreenRoutes
+import com.example.budgify.screen.CredDebManagementScreen
 import com.example.budgify.screen.CreditsDebitsScreen
 import com.example.budgify.screen.Homepage
 import com.example.budgify.screen.ObjectivesManagementScreen
@@ -44,6 +48,7 @@ import com.example.budgify.screen.Settings
 import com.example.budgify.screen.TransactionsScreen
 import com.example.budgify.userpreferences.AppTheme
 import com.example.budgify.userpreferences.ThemePreferenceManager
+import com.example.budgify.routes.ARG_INITIAL_LOAN_TYPE
 
 @Composable
 fun NavGraph(
@@ -78,21 +83,32 @@ fun NavGraph(
         composable(ScreenRoutes.Home.route) { Homepage(navController, viewModel) }
         composable(ScreenRoutes.Objectives.route) { ObjectivesScreen(navController, viewModel) }
         composable(ScreenRoutes.ObjectivesManagement.route) { ObjectivesManagementScreen(navController, viewModel) }
-        composable(ScreenRoutes.Settings.route) {
-            Settings(
-                // Assicurati che la tua Settings screen sia Settings e non SettingsScreen se hai cambiato nome
-                navController = navController,
-                viewModel = viewModel,
-                //themePreferenceManager = themePreferenceManager, // Passa themePreferenceManager
-                onThemeChange = onThemeChange, // Passa il callback
-                // Dovresti aggiungere anche callbacks per onPinSuccessfullySet e onPinCleared
-                // se vuoi che Settings possa comunicare questi cambiamenti a MainActivity
-                // per un aggiornamento UI immediato senza riavvio. Esempio:
-                // onPinSettingsChanged = { requiresPinEntry -> /* callback a MainActivity */ }
-            )
-        }
+        composable(ScreenRoutes.Settings.route) { Settings(navController, viewModel, onThemeChange) }
         composable(ScreenRoutes.Transactions.route) { TransactionsScreen(navController, viewModel) }
         composable(ScreenRoutes.CredDeb.route) { CreditsDebitsScreen(navController, viewModel) }
+        composable(
+            route = ScreenRoutes.CredDebManagement.route, // Use routeDefinition here
+            arguments = listOf(
+                navArgument(ARG_INITIAL_LOAN_TYPE) { // Use the constant for the argument name
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val initialLoanTypeName = backStackEntry.arguments?.getString(ARG_INITIAL_LOAN_TYPE)
+            val initialLoanType = try {
+                initialLoanTypeName?.let { LoanType.valueOf(it.uppercase()) }
+            } catch (e: IllegalArgumentException) {
+                Log.e("NavGraph", "Invalid LoanType argument: $initialLoanTypeName", e)
+                null
+            }
+            CredDebManagementScreen(
+                navController = navController,
+                viewModel = viewModel,
+                initialSelectedLoanType = initialLoanType
+            )
+        }
     }
 }
 

@@ -128,14 +128,19 @@ fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewMode
                     amount = totalCredits,
                     icon = Icons.Filled.ArrowUpward,
                     iconColor = Color(0xFF4CAF50)
-                ) { navController.navigate(ScreenRoutes.CredDebManagement.route) }
+                ) { navController.navigate(ScreenRoutes.credDebManagementRouteWithArg(LoanType.CREDIT)) }
                 ClickableAmountArea(
                     title = "Total Debts",
                     amount = totalDebits,
                     icon = Icons.Filled.ArrowDownward,
                     iconColor = Color(0xFFF44336)
-                ) { navController.navigate(ScreenRoutes.CredDebManagement.route) }
+                ) { navController.navigate(ScreenRoutes.credDebManagementRouteWithArg(LoanType.DEBT)) }
             }
+            Text(
+                text = "Tap on one section above for more details",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -648,18 +653,5 @@ fun EditLoanDialog(
                 TextButton(onClick = { showValidationErrorDialog = false }) { Text("OK") }
             }
         )
-    }
-}
-
-@Composable
-fun XButton(onDismiss: () -> Unit) {
-    IconButton(
-        onClick = onDismiss,
-        modifier = Modifier
-            .size(24.dp) // Set a fixed size for the IconButton
-            .clip(CircleShape) // Clip the IconButton to a circle shape
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest) // Add a background color to the circle
-    ) { // X button
-        Icon(Icons.Filled.Close, contentDescription = "Close")
     }
 }
