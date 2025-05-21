@@ -272,6 +272,56 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
     }
     // --- Fine sezione LOANS ---
 
+    /**
+     * Provides a StateFlow map of categories to their total expense amounts for a given account.
+     * The map is sorted by amount in descending order.
+     */
+    fun getExpenseDistributionForAccount(accountId: Int): StateFlow<Map<Category, Double>> {
+        return allTransactionsWithDetails
+            .map { transactionsWithDetailsList ->
+                transactionsWithDetailsList
+                    .filter { it.transaction.accountId == accountId &&
+                            it.transaction.type == TransactionType.EXPENSE &&
+                            it.category != null } // Filter for expenses of the account with a category
+                    .groupBy { it.category!! } // Group by the Category object
+                    .mapValues { entry ->
+                        // Sum the amounts of transactions in each category group
+                        entry.value.sumOf { transactionWithDetail -> transactionWithDetail.transaction.amount }
+                    }
+                    .toList() // Convert to list of pairs for sorting
+                    .sortedByDescending { it.second } // Sort by amount descending
+                    .toMap() // Convert back to a map (LinkedHashMap preserves order)
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000L),
+                initialValue = emptyMap() // Initial value while loading or if no data
+            )
+    }
+
+    fun getIncomeDistributionForAccount(accountId: Int): StateFlow<Map<Category, Double>> {
+        return allTransactionsWithDetails
+            .map { transactionsWithDetailsList ->
+                transactionsWithDetailsList
+                    .filter { it.transaction.accountId == accountId &&
+                            it.transaction.type == TransactionType.INCOME &&
+                            it.category != null } // Filter for incomes of the account with a category
+                    .groupBy { it.category!! } // Group by the Category object
+                    .mapValues { entry ->
+                        // Sum the amounts of transactions in each category group
+                        entry.value.sumOf { transactionWithDetail -> transactionWithDetail.transaction.amount }
+                    }
+                    .toList() // Convert to list of pairs for sorting
+                    .sortedByDescending { it.second } // Sort by amount descending
+                    .toMap() // Convert back to a map (LinkedHashMap preserves order)
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000L),
+                initialValue = emptyMap() // Initial value while loading or if no data
+            )
+    }
+
     // Factory per creare l'istanza del ViewModel
     class FinanceViewModelFactory(private val repository: FinanceRepository) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

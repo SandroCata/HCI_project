@@ -1,6 +1,7 @@
 package com.example.budgify.screen
 
 import android.util.Log
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -53,14 +54,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -121,7 +126,7 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
             ) {
                 // Box per i pie chart e istogramma
                 item {
-                    GraficiBox()
+                    GraficiBox(viewModel = viewModel)
                 }
 
                 // Box per i conti e il saldo totale
@@ -1096,30 +1101,397 @@ fun EditAccountDialog(
     }
 }
 
-// Composbale per visualizzare la box dei grafici
+// Define colors for pie chart slices
+val pieChartColorsDefaults = listOf(
+    Color(0xFFF44336), Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF673AB7),
+    Color(0xFF3F51B5), Color(0xFF2196F3), Color(0xFF03A9F4), Color(0xFF00BCD4),
+    Color(0xFF009688), Color(0xFF4CAF50), Color(0xFF8BC34A), Color(0xFFCDDC39),
+    Color(0xFFFFEB3B), Color(0xFFFFC107), Color(0xFFFF9800), Color(0xFFFF5722),
+    Color(0xFF795548), Color(0xFF9E9E9E), Color(0xFF607D8B)
+)
+val incomeChartColors = listOf(
+    Color(0xFF4CAF50), Color(0xFF8BC34A), Color(0xFFCDDC39), Color(0xFFFFEB3B),
+    Color(0xFF009688), Color(0xFF03A9F4), Color(0xFF2196F3), Color(0xFF00BCD4),
+    Color(0xFF673AB7), Color(0xFF3F51B5), Color(0xFF9C27B0), Color(0xFFE91E63) // Added more diverse colors
+)
+val expenseChartColors = listOf(
+    Color(0xFFF44336), Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFFFF5722),
+    Color(0xFFFF9800), Color(0xFFFFC107), Color(0xFF795548), Color(0xFF607D8B),
+    Color(0xFF3F51B5), Color(0xFF2196F3), Color(0xFF00BCD4), Color(0xFF03A9F4) // Added more diverse colors
+)
+
+
+data class PieSlice(val categoryName: String, val amount: Double, val color: Color)
+
 @Composable
-fun GraficiBox() {
+fun PieChart(
+    modifier: Modifier = Modifier,
+    slices: List<PieSlice>
+) {
+    if (slices.isEmpty()) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No data", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+        }
+        return
+    }
+
+    val totalAmount = slices.sumOf { it.amount }
+    if (totalAmount == 0.0) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No transactions", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+        }
+        return
+    }
+
+    var startAngle = -90f
+
+    Canvas(modifier = modifier) {
+        slices.forEach { slice ->
+            val sweepAngle = (slice.amount / totalAmount * 360f).toFloat()
+            if (sweepAngle > 0f) {
+                drawArc(
+                    color = slice.color,
+                    startAngle = startAngle,
+                    sweepAngle = sweepAngle,
+                    useCenter = true,
+                )
+            }
+            startAngle += sweepAngle
+        }
+    }
+}
+
+//@Composable
+//fun AccountExpensePieChart(
+//    account: Account,
+//    viewModel: FinanceViewModel
+//) {
+//    // Collect the expense distribution for this specific account
+//    val expenseDataMap by viewModel.getExpenseDistributionForAccount(account.id).collectAsStateWithLifecycle()
+//
+//    Column(
+//        modifier = Modifier
+//            .width(180.dp) // Adjusted width for each chart item
+//            .padding(horizontal = 8.dp, vertical = 8.dp) // Padding around each chart card
+//            .clip(RoundedCornerShape(12.dp))
+//            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)) // Subtle background
+//            .padding(12.dp), // Inner padding for content
+//        horizontalAlignment = Alignment.CenterHorizontally
+//    ) {
+//        Text(
+//            text = account.title,
+//            style = MaterialTheme.typography.titleSmall,
+//            fontWeight = FontWeight.Bold,
+//            maxLines = 1,
+//            overflow = TextOverflow.Ellipsis,
+//            color = MaterialTheme.colorScheme.onSurfaceVariant
+//        )
+//        Spacer(modifier = Modifier.height(10.dp))
+//
+//        if (expenseDataMap.isEmpty()) {
+//            Box(
+//                modifier = Modifier
+//                    .height(100.dp) // Same height as chart for consistent layout
+//                    .fillMaxWidth(),
+//                contentAlignment = Alignment.Center
+//            ) {
+//                Text(
+//                    "No expense data",
+//                    style = MaterialTheme.typography.bodyMedium,
+//                    color = MaterialTheme.colorScheme.onSurfaceVariant
+//                )
+//            }
+//        } else {
+//            val pieSlices = expenseDataMap.entries.mapIndexedNotNull { index, entry ->
+//                if (entry.value > 0) { // Only include slices with a positive amount
+//                    PieSlice(
+//                        categoryName = entry.key.desc, // Get category description
+//                        amount = entry.value,
+//                        color = pieChartColorsDefaults[index % pieChartColorsDefaults.size] // Cycle through predefined colors
+//                    )
+//                } else null
+//            }
+//
+//            if (pieSlices.isEmpty()){
+//                Box(
+//                    modifier = Modifier
+//                        .height(100.dp)
+//                        .fillMaxWidth(),
+//                    contentAlignment = Alignment.Center
+//                ) {
+//                    Text(
+//                        "No expenses to display",
+//                        style = MaterialTheme.typography.bodyMedium,
+//                        color = MaterialTheme.colorScheme.onSurfaceVariant
+//                    )
+//                }
+//            } else {
+//                PieChart(
+//                    modifier = Modifier
+//                        .size(100.dp), // Size of the canvas for the pie chart
+//                    slices = pieSlices,
+//                    //sliceThickness = 20.dp // Adjust thickness of the ring
+//                )
+//                Spacer(modifier = Modifier.height(12.dp))
+//
+//                // Legend for the pie chart
+//                Column(
+//                    modifier = Modifier.fillMaxWidth(),
+//                    horizontalAlignment = Alignment.Start // Align legend items to the start
+//                ) {
+//                    pieSlices.take(3).forEach { slice -> // Show legend for top 3 categories, adjust as needed
+//                        Row(
+//                            verticalAlignment = Alignment.CenterVertically,
+//                            modifier = Modifier.padding(vertical = 2.dp)
+//                        ) {
+//                            Box(
+//                                modifier = Modifier
+//                                    .size(10.dp)
+//                                    .background(slice.color, RoundedCornerShape(2.dp))
+//                            )
+//                            Spacer(modifier = Modifier.width(6.dp))
+//                            Text(
+//                                text = "${slice.categoryName}: ${"%.2f".format(slice.amount)}€",
+//                                style = MaterialTheme.typography.labelMedium, // Slightly larger label
+//                                maxLines = 1,
+//                                overflow = TextOverflow.Ellipsis,
+//                                color = MaterialTheme.colorScheme.onSurfaceVariant
+//                            )
+//                        }
+//                    }
+//                    if (pieSlices.size > 3) {
+//                        Text(
+//                            text = "+ ${pieSlices.size - 3} more...",
+//                            style = MaterialTheme.typography.labelSmall,
+//                            fontStyle = FontStyle.Italic,
+//                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+//                            modifier = Modifier.padding(start = 16.dp) // Indent "more" text
+//                        )
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
+
+@Composable
+fun CategoryDistributionPieChart(
+    title: String,
+    transactionType: TransactionType,
+    account: Account,
+    viewModel: FinanceViewModel,
+    colors: List<Color>
+) {
+    val categoryDataMap by if (transactionType == TransactionType.EXPENSE) {
+        viewModel.getExpenseDistributionForAccount(account.id).collectAsStateWithLifecycle()
+    } else {
+        viewModel.getIncomeDistributionForAccount(account.id).collectAsStateWithLifecycle()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp, horizontal = 4.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.7f))
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+
+        if (categoryDataMap.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .height(90.dp)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "No ${transactionType.name.lowercase()} data",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            val pieSlices = categoryDataMap.entries.mapIndexedNotNull { index, entry ->
+                if (entry.value > 0) {
+                    PieSlice(
+                        categoryName = entry.key.desc,
+                        amount = entry.value,
+                        color = colors[index % colors.size]
+                    )
+                } else null
+            }
+
+            if (pieSlices.isEmpty()){
+                Box(
+                    modifier = Modifier
+                        .height(90.dp)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "No ${transactionType.name.lowercase()} to display",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                PieChart(
+                    modifier = Modifier
+                        .size(90.dp),
+                    slices = pieSlices
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    pieSlices.take(2).forEach { slice ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 1.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(slice.color, RoundedCornerShape(2.dp))
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${slice.categoryName}: ${"%.2f".format(slice.amount)}€",
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    if (pieSlices.size > 2) {
+                        Text(
+                            text = "+ ${pieSlices.size - 2} more...",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontStyle = FontStyle.Italic,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(start = 12.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SingleAccountChartsCard(
+    account: Account,
+    viewModel: FinanceViewModel
+) {
+    Column(
+        modifier = Modifier
+            .width(350.dp)
+            .padding(start = 0.dp, end = 16.dp, bottom = 8.dp, top = 8.dp) // Added vertical padding for spacing between cards in the row
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = account.title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                CategoryDistributionPieChart(
+                    title = "Expenses",
+                    transactionType = TransactionType.EXPENSE,
+                    account = account,
+                    viewModel = viewModel,
+                    colors = expenseChartColors
+                )
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                CategoryDistributionPieChart(
+                    title = "Incomes",
+                    transactionType = TransactionType.INCOME,
+                    account = account,
+                    viewModel = viewModel,
+                    colors = incomeChartColors
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun GraficiBox(viewModel: FinanceViewModel) {
+    val accounts by viewModel.allAccounts.collectAsStateWithLifecycle()
+
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(230.dp)
             .padding(16.dp, 5.dp, 16.dp, 5.dp)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color.LightGray.copy(alpha = 0.3f))
                 .padding(16.dp)
         ) {
             Text(
-                text = "Graphs",
-                style = MaterialTheme.typography.titleLarge
+                text = "Accounts Overview",
+                style = MaterialTheme.typography.titleLarge,
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            // Qui puoi aggiungere la logica per visualizzare i grafici
-            Text("Pie charts...")
-            Text("Histogram...")
+            Spacer(modifier = Modifier.height(4.dp))
+            if (accounts.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            vertical = 50.dp,
+                            horizontal = 16.dp
+                        ) // Keep horizontal padding consistent
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.LightGray.copy(alpha = 0.3f))
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No accounts yet. Add an account to see charts.")
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        //.padding(horizontal = 16.dp) // This padding applies to the content INSIDE the scrollable area
+                ) {
+                    accounts.forEachIndexed { index, account ->
+                        SingleAccountChartsCard(account = account, viewModel = viewModel)
+                        // The horizontal padding on SingleAccountChartsCard itself will create space
+                    }
+                }
+            }
         }
     }
 }
