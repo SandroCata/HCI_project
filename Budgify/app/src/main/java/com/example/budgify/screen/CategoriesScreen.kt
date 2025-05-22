@@ -304,7 +304,7 @@ fun CategoryGridSection(
     viewModel: FinanceViewModel // Receive viewModel
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(3), // Or GridCells.Adaptive(minSize = 120.dp)
+        columns = GridCells.Fixed(2), // Or GridCells.Adaptive(minSize = 120.dp)
         contentPadding = PaddingValues(vertical = 16.dp, horizontal = 8.dp), // Adjust padding as needed
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
