@@ -128,38 +128,38 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
             showSnackbar = showSnackbar
         ) }
     ){
-        innerPadding ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                // Box per i pie chart e istogramma
-                item {
-                    GraficiBox(viewModel = viewModel)
-                }
+            innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            // Box per i pie chart e istogramma
+            item {
+                GraficiBox(viewModel = viewModel)
+            }
 
-                // Box per i conti e il saldo totale
-                item {
-                    ContiBox(
-                        viewModel,
-                        showSnackbar = { message ->
-                            scope.launch {
-                                snackbarHostState.showSnackbar(message)
-                            }
-
+            // Box per i conti e il saldo totale
+            item {
+                ContiBox(
+                    viewModel,
+                    showSnackbar = { message ->
+                        scope.launch {
+                            snackbarHostState.showSnackbar(message)
                         }
-                    )
-                }
 
-                item {
-                    LastTransactionBox(
-                        viewModel = viewModel,
-                        showSnackbar = showSnackbar
-                    )
-                }
+                    }
+                )
+            }
+
+            item {
+                LastTransactionBox(
+                    viewModel = viewModel,
+                    showSnackbar = showSnackbar
+                )
             }
         }
+    }
 }
 
 //Composbale per visualizzare le transazioni
@@ -296,7 +296,7 @@ fun LastTransactionBox(
                         transactionToAction = null
                     })
                 }
-                    },
+            },
             text = { Text("What would you like to do?") },
             confirmButton = {
                 Row(
@@ -769,8 +769,8 @@ fun AddAccountItem(
             viewModel = viewModel,
             onDismiss = { showAddAccountDialog = false },
             onAccountAdded = { account ->
-                    showAddAccountDialog = false
-                    showSnackbar("Account '${account.title}' added!")
+                showAddAccountDialog = false
+                showSnackbar("Account '${account.title}' added!")
             }
         )
     }
@@ -972,23 +972,23 @@ fun AddAccountDialog(
                 Button(
                     enabled = accountTitle.isNotBlank() && initialBalance.isNotBlank(),
                     onClick = {
-                    val balanceDouble = initialBalance.toDoubleOrNull()
-                    // Basic validation
-                    if (accountTitle.isNotBlank() && balanceDouble != null) {
-                        // Create a new Account object
-                        val newAccount = Account(
-                            title = accountTitle,
-                            amount = balanceDouble,
-                            initialAmount = balanceDouble
-                        )
-                        // Insert the new account using the ViewModel
-                        viewModel.addAccount(newAccount)
-                        onAccountAdded(newAccount)
-                        //onDismiss() // Close the dialog
-                    } else {
-                        Log.d("AddAccountDialog", "Validation failed")
-                    }
-                }) {
+                        val balanceDouble = initialBalance.toDoubleOrNull()
+                        // Basic validation
+                        if (accountTitle.isNotBlank() && balanceDouble != null) {
+                            // Create a new Account object
+                            val newAccount = Account(
+                                title = accountTitle,
+                                amount = balanceDouble,
+                                initialAmount = balanceDouble
+                            )
+                            // Insert the new account using the ViewModel
+                            viewModel.addAccount(newAccount)
+                            onAccountAdded(newAccount)
+                            //onDismiss() // Close the dialog
+                        } else {
+                            Log.d("AddAccountDialog", "Validation failed")
+                        }
+                    }) {
                     Text("Add")
                 }
             }
@@ -1181,13 +1181,15 @@ fun CategoryDistributionPieChart(
     title: String,
     transactionType: TransactionType,
     account: Account,
-    viewModel: FinanceViewModel,
+    allTransactions: List<TransactionWithDetails>,
     colors: List<Color>
 ) {
-    val categoryDataMap by if (transactionType == TransactionType.EXPENSE) {
-        viewModel.getExpenseDistributionForAccount(account.id).collectAsStateWithLifecycle()
-    } else {
-        viewModel.getIncomeDistributionForAccount(account.id).collectAsStateWithLifecycle()
+    // Re-calculate the data map here to include uncategorized transactions.
+    val categoryDataMap = remember(allTransactions, account, transactionType) {
+        allTransactions
+            .filter { it.transaction.accountId == account.id && it.transaction.type == transactionType }
+            .groupBy { it.category?.desc ?: "Uncategorized" } // Group by description, use "Uncategorized" for null.
+            .mapValues { entry -> entry.value.sumOf { it.transaction.amount } }
     }
 
     Column(
@@ -1224,10 +1226,13 @@ fun CategoryDistributionPieChart(
                 )
             }
         } else {
-            val pieSlices = categoryDataMap.entries.mapIndexedNotNull { index, entry ->
+            // Sort the map entries by amount in descending order.
+            val sortedEntries = categoryDataMap.entries.sortedByDescending { it.value }
+
+            val pieSlices = sortedEntries.mapIndexedNotNull { index, entry ->
                 if (entry.value > 0) {
                     PieSlice(
-                        categoryName = entry.key.desc,
+                        categoryName = entry.key, // The key is now the category name String.
                         amount = entry.value,
                         color = colors[index % colors.size]
                     )
@@ -1260,7 +1265,8 @@ fun CategoryDistributionPieChart(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.Start
                 ) {
-                    pieSlices.take(2).forEach { slice ->
+                    // The legend now correctly shows the top 3 categories by amount.
+                    pieSlices.take(3).forEach { slice ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(vertical = 1.dp)
@@ -1280,9 +1286,9 @@ fun CategoryDistributionPieChart(
                             )
                         }
                     }
-                    if (pieSlices.size > 2) {
+                    if (pieSlices.size > 3) {
                         Text(
-                            text = "+ ${pieSlices.size - 2} more...",
+                            text = "+ ${pieSlices.size - 3} more...",
                             style = MaterialTheme.typography.labelSmall,
                             fontStyle = FontStyle.Italic,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
@@ -1388,8 +1394,8 @@ fun GraficiBox(viewModel: FinanceViewModel) {
                     accountsWithTransactions.forEachIndexed { index, account ->
                         SingleAccountChartsCard(
                             account = account,
-                            viewModel = viewModel,
-                            chartType = currentChartType // Pass the current chart type
+                            chartType = currentChartType,
+                            allTransactions = allTransactionsWithDetails
                         )
                     }
                 }
@@ -1401,8 +1407,8 @@ fun GraficiBox(viewModel: FinanceViewModel) {
 @Composable
 fun SingleAccountChartsCard(
     account: Account,
-    viewModel: FinanceViewModel,
-    chartType: ChartType // Accept the chart type
+    chartType: ChartType,
+    allTransactions: List<TransactionWithDetails>
 ) {
     Column(
         modifier = Modifier
@@ -1433,14 +1439,14 @@ fun SingleAccountChartsCard(
                         title = "Expenses",
                         transactionType = TransactionType.EXPENSE,
                         account = account,
-                        viewModel = viewModel,
+                        allTransactions = allTransactions,
                         colors = expenseChartColors
                     )
                     ChartType.HISTOGRAM -> CategoryDistributionHistogramChart(
                         title = "Expenses",
                         transactionType = TransactionType.EXPENSE,
                         account = account,
-                        viewModel = viewModel,
+                        allTransactions = allTransactions,
                         colors = expenseChartColors // Use same or different colors
                     )
                 }
@@ -1452,14 +1458,14 @@ fun SingleAccountChartsCard(
                         title = "Incomes",
                         transactionType = TransactionType.INCOME,
                         account = account,
-                        viewModel = viewModel,
+                        allTransactions = allTransactions,
                         colors = incomeChartColors
                     )
                     ChartType.HISTOGRAM -> CategoryDistributionHistogramChart(
                         title = "Incomes",
                         transactionType = TransactionType.INCOME,
                         account = account,
-                        viewModel = viewModel,
+                        allTransactions = allTransactions,
                         colors = incomeChartColors // Use same or different colors
                     )
                 }
@@ -1477,13 +1483,15 @@ fun CategoryDistributionHistogramChart(
     title: String,
     transactionType: TransactionType,
     account: Account,
-    viewModel: FinanceViewModel,
+    allTransactions: List<TransactionWithDetails>,
     colors: List<Color>
 ) {
-    val categoryDataMap by if (transactionType == TransactionType.EXPENSE) {
-        viewModel.getExpenseDistributionForAccount(account.id).collectAsStateWithLifecycle()
-    } else {
-        viewModel.getIncomeDistributionForAccount(account.id).collectAsStateWithLifecycle()
+    // Re-calculate the data map here to include uncategorized transactions.
+    val categoryDataMap = remember(allTransactions, account, transactionType) {
+        allTransactions
+            .filter { it.transaction.accountId == account.id && it.transaction.type == transactionType }
+            .groupBy { it.category?.desc ?: "Uncategorized" } // Group by description, use "Uncategorized" for null.
+            .mapValues { entry -> entry.value.sumOf { it.transaction.amount } }
     }
 
     Column(
@@ -1520,10 +1528,13 @@ fun CategoryDistributionHistogramChart(
                 )
             }
         } else {
-            val histogramBars = categoryDataMap.entries.mapIndexedNotNull { index, entry ->
+            // Sort the map entries by amount in descending order.
+            val sortedEntries = categoryDataMap.entries.sortedByDescending { it.value }
+
+            val histogramBars = sortedEntries.mapIndexedNotNull { index, entry ->
                 if (entry.value > 0) { // Only include bars with a positive amount
                     HistogramBarData(
-                        categoryName = entry.key.desc,
+                        categoryName = entry.key, // The key is now the category name String.
                         amount = entry.value,
                         color = colors[index % colors.size] // Cycle through predefined colors
                     )
@@ -1559,7 +1570,8 @@ fun CategoryDistributionHistogramChart(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.Start
                 ) {
-                    histogramBars.take(2).forEach { bar -> // Show legend for top 2 categories
+                    // The legend now correctly shows the top 3 categories by amount.
+                    histogramBars.take(3).forEach { bar -> // Show legend for top 3 categories
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(vertical = 1.dp)
@@ -1579,9 +1591,9 @@ fun CategoryDistributionHistogramChart(
                             )
                         }
                     }
-                    if (histogramBars.size > 2) {
+                    if (histogramBars.size > 3) {
                         Text(
-                            text = "+ ${histogramBars.size - 2} more...",
+                            text = "+ ${histogramBars.size - 3} more...",
                             style = MaterialTheme.typography.labelSmall,
                             fontStyle = FontStyle.Italic,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
