@@ -190,11 +190,14 @@ fun ObjectiveItem(
     var showActionChoiceDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
+    var showAccountSelectionForCompletionDialog by remember { mutableStateOf(false) }
 
     val backgroundColor = when (obj.type) {
         ObjectiveType.INCOME -> Color(0xff0db201)
         ObjectiveType.EXPENSE -> Color(0xffff6f51)
     }
+
+    val isExpired = obj.endDate.isBefore(LocalDate.now())
 
     Column(
         modifier = Modifier
@@ -220,6 +223,22 @@ fun ObjectiveItem(
             textAlign = TextAlign.Center
         )
         Text(text = "${obj.amount}€", textAlign = TextAlign.Center)
+
+        if (obj.completed) {
+            Text(
+                "Status: Completed",
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.8f) // Make status visible
+            )
+        } else if (isExpired) {
+            Text(
+                "Status: Expired",
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.8f) // Make status visible
+            )
+        }
     }
 
     // Dialogo di Scelta Azione
@@ -234,8 +253,72 @@ fun ObjectiveItem(
             onDeleteClick = {
                 showDeleteConfirmationDialog = true
                 showActionChoiceDialog = false
+            },
+            onCompleteClick = {
+                showAccountSelectionForCompletionDialog = true
+                // selectedAccountIdForCompletion = null // Reset if re-opening
+                showActionChoiceDialog = false
             }
         )
+    }
+
+    if (showAccountSelectionForCompletionDialog) {
+        val accounts by viewModel.allAccounts.collectAsStateWithLifecycle() // Already have allAccounts
+        val hasAccounts by viewModel.hasAccounts.collectAsStateWithLifecycle(initialValue = false) // Use your hasAccounts Flow
+
+        if (!hasAccounts && accounts.isEmpty()) { // Check based on your hasAccounts or if list is empty after initial load
+            AlertDialog(
+                onDismissRequest = { showAccountSelectionForCompletionDialog = false },
+                title = { Text("No Accounts Found") },
+                text = { Text("You need to create an account first before completing an objective and creating a transaction.") },
+                confirmButton = {
+                    TextButton(onClick = { showAccountSelectionForCompletionDialog = false }) {
+                        Text("OK")
+                    }
+                }
+            )
+        } else {
+            AlertDialog(
+                onDismissRequest = { showAccountSelectionForCompletionDialog = false },
+                title = { Text("Select Account for Transaction") },
+                text = {
+                    if (accounts.isEmpty()) {
+                        Text("Loading accounts...") // Or some other placeholder
+                    } else {
+                        LazyColumn { // Use LazyColumn if you have many accounts
+                            items(accounts, key = { it.id }) { account ->
+                                TextButton(
+                                    onClick = {
+                                        // Option 1: Directly complete
+                                        viewModel.completeObjectiveAndCreateTransaction(
+                                            obj,
+                                            account.id,
+                                            null /* pass categoryId if you have it */
+                                        )
+                                        showSnackbar("Objective '${obj.desc}' completed. Transaction created for account '${account.title}'.")
+                                        showAccountSelectionForCompletionDialog = false
+
+                                        // Option 2: If you also need category selection, store accountId and show category dialog
+                                        // selectedAccountIdForCompletion = account.id
+                                        // showAccountSelectionForCompletionDialog = false
+                                        // showCategorySelectionDialog = true
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(account.title)
+                                }
+                            }
+                        }
+                    }
+                },
+                dismissButton = { // Changed to dismissButton for "Cancel"
+                    TextButton(onClick = { showAccountSelectionForCompletionDialog = false }) {
+                        Text("Cancel")
+                    }
+                },
+                confirmButton = {} // Confirm button is handled by item clicks
+            )
+        }
     }
 
     // Dialogo di Modifica Obiettivo
@@ -271,8 +354,10 @@ fun ObjectiveActionChoiceDialog(
     objective: Objective,
     onDismiss: () -> Unit,
     onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    onCompleteClick: () -> Unit
 ) {
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Row(
@@ -288,17 +373,31 @@ fun ObjectiveActionChoiceDialog(
             XButton(onDismiss)
         } },
         text = { Text("What would you like to do?")
-            },
+        },
         confirmButton = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                TextButton(onClick = onDeleteClick) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    TextButton(onClick = onDeleteClick) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(onClick = onEditClick) {
+                        Text("Edit")
+                    }
                 }
-                TextButton(onClick = onEditClick) {
-                    Text("Edit")
+                // "Complete" button: Only if not completed and not expired
+                if (!objective.completed) {
+                    TextButton(
+                        onClick = {
+                            onCompleteClick()
+                            // onDismiss() // Dismiss after action is initiated
+                        }, // onDismiss is handled by the actions themselves opening new dialogs or by XButton
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Mark as Completed")
+                    }
                 }
             }
         },
