@@ -1,34 +1,59 @@
 ### Scenarios and Personas
 
-1.Alex Jameson - Student with the dream of a car
 
-Alex is determined to buy his first car but struggles to track his expenses while juggling school and work. When he discovers A, he starts using its budgeting tools to monitor his savings and calculate future expenses, including insurance and maintenance costs.
+1. Alex Jameson – The Student with the Dream of a Car
 
-Impact of A
-- Budgeting for a Car Alex sets a savings goal in the app, and it tracks his progress. He realizes he needs a few more months to comfortably afford the car without draining his emergency fund.
-- Spending Insights The app shows that he spends too much on takeout, so he starts cooking at home more to save extra cash.
-  
-Thanks to A, Alex makes a more informed decision and buys his car without unnecessary financial stress.
+Personality & Behavior:
+
+Alex is an ambitious and forward-thinking university student, constantly striving for independence. He's disciplined in his studies and works part-time, but struggles with self-control when it comes to impulsive spending. Deep down, Alex is motivated by the desire to prove to himself and others that he can achieve major life goals on his own. He values freedom and sees owning a car as a symbol of personal success and responsibility.
+
+Scenario:
+Alex dreams of buying his first car but feels overwhelmed trying to balance his school workload, part-time job, and unpredictable spending habits. When he starts using "Budgify", it becomes more than just a budgeting tool—it’s his personal financial coach.
+
+Impact of "Budgify":
+
+Goal-Oriented Mindset: Alex sets a specific savings goal in "Budgify" for his car, breaking it down into manageable monthly targets. Seeing his progress visually keeps him motivated and focused.
+
+Behavioral Awareness: With "Budgify" spending insights, Alex becomes more aware of his habitual takeout expenses. Recognizing the impact, he starts meal-prepping, not only saving money but also improving his health and self-discipline.
+
+Thanks to "Budgify", Alex gains a stronger sense of control and confidence in his financial decisions, ultimately purchasing his car without compromising his long-term security.
+
+---
 
 2. James Carter – The Man Who Got Fired
-   
-Losing his job was a shock, and James initially panicked about finances. However, he starts using A to get a clearer picture of his financial situation.
 
-Impact of A
-- Emergency Fund Analysis The app helps James assess how long his savings can cover expenses, giving him a  realistic timeline for his job hunt.
-- Freelance Income Management As he starts freelancing, he uses A to track earnings and tax deductions, making budgeting easier.
-  
-With A’s guidance, James reduces stress, manages his expenses wisely, and builds a solid financial plan while looking for a new job.
+Personality & Behavior:
+James is a practical and resilient individual in his late 30s who thrives on stability. When he loses his job, his initial reaction is anxiety, bordering on hopelessness. Internally, he struggles with self-worth and the fear of losing control. However, James is also adaptive and willing to rebuild. He's detail-oriented and appreciates clarity when faced with uncertainty.
 
-3. Margaret Maggie Thompson – The Elder Who Wants to Go on a Cruise
-   
-Maggie is thrilled about her upcoming cruise but wants to make sure she stays within budget without sacrificing fun. She starts using A to plan her trip finances.
+Scenario:
+After being unexpectedly laid off, James feels lost and unsure of how long he can stay afloat. He turns to "Budgify" to regain a sense of direction and clarity during this uncertain time.
 
-Impact of A
-- Trip Budgeting She creates a vacation budget in A, estimating costs for flights, accommodations, excursions, and onboard spending.
-- Smart Expense Tracking The app categorizes her spending, ensuring she doesn’t overspend on souvenirs or onboard activities.
-  
-Thanks to A, Maggie enjoys her cruise stress-free, knowing she’s financially secure and won’t return home to unexpected expenses.
+Impact of "Budgify":
+
+Clarity in Chaos: "Budgify" helps James analyze his emergency fund and sets a realistic timeline for how long his current savings will last. This calms his anxiety and lets him focus strategically on his next steps.
+
+Structured Transition: As he begins freelancing, James uses "Budgify" to categorize different income sources, track tax-related expenses, and manage invoices. This organization helps him treat freelancing as a viable and structured career path.
+
+Thanks to "Budgify", James rebuilds his confidence and navigates unemployment with purpose, eventually stabilizing his finances and redefining his professional future.
+
+---
+
+3. Margaret "Maggie" Thompson – The Elder Who Wants to Go on a Cruise
+
+Personality & Behavior:
+Maggie is a lively, optimistic retiree with a zest for life. She’s careful with money but believes in enjoying the fruits of her lifelong labor. Internally, she’s driven by the need to feel independent and self-sufficient, even in her golden years. She's curious, enjoys planning, and takes pride in managing her finances herself rather than relying on her children.
+
+Scenario:
+With a long-anticipated cruise around the Mediterranean on the horizon, Maggie wants to enjoy herself without falling into careless spending. She downloads "Budgify" to help her prepare for the trip.
+
+Impact of "Budgify":
+
+Confident Planning: Maggie uses "Budgify" to create a personalized trip budget, dividing expenses into categories like travel, lodging, excursions, and on-board spending. The app gives her peace of mind by projecting her affordability.
+
+Conscious Spending: During the trip, "Budgify" tracks her spending in real time, sending gentle alerts when she’s nearing her limits. This empowers her to make informed choices—buying meaningful souvenirs while skipping unnecessary extras.
+
+Thanks to "Budgify", Maggie enjoys her cruise worry-free, proud of having full control over her finances, and returns home with wonderful memories—not debt.
+
 
 ### Interview
 
@@ -40,6 +65,7 @@ Thanks to A, Maggie enjoys her cruise stress-free, knowing she’s financially s
 
 4) If you could improve one thing in finance apps, what would it bebr
 
+
 ### Questionnaire
 
 [Here](httpsdocs.google.comformsd1fRGUwQrCjuY9JcCf58vKLwpskM2qY9og3AjtkynC6AYedit)
@@ -48,7 +74,6 @@ Thanks to A, Maggie enjoys her cruise stress-free, knowing she’s financially s
 ### Requirements
 
 Some original features with respect to competitors
-- Currency Conversion
 - Rewarding Objectives to achieve
 - DebtsCredits handling
 - Transactions Calendar 
