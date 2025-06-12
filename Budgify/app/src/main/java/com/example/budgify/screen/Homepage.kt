@@ -1598,7 +1598,8 @@ fun CategoryDistributionHistogramChart(
 fun HistogramChart(
     modifier: Modifier = Modifier,
     bars: List<HistogramBarData>,
-    barWidthToSpacingRatio: Float = 2f, // e.g., bar is twice as wide as spacing
+    barWidthToSpacingRatio: Float = 2f, // For multi-bar dynamic layout
+    singleBarFixedWidth: Dp = 50.dp,   // For the single-bar case
     showValuesOnBars: Boolean = true,
     valueTextSizeSp: Float = 9f
 ) {
@@ -1620,52 +1621,71 @@ fun HistogramChart(
     val density = LocalDensity.current
     val textPaint = remember {
         Paint().apply {
-            color = android.graphics.Color.BLACK // Or MaterialTheme.colorScheme.onSurface.toArgb()
+            color = android.graphics.Color.BLACK
             textAlign = Paint.Align.CENTER
             textSize = density.run { valueTextSizeSp.sp.toPx() }
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL) // Or a custom font
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
             isAntiAlias = true
         }
     }
 
     Canvas(modifier = modifier) {
         val numberOfBars = bars.size
-        // Total parts = (numberOfBars * barWidthRatio) + (numberOfBars - 1 * spacingRatio (implicitly 1))
-        // Simplified: each bar gets a "slot" of (barWidthToSpacingRatio + 1) units, then take barWidthToSpacingRatio for the bar
-        val totalSlotUnits = barWidthToSpacingRatio + 1
-        val slotWidthPx = size.width / (numberOfBars * totalSlotUnits - 1) // total units considering spacing is 1 unit
 
-        val barActualWidthPx = slotWidthPx * barWidthToSpacingRatio
-        val spacingActualPx = slotWidthPx // spacing is one unit of the slot
-
-        var currentX = 0f
-
-        bars.forEach { bar ->
+        // HYBRID LOGIC: Check the number of bars
+        if (numberOfBars == 1) {
+            // --- CASE 1: Only one bar ---
+            // Use a fixed width and center it.
+            val bar = bars.first()
+            val barWidthPx = singleBarFixedWidth.toPx()
+            val startX = (size.width - barWidthPx) / 2 // Center the bar
             val barHeightPx = (bar.amount / maxAmount * size.height).toFloat()
+
             if (barHeightPx > 0f) {
                 drawRect(
                     color = bar.color,
-                    topLeft = Offset(x = currentX, y = size.height - barHeightPx),
-                    size = Size(width = barActualWidthPx, height = barHeightPx)
+                    topLeft = Offset(x = startX, y = size.height - barHeightPx),
+                    size = Size(width = barWidthPx, height = barHeightPx)
                 )
 
                 if (showValuesOnBars && bar.amount > 0) {
-                    val valueText = "%.0f".format(bar.amount) // Format as integer for display
-                    val textY = size.height - barHeightPx - 4.dp.toPx() // Position above bar
-                    val textX = currentX + barActualWidthPx / 2
-
-                    // Basic check to not draw text if it's too high or bar is too short
+                    val valueText = "%.0f".format(bar.amount)
+                    val textY = size.height - barHeightPx - 4.dp.toPx()
+                    val textX = startX + barWidthPx / 2
                     if (textY > textPaint.textSize) {
-                        drawContext.canvas.nativeCanvas.drawText(
-                            valueText,
-                            textX,
-                            textY,
-                            textPaint
-                        )
+                        drawContext.canvas.nativeCanvas.drawText(valueText, textX, textY, textPaint)
                     }
                 }
             }
-            currentX += barActualWidthPx + spacingActualPx
+        } else {
+            // --- CASE 2: Multiple bars ---
+            // Use the original dynamic spacing logic.
+            val totalSlotUnits = barWidthToSpacingRatio + 1
+            val slotWidthPx = size.width / (numberOfBars * totalSlotUnits - 1)
+            val barActualWidthPx = slotWidthPx * barWidthToSpacingRatio
+            val spacingActualPx = slotWidthPx
+            var currentX = 0f
+
+            bars.forEach { bar ->
+                val barHeightPx = (bar.amount / maxAmount * size.height).toFloat()
+                if (barHeightPx > 0f) {
+                    drawRect(
+                        color = bar.color,
+                        topLeft = Offset(x = currentX, y = size.height - barHeightPx),
+                        size = Size(width = barActualWidthPx, height = barHeightPx)
+                    )
+
+                    if (showValuesOnBars && bar.amount > 0) {
+                        val valueText = "%.0f".format(bar.amount)
+                        val textY = size.height - barHeightPx - 4.dp.toPx()
+                        val textX = currentX + barActualWidthPx / 2
+                        if (textY > textPaint.textSize) {
+                            drawContext.canvas.nativeCanvas.drawText(valueText, textX, textY, textPaint)
+                        }
+                    }
+                }
+                currentX += barActualWidthPx + spacingActualPx
+            }
         }
     }
 }
