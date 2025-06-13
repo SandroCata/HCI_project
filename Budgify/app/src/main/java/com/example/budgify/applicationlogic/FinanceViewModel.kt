@@ -12,16 +12,22 @@ import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.entities.TransactionType
+import com.example.budgify.screen.calculateXpForNextLevel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
+import kotlin.text.toDouble
 
 class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() {
 
@@ -112,7 +118,43 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
         }
     }
 
-    fun completeObjectiveAndCreateTransaction(objective: Objective, accountId: Int, categoryId: Int? = null) { // Added optional categoryId
+    // --- XP AND LEVEL SYSTEM ---
+
+    // Add StateFlows for user's level and XP
+    // These would typically be loaded from and saved to a data source (e.g., DataStore, Room UserProfile table)
+    private val _userLevel = MutableStateFlow(1) // Default to level 1
+    val userLevel: StateFlow<Int> = _userLevel.asStateFlow()
+
+    private val _userXp = MutableStateFlow(0) // XP towards next level
+    val userXp: StateFlow<Int> = _userXp.asStateFlow()
+
+    // You'd also need a way to get the XP required for the current level
+    val xpForCurrentUserNextLevel: StateFlow<Int> = _userLevel.map { level ->
+        calculateXpForNextLevel(level) // Use the same helper
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), calculateXpForNextLevel(1))
+
+    init {
+        viewModelScope.launch {
+            try {
+                // Load initial values from DataStore
+                _userLevel.value = repository.userLevel.first() // .first() gets the first emitted value
+                _userXp.value = repository.userXp.first()
+                Log.d("XP_System", "Initial Level: ${_userLevel.value}, Initial XP: ${_userXp.value} loaded from DataStore.")
+            } catch (e: Exception) {
+                Log.e("XP_System", "Error loading initial level/XP from DataStore", e)
+                // Keep default values (1 and 0) if loading fails
+            }
+        }
+    }
+
+
+    fun completeObjectiveAndCreateTransaction(
+        objective: Objective,
+        accountId: Int,
+        categoryId: Int? = null,
+        onLevelUp: ((newLevel: Int) -> Unit)? = null // Optional callback for level up
+    ) { // Added optional categoryId
+        Log.d("XP_DEBUG", "completeObjectiveAndCreateTransaction called for objective: ${objective.desc}, accountId: $accountId")
         viewModelScope.launch {
             if (!objective.completed) {
                 // 1. Mark objective as completed
@@ -137,11 +179,111 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
                 // Use your existing addTransaction function which also handles updating account balance
                 addTransaction(newTransaction)
 
+                val xpGained = calculateXpForObjective(objective)
+                addXp(xpGained, onLevelUp)
+
                 // The UI should react to changes in allObjectives and allTransactionsWithDetails StateFlows
                 // No explicit refresh needed here if your UI collects these flows.
+                Log.d("XP_System", "Objective '${objective.desc}' completed. XP Gained: $xpGained. Current XP: ${_userXp.value}/${xpForCurrentUserNextLevel.value}, Level: ${_userLevel.value}")
+            } else {
+                Log.d("XP_System", "Objective '${objective.desc}' was already completed.")
             }
         }
     }
+
+    private fun addXp(
+        amount: Int,
+        onLevelUp: ((newLevel: Int) -> Unit)? = null
+    ) {
+        viewModelScope.launch { // The entire body should be in a coroutine scope for repository call
+            Log.d("XP_DEBUG_ADDXP", "addXp called with amount: $amount. Current XP: ${_userXp.value}, Current Level: ${_userLevel.value}")
+
+            if (amount <= 0) {
+                Log.d("XP_DEBUG_ADDXP", "Amount is <= 0, returning.")
+                return@launch
+            }
+
+            var tempXp = _userXp.value + amount
+            var tempLevel = _userLevel.value
+            var xpNeededForNext = calculateXpForNextLevel(tempLevel)
+            var hasLeveledUp = false
+
+            while (tempXp >= xpNeededForNext) {
+                tempXp -= xpNeededForNext
+                tempLevel++
+                xpNeededForNext = calculateXpForNextLevel(tempLevel) // Update for the new current level
+                hasLeveledUp = true
+                Log.d("XP_System", "Level Up! New Level: $tempLevel")
+                onLevelUp?.invoke(tempLevel)
+            }
+
+            // Update StateFlows with final calculated values
+            _userLevel.value = tempLevel
+            _userXp.value = tempXp
+
+            Log.d("XP_DEBUG_ADDXP", "StateFlows updated: _userLevel=${_userLevel.value}, _userXp=${_userXp.value}")
+
+            // --- SAVE TO DATASTORE ---
+            try {
+                repository.updateUserLevelAndXp(_userLevel.value, _userXp.value)
+                Log.d("XP_DEBUG_ADDXP", "Successfully saved to DataStore - Level: ${_userLevel.value}, XP: ${_userXp.value}")
+            } catch (e: Exception) {
+                Log.e("XP_DEBUG_ADDXP", "Error saving to DataStore", e)
+            }
+            // --- END SAVE TO DATASTORE ---
+
+
+            if(hasLeveledUp) {
+                // Additional logic after all level ups are processed
+                Log.d("XP_System", "User has leveled up. Final Level: ${_userLevel.value}, Final XP: ${_userXp.value}/${calculateXpForNextLevel(_userLevel.value)}")
+            }
+        }
+    }
+
+    // XP Calculation Logic
+    private fun calculateXpForObjective(objective: Objective): Int {
+        var baseXP = 0
+
+        // 1. XP based on amount (example: 1 XP for every 10 currency units, min 5 XP for amount part)
+        val amountXp = maxOf(5, (objective.amount / 10).toInt())
+        baseXP += amountXp
+
+        // 2. Bonus XP for early completion
+        val today = LocalDate.now()
+        val daysRemaining = ChronoUnit.DAYS.between(today, objective.endDate)
+        val totalDuration = ChronoUnit.DAYS.between(objective.startDate, objective.endDate)
+
+        // Ensure no division by zero or negative totalDuration if start and end date are same or illogical
+        if (totalDuration <= 0) { // If objective duration is 0 or 1 day, or invalid
+            if (daysRemaining >= 0) { // Completed on time or early for a short objective
+                baseXP += (baseXP * 0.1).toInt() // Small flat bonus (e.g., 10%)
+            }
+        } else {
+            if (daysRemaining < 0) { // Completed late
+                // No bonus, or even a penalty if desired (e.g., baseXP /= 2)
+                Log.d("XP_System", "Objective completed late. Days remaining: $daysRemaining")
+            } else { // Completed on time or early
+                // Bonus proportional to how much of the objective's duration was left
+                val earlyCompletionRatio = daysRemaining.toDouble() / totalDuration.toDouble()
+                // Max bonus of, say, 50% of baseXP for completing very early
+                val earlyCompletionBonus = (earlyCompletionRatio * (baseXP * 0.5)).toInt()
+                baseXP += earlyCompletionBonus
+                Log.d("XP_System", "Objective completed on time/early. Days remaining: $daysRemaining, Total duration: $totalDuration, Bonus: $earlyCompletionBonus")
+            }
+        }
+
+        // Ensure a minimum XP is always awarded for any completed objective
+        return maxOf(10, baseXP) // Example: minimum 10 XP
+    }
+
+    // Calculates XP needed to reach the *next* level from the given *current* level
+    private fun calculateXpForNextLevel(level: Int): Int {
+        // Example formula: 100 base XP for level 1 to 2, then increasing
+        // (currentLevel -1) * 50 means difficulty scales up by 50xp more per level
+        if (level <= 0) return 100 // Should not happen with current logic starting at level 1
+        return 100 * level + (level - 1) * 50
+    }
+
 
     //CATEGORIES
     val allCategories = repository.getAllCategories().stateIn(

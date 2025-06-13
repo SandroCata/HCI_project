@@ -1,5 +1,6 @@
 package com.example.budgify.screen
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -253,6 +254,7 @@ fun ObjectiveItem(
                 showActionChoiceDialog = false
             },
             onDeleteClick = {
+                Log.d("XP_DEBUG", "onCompleteClick in ObjectiveItem. Setting showAccountSelectionForCompletionDialog = true.")
                 showDeleteConfirmationDialog = true
                 showActionChoiceDialog = false
             },
@@ -314,6 +316,7 @@ fun ObjectiveItem(
                                         //    )
                                         // },
                                         modifier = Modifier.clickable {
+                                            Log.d("XP_DEBUG", "Account selected: ${account.title} for objective: ${obj.desc}. Calling completeObjectiveAndCreateTransaction.") // <-- ADD THIS LOG
                                             viewModel.completeObjectiveAndCreateTransaction(
                                                 obj,
                                                 account.id,
@@ -413,6 +416,7 @@ fun ObjectiveActionChoiceDialog(
                 if (!objective.completed) {
                     TextButton(
                         onClick = {
+                            Log.d("XP_DEBUG", "Mark as Completed clicked in ActionChoiceDialog for: ${objective.desc}")
                             onCompleteClick()
                             // onDismiss() // Dismiss after action is initiated
                         }, // onDismiss is handled by the actions themselves opening new dialogs or by XButton

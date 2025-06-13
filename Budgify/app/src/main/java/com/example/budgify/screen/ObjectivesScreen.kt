@@ -22,10 +22,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,18 +38,31 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.budgify.navigation.BottomBar
 import com.example.budgify.navigation.TopBar
 import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.routes.ScreenRoutes
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 @Composable
 fun ObjectivesScreen(navController: NavController, viewModel: FinanceViewModel) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Objectives.route) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val objectives by viewModel.allObjectives.collectAsState(initial = emptyList())
+    val reachedCount = remember(objectives) {
+        objectives.count { it.completed }
+    }
+    val unreachedCount = remember(objectives) {
+        objectives.count { !it.completed && it.endDate.isAfter(LocalDate.now().minusDays(1)) } // Active and not completed
+    }
+
+    val currentLevel by viewModel.userLevel.collectAsStateWithLifecycle()
+    val currentXp by viewModel.userXp.collectAsStateWithLifecycle()
+    val xpForNextLevel = remember(currentLevel) { calculateXpForNextLevel(currentLevel) } //
 
     Scaffold (
         topBar = { TopBar(navController, currentRoute) },
@@ -66,32 +82,42 @@ fun ObjectivesScreen(navController: NavController, viewModel: FinanceViewModel) 
                     .fillMaxSize()
                     .padding(innerPadding)
                     .padding(16.dp),
-                verticalArrangement = Arrangement.Center, // Distribute space between sections
+                verticalArrangement = Arrangement.Center, // Add space between sections
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
                 Column {
                     // Section 1: Profile Picture, Level, and Level Bar
                     ProfileAndLevelSection(
-                        profilePicture = rememberVectorPainter(Icons.Filled.Person), // Replace with your logic to get the profile picture
-                        currentLevel = 0, // Replace with your user's current level
-                        progressToNextLevel = 0.0f // Replace with user's progress (0.0 to 1.0)
+                        profilePicture = rememberVectorPainter(Icons.Filled.Person),
+                        currentLevel = currentLevel,
+                        currentXp = currentXp,
+                        xpForNextLevel = xpForNextLevel,
+                        progressToNextLevel = if (xpForNextLevel > 0) currentXp.toFloat() / xpForNextLevel else 0f
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Section 2: Reached and Unreached Objectives Count
                     ObjectiveCountsSection(
-                        reachedCount = 0, // Replace with the number of reached objectives
-                        unreachedCount = 0 // Replace with the number of unreached objectives
+                        reachedCount = reachedCount,
+                        unreachedCount = unreachedCount
                     )
 
                     // Section 3: Manage Objectives Button
                     ManageObjectivesButton(navController = navController)
+
+                    // Optional: Display XP for demonstration
+//                    Text("Current XP: $currentXp / $xpForNextLevel")
+//                    Text("Level: $currentLevel")
                 }
 
             }
     }
+}
+
+fun calculateXpForNextLevel(level: Int): Int {
+    return 100 * level + (level -1) * 50 // Example: 100 for L1->L2, 250 L2->L3, 450 L3->L4 etc.
 }
 
 @Composable
@@ -141,49 +167,55 @@ fun ObjectiveCountsSection(reachedCount: Int, unreachedCount: Int) {
 }
 
 @Composable
-fun ProfileAndLevelSection(profilePicture: Painter, currentLevel: Int, progressToNextLevel: Float) {
+fun ProfileAndLevelSection(
+    profilePicture: Painter,
+    currentLevel: Int,
+    currentXp: Int, // Add current XP
+    xpForNextLevel: Int, // Add XP needed for next level
+    progressToNextLevel: Float
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(Color.LightGray.copy(alpha = 0.3f))
-            .padding(5.dp, 5.dp, 5.dp, 16.dp), // Add some space below this section
+            .padding(16.dp), // Increased padding for better spacing
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp) // Space out elements within this section
     ) {
         Text(
-            text = "Your Achievments",
+            text = "Your Achievements",
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
-        Row {
+        Row (verticalAlignment = Alignment.CenterVertically) { // Align items in the row
             // Profile Picture
             Image(
                 painter = profilePicture,
                 contentDescription = "Profile Picture",
-                modifier = Modifier.size(96.dp), // Adjust size as needed
+                modifier = Modifier
+                    .size(80.dp) // Slightly smaller
+                    .clip(RoundedCornerShape(50)), // Make it circular
                 colorFilter = tint(MaterialTheme.colorScheme.onSurface)
-                // You might add clipping (e.g., CircleShape) and other modifiers here
             )
 
-            Spacer(modifier = Modifier.width(8.dp)) // Space between picture and text
-
-            // Level Text
-            Text(
-                text = "Level $currentLevel",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.align(Alignment.CenterVertically)
-            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column { // Group Level and XP text
+                Text(
+                    text = "Level $currentLevel",
+                    style = MaterialTheme.typography.headlineSmall // More prominent
+                )
+                Text(
+                    text = "$currentXp / $xpForNextLevel XP", // Display XP progress
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
-        Text(
-            text = "Progress to next level: $progressToNextLevel"
-        )
-        Spacer(modifier = Modifier.height(4.dp)) // Space between level and bar
-        // Level Bar (using LinearProgressIndicator)
         LinearProgressIndicator(
             progress = { progressToNextLevel }, // Pass progress as a lambda
             modifier = Modifier
                 .fillMaxWidth(0.8f) // Adjust width of the bar
-                .height(10.dp)
+                .height(12.dp)
                 .clip(RoundedCornerShape(5.dp)),
             strokeCap = StrokeCap.Round
         )

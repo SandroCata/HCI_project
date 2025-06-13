@@ -20,7 +20,8 @@ class FinanceRepository(
     private val accountDao: AccountDao,
     private val objectiveDao: ObjectiveDao,
     private val categoryDao: CategoryDao,
-    private val loanDao: LoanDao
+    private val loanDao: LoanDao,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) {
 
     // TRANSACTIONS
@@ -60,6 +61,17 @@ class FinanceRepository(
     suspend fun deleteObjective(objective: Objective) {
         objectiveDao.delete(objective)
     }
+
+    // --- USER LEVEL AND XP (from DataStore) ---
+    val userLevel: Flow<Int> = userPreferencesRepository.userLevel
+    val userXp: Flow<Int> = userPreferencesRepository.userXp
+
+    suspend fun updateUserLevelAndXp(level: Int, xp: Int) {
+        userPreferencesRepository.updateUserLevelAndXp(level, xp)
+    }
+
+    suspend fun getInitialUserLevel(): Int = userPreferencesRepository.getInitialUserLevel()
+    suspend fun getInitialUserXp(): Int = userPreferencesRepository.getInitialUserXp()
 
     //CATEGORIES
     fun getAllCategories(): Flow<List<Category>> {

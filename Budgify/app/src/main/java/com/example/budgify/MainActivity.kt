@@ -68,15 +68,18 @@ class MainActivity : ComponentActivity() {
                 ScreenRoutes.Home.route
             }
 
-            val application = application as FinanceApplication
-            val database = application.database
-            val repository = FinanceRepository(
-                database.transactionDao(),
-                database.accountDao(),
-                database.goalDao(),
-                database.categoryDao(),
-                database.loanDao()
-            )
+//            val application = application as FinanceApplication
+//            val database = application.database
+//            val repository = FinanceRepository(
+//                database.transactionDao(),
+//                database.accountDao(),
+//                database.goalDao(),
+//                database.categoryDao(),
+//                database.loanDao()
+//            )
+            val financeApp = application as FinanceApplication
+            val repository = financeApp.repository
+
             val financeViewModel: FinanceViewModel =
                 viewModel(factory = FinanceViewModel.FinanceViewModelFactory(repository))
 
