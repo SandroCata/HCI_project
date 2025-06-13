@@ -125,7 +125,7 @@ fun ObjectiveCountsSection(reachedCount: Int, unreachedCount: Int) {
     Column (
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.LightGray.copy(alpha = 0.3f))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(5.dp)
     ) {
         Text (
@@ -178,7 +178,7 @@ fun ProfileAndLevelSection(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.LightGray.copy(alpha = 0.3f))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(16.dp), // Increased padding for better spacing
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp) // Space out elements within this section

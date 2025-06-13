@@ -248,7 +248,7 @@ fun LastTransactionBox(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color.LightGray.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(16.dp)
         ) {
             Text(
@@ -702,7 +702,7 @@ fun ContiBox(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color.LightGray.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(16.dp)
         ) {
             Text(
@@ -751,7 +751,7 @@ fun AddAccountItem(
             .clickable {
                 showAddAccountDialog = true // Show the dialog on click
             }
-            .background(MaterialTheme.colorScheme.onTertiary),
+            .background(MaterialTheme.colorScheme.surfaceVariant),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -759,7 +759,7 @@ fun AddAccountItem(
             Icons.Filled.Add,
             contentDescription = "Add Account",
             modifier = Modifier.size(40.dp),
-            tint = MaterialTheme.colorScheme.surface
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 
@@ -808,12 +808,12 @@ fun AccountItem(
         Column(
             modifier = Modifier
                 .fillMaxSize() // Usa fillMaxSize per occupare tutto lo spazio del Box
-                .background(MaterialTheme.colorScheme.onTertiary),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Text(text = account.title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.surface)
-            Text(text = "${account.amount}€", color = MaterialTheme.colorScheme.surface)
+            Text(text = account.title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = "${account.amount}€", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
         // L'icona di eliminazione non è più mostrata direttamente qui,
@@ -1327,7 +1327,7 @@ fun GraficiBox(viewModel: FinanceViewModel) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color.LightGray.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(16.dp)
         ) {
             Row( // Row to hold the title and the toggle button

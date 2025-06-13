@@ -280,7 +280,7 @@ fun AddCategoryButton(
             .width(150.dp)
             .height(80.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.onTertiary)
+            .background(MaterialTheme.colorScheme.surface)
             .clickable(onClick = onClick), // Call the provided lambda on click
         contentAlignment = Alignment.Center // Center the content (Icon)
     ) {
@@ -288,7 +288,7 @@ fun AddCategoryButton(
             imageVector = Icons.Filled.Add,
             contentDescription = "Add Category",
             modifier = Modifier.size(40.dp),
-            tint = MaterialTheme.colorScheme.surface
+            tint = MaterialTheme.colorScheme.onSurface
         )
     }
 }

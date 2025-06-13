@@ -197,7 +197,7 @@ fun Settings(
                     .fillMaxWidth()
                     .weight(1f)
                     .padding(top = 16.dp),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.TopCenter
             ) {
                 when (selectedOption) {
                     SettingsOptionType.NONE -> {
@@ -613,19 +613,29 @@ fun ThemeSettingsContent(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxWidth()
+        //verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
     ) {
-        Text("Choose App Theme", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(
+            "Choose App Theme",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 16.dp)
+        )
 
         // Display all available themes (unlocked ones)
-        if (availableThemes.isEmpty() && AppTheme.entries.toTypedArray().isNotEmpty()) {
-            // This case should ideally not happen if defaults are always "unlocked"
-            Text("Loading themes or no themes available...")
+        if (AppTheme.entries.isEmpty()) { // Simplified check
+            Text(
+                "No themes defined in the app.",
+                modifier = Modifier.padding(16.dp)
+            )
         } else {
             // You can use a LazyColumn or Column depending on how many themes you expect
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                AppTheme.entries.forEach { theme -> // Iterate through ALL themes to show locked status
+            Column() {
+                val allThemesSorted = remember { AppTheme.entries.sortedBy { it.unlockLevel } }
+                allThemesSorted.forEach { theme -> // Iterate through ALL themes to show locked status
                     val isUnlocked = unlockedThemeNames.contains(theme.name)
                     Row(
                         modifier = Modifier
@@ -637,7 +647,7 @@ fun ThemeSettingsContent(
                                     currentTheme = theme // Update local state for UI feedback (e.g., RadioButton)
                                 }
                             }
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = 12.dp, horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
@@ -654,14 +664,16 @@ fun ThemeSettingsContent(
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = theme.displayName,
-                            color = if (isUnlocked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            color = if (isUnlocked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            modifier = Modifier.weight(1f).padding(8.dp)
                         )
-                        Spacer(Modifier.weight(1f)) // Push lock icon/text to the end
+                        //Spacer(Modifier.weight(1f)) // Push lock icon/text to the end
                         if (!isUnlocked) {
                             Text(
                                 text = "(Unlocks at Level ${theme.unlockLevel})",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                modifier = Modifier.padding(start = 8.dp)
                             )
                             // Optionally, add a Lock Icon
                             // Icon(Icons.Default.Lock, contentDescription = "Locked", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))

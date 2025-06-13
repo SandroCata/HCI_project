@@ -162,7 +162,7 @@ fun MonthlyCalendar(
             .fillMaxWidth()
             .padding(16.dp, 5.dp, 16.dp, 5.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.LightGray.copy(alpha = 0.3f))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         // Header del calendario (mese e navigazione)
         Row(
@@ -371,7 +371,7 @@ fun TransactionBox(
                 .fillMaxWidth()
                 // .fillMaxHeight() // Valuta se fillMaxHeight è appropriato qui
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color.LightGray.copy(alpha = 0.3f))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .padding(16.dp)
         ) {
             Text(

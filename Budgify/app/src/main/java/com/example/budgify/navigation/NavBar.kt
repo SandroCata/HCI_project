@@ -37,6 +37,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -155,7 +156,11 @@ fun BottomBar(
         modifier = Modifier
             .padding(bottom = 0.dp)
     ) {
-        NavigationBar(modifier = Modifier.align(Alignment.BottomCenter)) {
+        NavigationBar(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            containerColor = MaterialTheme.colorScheme.surface, // Explicitly use surface from current theme
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        ) {
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
             // val desc = ""
@@ -189,7 +194,14 @@ fun BottomBar(
                                 restoreState = true
                             }
                         }
-                    }
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = MaterialTheme.colorScheme.onSurface, // Or onSecondaryContainer, if indicator is secondaryContainer
+                        selectedTextColor = MaterialTheme.colorScheme.onSurface, // Or onSecondaryContainer
+                        indicatorColor = MaterialTheme.colorScheme.surfaceVariant, // <<--- THIS IS THE CHANGE
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 )
             }
         }

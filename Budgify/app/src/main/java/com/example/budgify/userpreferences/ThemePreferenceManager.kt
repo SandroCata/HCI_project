@@ -7,12 +7,38 @@ import androidx.security.crypto.MasterKey
 import android.util.Log
 
 enum class AppTheme(val displayName: String, val unlockLevel: Int) {
-    LIGHT("Light", 1),              // Default, unlocked at level 1
-    DARK("Dark", 1),                // Default, unlocked at level 1
-    OCEAN_BLUE("Ocean Blue", 2),    // Unlocks at Level 5
-    FOREST_GREEN("Forest Green", 3), // Unlocks at Level 10
-    SUNSET_ORANGE("Sunset Orange", 4) // Unlocks at Level 15
-    // Add more themes and their unlock levels if you wish
+    // --- Level 1: Core Themes ---
+    LIGHT("Light", 1),
+    DARK("Dark", 1),
+
+    // --- Level 3: Common & Pleasant Variations ---
+    MINTY_FRESH("Minty Fresh", 2),
+    OCEAN_BLUE("Ocean Blue", 3), // Was level 5, bringing it slightly earlier
+
+    // --- Level 5: Paired Light/Dark Themes ---
+    LIGHT_LAVENDER("Lavender Bliss (Light)", 4),
+    DARK_LAVENDER("Lavender Bliss (Dark)", 5),
+
+    // --- Level 7: More Distinct Colors ---
+    SUNNY_CITRUS("Sunny Citrus", 6), // Was level 15, feels like a mid-tier bright option
+    FOREST_GREEN("Forest Green", 7), // Was level 10
+
+    // --- Level 10: Earthy & Natural ---
+    LIGHT_EARTHY("Earthy Tones (Light)", 8),
+    DARK_EARTHY("Earthy Tones (Dark)", 9),
+
+    // --- Level 12: Elegant & Unique ---
+    ROSE_GOLD_TINT("Rose Gold Tint", 10),
+    TEAL_AND_AMBER("Teal and Amber", 11), // Your new theme
+
+    // --- Level 15: Bold & Focused ---
+    SUNSET_ORANGE("Sunset Orange", 12),
+    CRIMSON_FOCUS("Crimson Focus", 13),
+
+    // --- Level 18: Deep & Sophisticated ---
+    DEEP_OCEAN_SLATE("Deep Ocean Slate", 14),
+
+    CHARCOAL_AND_GOLD_DUST("Charcoal and Gold Dust", 15)
 }
 
 class ThemePreferenceManager(context: Context) {
