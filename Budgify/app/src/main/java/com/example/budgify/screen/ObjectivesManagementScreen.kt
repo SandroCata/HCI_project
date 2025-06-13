@@ -32,6 +32,8 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -177,7 +179,7 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
 
 enum class ObjectivesManagementSection(val title: String) {
     Active("Active Objectives"),
-    Expired("Expired Objectives")
+    Expired("Inactive Objectives")
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -280,42 +282,59 @@ fun ObjectiveItem(
         } else {
             AlertDialog(
                 onDismissRequest = { showAccountSelectionForCompletionDialog = false },
-                title = { Text("Select Account for Transaction") },
+                title = { Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Select Account",
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis)
+                    XButton(onDismiss = { showAccountSelectionForCompletionDialog = false })
+                } },
                 text = {
                     if (accounts.isEmpty()) {
-                        Text("Loading accounts...") // Or some other placeholder
+                        Text("Loading accounts...")
                     } else {
-                        LazyColumn { // Use LazyColumn if you have many accounts
-                            items(accounts, key = { it.id }) { account ->
-                                TextButton(
-                                    onClick = {
-                                        // Option 1: Directly complete
-                                        viewModel.completeObjectiveAndCreateTransaction(
-                                            obj,
-                                            account.id,
-                                            null /* pass categoryId if you have it */
+                        Column {
+                            Text(
+                                "Choose an account to create a transaction for this objective",
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                                items(accounts, key = { it.id }) { account ->
+                                    ListItem(
+                                        headlineContent = { Text(account.title) },
+                                        // supportingContent = { Text("Optional: Account type or balance") },
+                                        // leadingContent = {
+                                        //    Icon(
+                                        //        Icons.Filled.AccountBalanceWallet,
+                                        //        contentDescription = "Account",
+                                        //    )
+                                        // },
+                                        modifier = Modifier.clickable {
+                                            viewModel.completeObjectiveAndCreateTransaction(
+                                                obj,
+                                                account.id,
+                                                null
+                                            )
+                                            showSnackbar("Objective '${obj.desc}' completed. Transaction created for account '${account.title}'.")
+                                            showAccountSelectionForCompletionDialog = false
+                                        },
+                                        colors = ListItemDefaults.colors(
+                                            containerColor = Color.Transparent // Make ListItem's own container transparent
+                                            // You can also customize headlineColor, leadingIconColor, etc. if needed
+                                            // headlineColor = MaterialTheme.colorScheme.onSurface, // Default
                                         )
-                                        showSnackbar("Objective '${obj.desc}' completed. Transaction created for account '${account.title}'.")
-                                        showAccountSelectionForCompletionDialog = false
-
-                                        // Option 2: If you also need category selection, store accountId and show category dialog
-                                        // selectedAccountIdForCompletion = account.id
-                                        // showAccountSelectionForCompletionDialog = false
-                                        // showCategorySelectionDialog = true
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(account.title)
+                                    )
+                                    // Divider() // ListItem often looks good without explicit dividers, but you can add if preferred
                                 }
                             }
                         }
                     }
                 },
-                dismissButton = { // Changed to dismissButton for "Cancel"
-                    TextButton(onClick = { showAccountSelectionForCompletionDialog = false }) {
-                        Text("Cancel")
-                    }
-                },
+                dismissButton = null,
                 confirmButton = {} // Confirm button is handled by item clicks
             )
         }
@@ -358,6 +377,8 @@ fun ObjectiveActionChoiceDialog(
     onCompleteClick: () -> Unit
 ) {
 
+    val hasExpired = objective.endDate.isBefore(LocalDate.now())
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Row(
@@ -383,6 +404,7 @@ fun ObjectiveActionChoiceDialog(
                     TextButton(onClick = onDeleteClick) {
                         Text("Delete", color = MaterialTheme.colorScheme.error)
                     }
+                    if (!objective.completed && !hasExpired)
                     TextButton(onClick = onEditClick) {
                         Text("Edit")
                     }
@@ -664,9 +686,9 @@ fun ObjectivesSection(
         val now = LocalDate.now()
         when (type) {
             // Gli obiettivi attivi hanno data di fine uguale o successiva a oggi E non sono completati (se hai un flag `isCompleted`)
-            ObjectiveSectionType.ACTIVE -> objectives.filter { !it.endDate.isBefore(now) /* && !it.isCompleted */ }
+            ObjectiveSectionType.ACTIVE -> objectives.filter { !it.endDate.isBefore(now) && !it.completed }
             // Gli obiettivi scaduti hanno data di fine precedente a oggi OPPURE sono completati
-            ObjectiveSectionType.EXPIRED -> objectives.filter { it.endDate.isBefore(now) /* || it.isCompleted */ }
+            ObjectiveSectionType.EXPIRED -> objectives.filter { it.endDate.isBefore(now) || it.completed  }
         }
     }
 
