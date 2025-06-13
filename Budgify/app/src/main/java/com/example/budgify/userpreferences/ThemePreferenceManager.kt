@@ -6,8 +6,13 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import android.util.Log
 
-enum class AppTheme {
-    LIGHT, DARK
+enum class AppTheme(val displayName: String, val unlockLevel: Int) {
+    LIGHT("Light", 1),              // Default, unlocked at level 1
+    DARK("Dark", 1),                // Default, unlocked at level 1
+    OCEAN_BLUE("Ocean Blue", 2),    // Unlocks at Level 5
+    FOREST_GREEN("Forest Green", 3), // Unlocks at Level 10
+    SUNSET_ORANGE("Sunset Orange", 4) // Unlocks at Level 15
+    // Add more themes and their unlock levels if you wish
 }
 
 class ThemePreferenceManager(context: Context) {

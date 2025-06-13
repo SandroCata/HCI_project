@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -38,9 +40,11 @@ import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.navigation.getSavedPinFromContext
 import com.example.budgify.routes.ScreenRoutes
 import com.example.budgify.userpreferences.AppTheme
+import com.example.budgify.userpreferences.ThemePreferenceManager
 import com.example.budgify.userpreferences.rememberThemePreferenceManager
 import kotlinx.coroutines.launch
 
+const val DEV = false
 
 // --- Security Question Data ---
 data class SecurityQuestionAnswer(val questionIndex: Int, val answer: String)
@@ -111,17 +115,23 @@ fun saveSecurityQuestionAnswer(context: android.content.Context, questionIndex: 
 
 
 enum class SettingsOptionType {
-    NONE, PIN, THEME, ABOUT
+    NONE, PIN, THEME, ABOUT, DEV_RESET
 }
 
 @Composable
-fun Settings(navController: NavController, viewModel: FinanceViewModel, onThemeChange: (AppTheme) -> Unit) {
+fun Settings(
+    navController: NavController,
+    viewModel: FinanceViewModel,
+    onThemeChange: (AppTheme) -> Unit
+) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.Settings.route) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var selectedOption by remember { mutableStateOf(SettingsOptionType.NONE) }
+    val context = LocalContext.current
+    var showResetConfirmationDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
+        Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { TopBar(navController, currentRoute) },
         bottomBar = {
@@ -140,7 +150,8 @@ fun Settings(navController: NavController, viewModel: FinanceViewModel, onThemeC
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Column(
@@ -157,7 +168,7 @@ fun Settings(navController: NavController, viewModel: FinanceViewModel, onThemeC
                 Spacer(modifier = Modifier.height(8.dp))
                 SettingsOption(
                     icon = Icons.Default.NightsStay,
-                    title = "Dark/Light Mode",
+                    title = "Theme",
                     onClick = { selectedOption = SettingsOptionType.THEME }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -166,6 +177,19 @@ fun Settings(navController: NavController, viewModel: FinanceViewModel, onThemeC
                     title = "About the app",
                     onClick = { selectedOption = SettingsOptionType.ABOUT }
                 )
+                Spacer(modifier = Modifier.height(8.dp)) // Spacer before the new option
+                // --- ADDED DEV RESET AS A MAIN OPTION ---
+                if (DEV) {
+                    SettingsOption(
+                        icon = Icons.Filled.DeleteForever, // Choose an appropriate icon
+                        title = "DEV: Reset Level & Unlocks",
+                        onClick = {
+                            // Instead of changing the main view, trigger the confirmation dialog
+                            // selectedOption = SettingsOptionType.DEV_RESET; // Optional: if you want to highlight it
+                            showResetConfirmationDialog = true
+                        }
+                    )
+                }
             }
 
             Box(
@@ -179,22 +203,72 @@ fun Settings(navController: NavController, viewModel: FinanceViewModel, onThemeC
                     SettingsOptionType.NONE -> {
                         Text(
                             "Select an option for more details",
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            modifier = Modifier.align(Alignment.Center)
                         )
                     }
                     SettingsOptionType.PIN -> {
                         PinSettingsContent(snackbarHostState = snackbarHostState)
                     }
                     SettingsOptionType.THEME -> {
-                        ThemeSettingsContent(onThemeChange)
+                        ThemeSettingsContent(
+                            viewModel = viewModel, // Pass the viewModel
+                            onThemeChange = { newTheme ->
+                                val themePreferenceManager = ThemePreferenceManager(context) // Recreate or get instance
+                                themePreferenceManager.saveTheme(newTheme)
+                                onThemeChange(newTheme)
+                            }
+                        )
                     }
                     SettingsOptionType.ABOUT -> {
                         AboutSettingsContent()
                     }
+                    SettingsOptionType.DEV_RESET -> {}
                 }
             }
         }
+        if (showResetConfirmationDialog) {
+            ResetConfirmationDialog(
+                onConfirm = {
+                    scope.launch {
+                        viewModel.resetUserProgressForTesting()
+                        snackbarHostState.showSnackbar("User level, XP, and themes reset!")
+                    }
+                    showResetConfirmationDialog = false
+                    selectedOption = SettingsOptionType.NONE // Reset selection after action
+                },
+                onDismiss = {
+                    showResetConfirmationDialog = false
+                    selectedOption = SettingsOptionType.NONE // Reset selection if cancelled
+                }
+            )
+        }
     }
+}
+
+@Composable
+fun ResetConfirmationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirm Reset") },
+        text = { Text("Are you sure you want to reset all user level progress, XP, and unlocked themes? This action cannot be undone.") },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Reset")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -524,9 +598,18 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
 
 
 @Composable
-fun ThemeSettingsContent(onThemeChange: (AppTheme) -> Unit) {
+fun ThemeSettingsContent(
+    viewModel: FinanceViewModel,
+    onThemeChange: (AppTheme) -> Unit
+) {
     val themePreferenceManager = rememberThemePreferenceManager()
     var currentTheme by remember { mutableStateOf(themePreferenceManager.getSavedTheme()) }
+    val unlockedThemeNames by viewModel.unlockedThemeNames.collectAsStateWithLifecycle()
+    val availableThemes = remember(unlockedThemeNames) {
+        AppTheme.entries.filter { themeEnum ->
+            unlockedThemeNames.contains(themeEnum.name) // Filter by name
+        }.sortedBy { it.unlockLevel } // Optional: sort them by unlock level or name
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -535,39 +618,57 @@ fun ThemeSettingsContent(onThemeChange: (AppTheme) -> Unit) {
     ) {
         Text("Choose App Theme", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
 
-        Row(
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Button(
-                onClick = {
-                    onThemeChange(AppTheme.LIGHT)
-                    currentTheme = AppTheme.LIGHT
-                },
-                enabled = currentTheme != AppTheme.LIGHT,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp)
-            ) {
-                Icon(imageVector = Icons.Default.WbSunny, contentDescription = "Light Theme")
-                Spacer(Modifier.width(4.dp))
-                Text("Light")
-            }
-
-            Button(
-                onClick = {
-                    onThemeChange(AppTheme.DARK)
-                    currentTheme = AppTheme.DARK
-                },
-                enabled = currentTheme != AppTheme.DARK,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp)
-            ) {
-                Icon(imageVector = Icons.Default.NightsStay, contentDescription = "Dark Theme")
-                Spacer(Modifier.width(4.dp))
-                Text("Dark")
+        // Display all available themes (unlocked ones)
+        if (availableThemes.isEmpty() && AppTheme.entries.toTypedArray().isNotEmpty()) {
+            // This case should ideally not happen if defaults are always "unlocked"
+            Text("Loading themes or no themes available...")
+        } else {
+            // You can use a LazyColumn or Column depending on how many themes you expect
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                AppTheme.entries.forEach { theme -> // Iterate through ALL themes to show locked status
+                    val isUnlocked = unlockedThemeNames.contains(theme.name)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = isUnlocked) { // Only clickable if unlocked
+                                if (isUnlocked) {
+                                    themePreferenceManager.saveTheme(theme) // Save the theme preference
+                                    onThemeChange(theme) // Trigger the actual theme change
+                                    currentTheme = theme // Update local state for UI feedback (e.g., RadioButton)
+                                }
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (currentTheme == theme),
+                            onClick = if (isUnlocked) {
+                                {
+                                    themePreferenceManager.saveTheme(theme)
+                                    onThemeChange(theme)
+                                    currentTheme = theme
+                                }
+                            } else null, // Disable RadioButton click if not unlocked
+                            enabled = isUnlocked // Visually disable RadioButton if not unlocked
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = theme.displayName,
+                            color = if (isUnlocked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                        Spacer(Modifier.weight(1f)) // Push lock icon/text to the end
+                        if (!isUnlocked) {
+                            Text(
+                                text = "(Unlocks at Level ${theme.unlockLevel})",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            // Optionally, add a Lock Icon
+                            // Icon(Icons.Default.Lock, contentDescription = "Locked", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                        }
+                    }
+                    Divider() // Optional: add a divider between theme options
+                }
             }
         }
     }

@@ -12,13 +12,15 @@ import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.entities.TransactionType
-import com.example.budgify.screen.calculateXpForNextLevel
+import com.example.budgify.userpreferences.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -27,10 +29,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
-import kotlin.text.toDouble
 
 class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() {
 
+    private val _snackbarMessages = MutableSharedFlow<String>() // Use SharedFlow for events
+    val snackbarMessages: Flow<String> = _snackbarMessages.asSharedFlow() // Expose as Flow
 
     // TRANSACTIONS
 //    val allTransactions = repository.getAllTransactions().stateIn(
@@ -133,16 +136,57 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
         calculateXpForNextLevel(level) // Use the same helper
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), calculateXpForNextLevel(1))
 
+    private val _unlockedThemeNames = MutableStateFlow<Set<String>>(emptySet())
+    val unlockedThemeNames: StateFlow<Set<String>> = _unlockedThemeNames.asStateFlow()
+
     init {
         viewModelScope.launch {
             try {
                 // Load initial values from DataStore
-                _userLevel.value = repository.userLevel.first() // .first() gets the first emitted value
+                val loadedLevel = repository.userLevel.first()
+                _userLevel.value = loadedLevel // .first() gets the first emitted value
                 _userXp.value = repository.userXp.first()
                 Log.d("XP_System", "Initial Level: ${_userLevel.value}, Initial XP: ${_userXp.value} loaded from DataStore.")
+                repository.unlockedThemes.collect { themesFromDataStore ->
+                    val themesUnlockedByLevel = AppTheme.entries
+                        .filter { it.unlockLevel <= loadedLevel } // Use the just loaded level
+                        .map { it.name }
+                        .toSet()
+
+                    // Combine and update the StateFlow
+                    _unlockedThemeNames.value = themesFromDataStore + themesUnlockedByLevel // Set union
+                    Log.d("ThemeUnlock_Init", "Unlocked themes initialized. DataStore: $themesFromDataStore, LevelBased: $themesUnlockedByLevel, Combined: ${_unlockedThemeNames.value}")
+                }
             } catch (e: Exception) {
                 Log.e("XP_System", "Error loading initial level/XP from DataStore", e)
-                // Keep default values (1 and 0) if loading fails
+                _userLevel.value = 1
+                _userXp.value = 0
+
+                // Fallback for themes if everything else fails
+                // Ensure themes for level 1 are at least set if there was an error
+                val defaultThemesForLevel1 = AppTheme.entries
+                    .filter { it.unlockLevel <= _userLevel.value } // Uses potentially reset _userLevel.value
+                    .map { it.name }
+                    .toSet()
+                _unlockedThemeNames.value = defaultThemesForLevel1
+                Log.d("ThemeUnlock_Init", "Error loading, defaulted themes to: ${_unlockedThemeNames.value} based on level ${_userLevel.value}")
+            }
+        }
+    }
+
+    private suspend fun ensureThemesForCurrentLevelAreStored() {
+        val currentLvl = _userLevel.value
+        val currentUnlockedInVm = _unlockedThemeNames.value // What VM thinks is unlocked
+
+        AppTheme.entries.forEach { theme ->
+            if (theme.unlockLevel <= currentLvl && !currentUnlockedInVm.contains(theme.name)) {
+                // This theme should be unlocked by level, but isn't in our current VM's set (and thus maybe not in DataStore)
+                try {
+                    repository.addUnlockedTheme(theme.name) // This will save and also update the flow _unlockedThemeNames listens to
+                    Log.d("ThemeUnlock_Ensure", "Ensured ${theme.name} is saved as unlocked for level $currentLvl.")
+                } catch (e: Exception) {
+                    Log.e("ThemeUnlock_Ensure", "Failed to save ${theme.name} during ensure check.", e)
+                }
             }
         }
     }
@@ -152,7 +196,7 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
         objective: Objective,
         accountId: Int,
         categoryId: Int? = null,
-        onLevelUp: ((newLevel: Int) -> Unit)? = null // Optional callback for level up
+        // onCompletionFeedback: ((newLevel: Int, newlyUnlockedTheme: AppTheme?) -> Unit)? = null
     ) { // Added optional categoryId
         Log.d("XP_DEBUG", "completeObjectiveAndCreateTransaction called for objective: ${objective.desc}, accountId: $accountId")
         viewModelScope.launch {
@@ -180,7 +224,7 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
                 addTransaction(newTransaction)
 
                 val xpGained = calculateXpForObjective(objective)
-                addXp(xpGained, onLevelUp)
+                addXp(xpGained, null)
 
                 // The UI should react to changes in allObjectives and allTransactionsWithDetails StateFlows
                 // No explicit refresh needed here if your UI collects these flows.
@@ -193,7 +237,7 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
 
     private fun addXp(
         amount: Int,
-        onLevelUp: ((newLevel: Int) -> Unit)? = null
+        onLevelUpCallback: ((newLevel: Int, newlyUnlockedTheme: AppTheme?) -> Unit)? = null
     ) {
         viewModelScope.launch { // The entire body should be in a coroutine scope for repository call
             Log.d("XP_DEBUG_ADDXP", "addXp called with amount: $amount. Current XP: ${_userXp.value}, Current Level: ${_userLevel.value}")
@@ -206,18 +250,35 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
             var tempXp = _userXp.value + amount
             var tempLevel = _userLevel.value
             var xpNeededForNext = calculateXpForNextLevel(tempLevel)
-            var hasLeveledUp = false
+            var hasLeveledUpThisGain = false
+            var highestLevelReachedThisGain = tempLevel
+            var newlyUnlockedThemeDuringGain: AppTheme? = null
 
             while (tempXp >= xpNeededForNext) {
                 tempXp -= xpNeededForNext
                 tempLevel++
-                xpNeededForNext = calculateXpForNextLevel(tempLevel) // Update for the new current level
-                hasLeveledUp = true
+                xpNeededForNext = calculateXpForNextLevel(tempLevel)
+                hasLeveledUpThisGain = true
+                highestLevelReachedThisGain = tempLevel // Keep track of the highest new level
+
                 Log.d("XP_System", "Level Up! New Level: $tempLevel")
-                onLevelUp?.invoke(tempLevel)
+                _snackbarMessages.emit("Level Up! You are now Level $tempLevel!")
+                // Check for theme unlock at this new level
+                val themeUnlockedNow = AppTheme.entries.find { theme ->
+                    theme.unlockLevel == tempLevel && !_unlockedThemeNames.value.contains(theme.name)
+                }
+
+                if (themeUnlockedNow != null) {
+                    repository.addUnlockedTheme(themeUnlockedNow.name) // Save to DataStore (this should trigger the flow collection in init/elsewhere to update _unlockedThemeNames)
+                    _snackbarMessages.emit("New Theme Unlocked: ${themeUnlockedNow.displayName}!")
+                    if (newlyUnlockedThemeDuringGain == null) {
+                        newlyUnlockedThemeDuringGain = themeUnlockedNow
+                    }
+                }
             }
 
             // Update StateFlows with final calculated values
+            val oldLevelValue = _userLevel.value
             _userLevel.value = tempLevel
             _userXp.value = tempXp
 
@@ -226,17 +287,33 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
             // --- SAVE TO DATASTORE ---
             try {
                 repository.updateUserLevelAndXp(_userLevel.value, _userXp.value)
-                Log.d("XP_DEBUG_ADDXP", "Successfully saved to DataStore - Level: ${_userLevel.value}, XP: ${_userXp.value}")
+                Log.d("XP_DEBUG_ADDXP", "Successfully saved Level/XP to DataStore.")
+
+                // After saving level, ensure any themes for this new level (or past levels if missed) are noted
+                // This is a good place if addUnlockedTheme in the loop above relies on the flow updating _unlockedThemeNames
+                // or if you want to be absolutely sure.
+                // Alternatively, the collection of repository.unlockedThemes in init should handle this.
+                // For robustness, you could call a specific function:
+                // ensureThemesForCurrentLevelAreStored() // Call this to make sure DataStore is consistent
+
             } catch (e: Exception) {
-                Log.e("XP_DEBUG_ADDXP", "Error saving to DataStore", e)
+                Log.e("XP_DEBUG_ADDXP", "Error saving Level/XP to DataStore", e)
             }
-            // --- END SAVE TO DATASTORE ---
+
+            if (hasLeveledUpThisGain) {
+                // Potentially call ensureThemesForCurrentLevelAreStored() here as well if you want to be certain
+                // that by the time onLevelUp is called, _unlockedThemeNames reflects all themes for the new level.
+                // However, the collection in init and the addUnlockedTheme in the loop should handle it.
+                onLevelUpCallback?.invoke(highestLevelReachedThisGain, newlyUnlockedThemeDuringGain)
+            }
+        }
+    }
 
 
-            if(hasLeveledUp) {
-                // Additional logic after all level ups are processed
-                Log.d("XP_System", "User has leveled up. Final Level: ${_userLevel.value}, Final XP: ${_userXp.value}/${calculateXpForNextLevel(_userLevel.value)}")
-            }
+    private fun checkForThemeUnlock(newLevel: Int): AppTheme? {
+        val currentUnlocked = unlockedThemeNames.value // Get current unlocked themes
+        return AppTheme.entries.find { theme ->
+            theme.unlockLevel == newLevel && !currentUnlocked.contains(theme.name)
         }
     }
 
@@ -495,6 +572,40 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
                 started = SharingStarted.WhileSubscribed(5000L),
                 initialValue = emptyMap() // Initial value while loading or if no data
             )
+    }
+
+    fun resetUserProgressForTesting() { // New public function for UI to call
+        viewModelScope.launch {
+            try {
+                // Reset level and XP
+                repository.resetUserLevelAndXp()
+                _userLevel.value = 1 // Update local StateFlow
+                _userXp.value = 0    // Update local StateFlow
+                Log.d("DevReset", "User level and XP reset to defaults.")
+
+                // Reset unlocked themes
+                repository.resetUnlockedThemes()
+                // The collection in init should update _unlockedThemeNames,
+                // but for immediate UI feedback, we can also force it:
+                val defaultThemes = AppTheme.entries
+                    .filter { it.unlockLevel <= 1 }
+                    .map { it.name }
+                    .toSet()
+                _unlockedThemeNames.value = defaultThemes
+                Log.d("DevReset", "Unlocked themes reset to defaults: $defaultThemes")
+                _snackbarMessages.emit("User progress has been reset.")
+
+
+                // You might also want to reset the currently selected theme to a default
+                // This depends on how ThemePreferenceManager is accessed or if ViewModel manages it.
+                // For now, this focuses on level and unlockable themes.
+
+            } catch (e: Exception) {
+                Log.e("DevReset", "Error resetting user progress", e)
+                _snackbarMessages.emit("Error resetting progress.") // Optional: notify UI of error
+                // Optionally, provide feedback to the UI about the error
+            }
+        }
     }
 
     // Factory per creare l'istanza del ViewModel

@@ -146,4 +146,18 @@ class FinanceRepository(
         loanDao.delete(loan)
     }
     // --- Fine sezione LOANS ---
+
+    val unlockedThemes: Flow<Set<String>> = userPreferencesRepository.unlockedThemes
+
+    suspend fun addUnlockedTheme(themeName: String) {
+        userPreferencesRepository.addUnlockedTheme(themeName)
+    }
+
+    suspend fun resetUserLevelAndXp() { // Expose level/XP reset
+        userPreferencesRepository.resetUserLevelAndXpToDefault()
+    }
+
+    suspend fun resetUnlockedThemes() { // Expose theme reset
+        userPreferencesRepository.resetUnlockedThemesToDefault()
+    }
 }

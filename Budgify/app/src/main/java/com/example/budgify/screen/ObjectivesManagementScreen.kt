@@ -1,6 +1,7 @@
 package com.example.budgify.screen
 
 import android.util.Log
+import androidx.activity.result.launch
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -38,6 +39,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
@@ -47,6 +49,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,6 +74,7 @@ import com.example.budgify.navigation.BottomBar
 import com.example.budgify.navigation.TopBar
 import com.example.budgify.navigation.XButton
 import com.example.budgify.routes.ScreenRoutes
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -106,6 +110,16 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                 val isAtBottom = lastVisibleItem?.index == listState.layoutInfo.totalItemsCount - 1 && listState.layoutInfo.totalItemsCount > 0
                 isAtTop || isAtBottom || !listState.isScrollInProgress
             }
+        }
+    }
+
+    LaunchedEffect(key1 = Unit) { // Use Unit as key if viewModel.snackbarMessages is stable
+        viewModel.snackbarMessages.collectLatest { message ->
+            Log.d("ObjectivesScreen_Snackbar", "Collected global message from VM: $message")
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short // Or .Long, or make it configurable
+            )
         }
     }
 
@@ -269,6 +283,7 @@ fun ObjectiveItem(
     if (showAccountSelectionForCompletionDialog) {
         val accounts by viewModel.allAccounts.collectAsStateWithLifecycle() // Already have allAccounts
         val hasAccounts by viewModel.hasAccounts.collectAsStateWithLifecycle(initialValue = false) // Use your hasAccounts Flow
+        //val scope = rememberCoroutineScope()
 
         if (!hasAccounts && accounts.isEmpty()) { // Check based on your hasAccounts or if list is empty after initial load
             AlertDialog(
@@ -316,19 +331,18 @@ fun ObjectiveItem(
                                         //    )
                                         // },
                                         modifier = Modifier.clickable {
-                                            Log.d("XP_DEBUG", "Account selected: ${account.title} for objective: ${obj.desc}. Calling completeObjectiveAndCreateTransaction.") // <-- ADD THIS LOG
+                                            Log.d("XP_DEBUG", "Account selected: ${account.title} for objective: ${obj.desc}. Calling completeObjectiveAndCreateTransaction.")
                                             viewModel.completeObjectiveAndCreateTransaction(
-                                                obj,
-                                                account.id,
-                                                null
+                                                objective = obj,
+                                                accountId = account.id,
+                                                categoryId = null
                                             )
-                                            showSnackbar("Objective '${obj.desc}' completed. Transaction created for account '${account.title}'.")
+                                            // You can still show a generic local snackbar if desired:
+                                            showSnackbar("Objective '${obj.desc}' marked complete. Transaction created for '${account.title}'.")
                                             showAccountSelectionForCompletionDialog = false
                                         },
                                         colors = ListItemDefaults.colors(
-                                            containerColor = Color.Transparent // Make ListItem's own container transparent
-                                            // You can also customize headlineColor, leadingIconColor, etc. if needed
-                                            // headlineColor = MaterialTheme.colorScheme.onSurface, // Default
+                                            containerColor = Color.Transparent
                                         )
                                     )
                                     // Divider() // ListItem often looks good without explicit dividers, but you can add if preferred
