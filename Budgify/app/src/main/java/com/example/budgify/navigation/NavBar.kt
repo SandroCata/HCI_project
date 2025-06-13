@@ -822,6 +822,7 @@ fun AddLoanDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Add Loan", style = MaterialTheme.typography.titleLarge)
+                XButton(onDismiss)
             }
             Spacer(modifier = Modifier.height(16.dp))
 
