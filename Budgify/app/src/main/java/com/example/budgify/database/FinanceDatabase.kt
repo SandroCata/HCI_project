@@ -77,7 +77,7 @@ class Converters {
         Category::class,
         Loan::class
    ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class) // Se hai bisogno di TypeConverters

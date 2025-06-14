@@ -1,7 +1,6 @@
 package com.example.budgify.screen
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.copy
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -26,9 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,12 +51,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.isEmpty
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -67,20 +61,21 @@ import androidx.navigation.NavController
 import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.entities.Loan
 import com.example.budgify.entities.LoanType
-import com.example.budgify.entities.Objective
-import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.navigation.BottomBar
 import com.example.budgify.navigation.TopBar
 import com.example.budgify.navigation.XButton
 import com.example.budgify.routes.ScreenRoutes
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import kotlin.text.forEach
 import kotlin.text.lowercase
-import kotlin.text.toList
+import androidx.compose.material3.ListItem // For account selection
+import androidx.compose.material3.ListItemDefaults // For account selection
+import kotlinx.coroutines.flow.collectLatest // For global snackbar messages if you add them
+import android.util.Log // For debugging
+import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.text.style.TextOverflow
 
 // Enum for the sections in LoanManagementScreen, aligning with LoanType
 enum class LoanSectionType(val title: String, val loanType: LoanType) {
@@ -238,6 +233,8 @@ fun LoanItem(
     var showActionChoiceDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
+    var showAccountSelectionForCompletionDialog by remember { mutableStateOf(false) }
+
 
     val backgroundColor = when (loan.type) {
         LoanType.CREDIT -> Color(0xFF4CAF50).copy(alpha = 0.8f) // Greenish for credit
@@ -265,6 +262,14 @@ fun LoanItem(
         loan.endDate?.let {
             Text(text = "End Date: ${it.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", color = Color.White)
         }
+        if (loan.completed) {
+            Text(
+                "Status: ${if (loan.type == LoanType.DEBT) "Repaid" else "Collected"}",
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.9f)
+            )
+        }
     }
 
     if (showActionChoiceDialog) {
@@ -278,16 +283,97 @@ fun LoanItem(
             onDeleteClick = {
                 showDeleteConfirmationDialog = true
                 showActionChoiceDialog = false
+            },
+            onCompleteClick = { // New callback
+                Log.d("LoanItem", "Mark as Paid/Collected clicked for: ${loan.desc}")
+                showAccountSelectionForCompletionDialog = true
+                showActionChoiceDialog = false
             }
+
         )
     }
+
+    // Account Selection Dialog for Completing Loan
+    if (showAccountSelectionForCompletionDialog) {
+        val accounts by viewModel.allAccounts.collectAsStateWithLifecycle()
+        val hasAccounts by viewModel.hasAccounts.collectAsStateWithLifecycle(initialValue = false)
+
+        if (!hasAccounts && accounts.isEmpty()) {
+            AlertDialog(
+                onDismissRequest = { showAccountSelectionForCompletionDialog = false },
+                title = { Text("No Accounts Found") },
+                text = { Text("You need to create an account first before completing a loan and creating a transaction.") },
+                confirmButton = {
+                    TextButton(onClick = { showAccountSelectionForCompletionDialog = false }) {
+                        Text("OK")
+                    }
+                }
+            )
+        } else {
+            AlertDialog(
+                onDismissRequest = { showAccountSelectionForCompletionDialog = false },
+                title = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Select Account for ${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }}",
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        XButton(onDismiss = { showAccountSelectionForCompletionDialog = false })
+                    }
+                },
+                text = {
+                    if (accounts.isEmpty()) {
+                        Text("Loading accounts...")
+                    } else {
+                        Column {
+                            Text(
+                                "Choose an account to create a transaction for this ${loan.type.name.lowercase()}.",
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                                items(accounts, key = { it.id }) { account ->
+                                    ListItem(
+                                        headlineContent = { Text(account.title) },
+                                        modifier = Modifier.clickable {
+                                            Log.d("LoanItem", "Account '${account.title}' selected for loan '${loan.desc}'. Calling completeLoanPaymentOrCollection.")
+                                            viewModel.completeLoanAndCreateTransaction(
+                                                loan = loan,
+                                                accountId = account.id,
+                                                categoryId = null // Add category selection if needed later
+                                            )
+                                            showSnackbar("${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }} '${loan.desc}' marked complete. Transaction created for '${account.title}'.")
+                                            showAccountSelectionForCompletionDialog = false
+                                        },
+                                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                dismissButton = null,
+                confirmButton = {} // Confirm button is handled by item clicks
+            )
+        }
+    }
+
 
     if (showEditDialog) {
         EditLoanDialog(
             loan = loan,
             viewModel = viewModel,
             onDismiss = { showEditDialog = false },
-            showSnackbar = showSnackbar
+            showSnackbar = showSnackbar,
+            onDeleteRequest = { // Added to trigger delete confirmation
+                showEditDialog = false
+                showDeleteConfirmationDialog = true
+            }
         )
     }
 
@@ -304,20 +390,20 @@ fun LoanItem(
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditLoanDialog(
     loan: Loan,
     viewModel: FinanceViewModel,
     onDismiss: () -> Unit,
-    showSnackbar: (String) -> Unit
+    showSnackbar: (String) -> Unit,
+    onDeleteRequest: () -> Unit // For triggering delete confirmation
 ) {
     var description by remember { mutableStateOf(loan.desc) }
     var amount by remember { mutableStateOf(loan.amount.toString().replace('.',',')) }
     var selectedStartDate by remember { mutableStateOf(loan.startDate) }
     var selectedEndDate by remember { mutableStateOf(loan.endDate) } // Nullable
-    var selectedLoanType by remember { mutableStateOf(loan.type) } // Type can be edited
+    var selectedLoanType by remember { mutableStateOf(loan.type) }
     var showStartDatePickerDialog by remember { mutableStateOf(false) }
     var showEndDatePickerDialog by remember { mutableStateOf(false) }
     val loanTypes = LoanType.entries.toList()
@@ -336,7 +422,7 @@ fun EditLoanDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Edit Loan", style = MaterialTheme.typography.titleLarge)
+                Text("Edit ${loan.type.name.lowercase()}", style = MaterialTheme.typography.titleLarge)
                 XButton(onDismiss)
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -346,16 +432,23 @@ fun EditLoanDialog(
                 onValueChange = { description = it },
                 label = { Text("Description") },
                 modifier = Modifier.fillMaxWidth(),
-                isError = description.isBlank() && errorMessage != null
+                isError = description.isBlank() && errorMessage != null && errorMessage!!.contains("Description",ignoreCase = true)
             )
             Spacer(modifier = Modifier.height(8.dp))
             TextField(
                 value = amount,
-                onValueChange = { amount = it },
+                onValueChange = { amount = it.replace(",",".").replace(Regex("[^\\d.]"), "").let { num ->
+                    val parts = num.split('.')
+                    if (parts.size > 1) {
+                        parts[0] + "." + parts.subList(1, parts.size).joinToString("").take(2)
+                    } else {
+                        num
+                    }
+                }.replace('.',',') },
                 label = { Text("Amount (€)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
-                isError = amount.replace(',','.').toDoubleOrNull() == null && errorMessage != null
+                isError = amount.replace(',','.').toDoubleOrNull() == null && errorMessage != null && errorMessage!!.contains("Amount",ignoreCase = true)
             )
             Spacer(modifier = Modifier.height(8.dp))
             TextField(
@@ -371,11 +464,11 @@ fun EditLoanDialog(
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                isError = errorMessage != null && selectedEndDate != null && selectedStartDate.isAfter(selectedEndDate)
+                isError = errorMessage != null && selectedEndDate != null && selectedStartDate.isAfter(selectedEndDate!!)
             )
             Spacer(modifier = Modifier.height(8.dp))
             TextField(
-                value = selectedEndDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "Optional",
+                value = selectedEndDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "Not set (Optional)",
                 onValueChange = {},
                 label = { Text("End Date (Optional)") },
                 readOnly = true,
@@ -387,7 +480,7 @@ fun EditLoanDialog(
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                isError = errorMessage != null && selectedEndDate != null && selectedStartDate.isAfter(selectedEndDate)
+                isError = errorMessage != null && selectedEndDate != null && selectedStartDate.isAfter(selectedEndDate!!)
             )
             Spacer(modifier = Modifier.height(8.dp))
             // Loan Type Radio Buttons
@@ -423,8 +516,11 @@ fun EditLoanDialog(
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.SpaceBetween // Space for Delete and Save
             ) {
+                TextButton(onClick = onDeleteRequest ) { // Trigger delete confirmation
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
                 Button(
                     onClick = {
                         errorMessage = null // Reset error
@@ -438,7 +534,7 @@ fun EditLoanDialog(
                             errorMessage = "Please enter a valid positive amount."
                             return@Button
                         }
-                        if (selectedEndDate != null && selectedStartDate.isAfter(selectedEndDate)) {
+                        if (selectedEndDate != null && selectedStartDate.isAfter(selectedEndDate!!)) {
                             errorMessage = "Start date cannot be after end date."
                             return@Button
                         }
@@ -448,7 +544,8 @@ fun EditLoanDialog(
                             amount = amountDouble,
                             startDate = selectedStartDate,
                             endDate = selectedEndDate,
-                            type = selectedLoanType
+                            type = selectedLoanType,
+                            completed = loan.completed // Preserve paid status, only completion logic changes it
                         )
                         coroutineScope.launch {
                             viewModel.updateLoan(updatedLoan)
@@ -463,7 +560,12 @@ fun EditLoanDialog(
     }
 
     if (showStartDatePickerDialog) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedStartDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
+        val currentStartDateMillis = remember(selectedStartDate) {
+            selectedStartDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        }
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = currentStartDateMillis)
+        val confirmEnabled by remember { derivedStateOf { datePickerState.selectedDateMillis != null } }
+
         DatePickerDialog(
             onDismissRequest = { showStartDatePickerDialog = false },
             confirmButton = {
@@ -474,14 +576,21 @@ fun EditLoanDialog(
                         }
                         showStartDatePickerDialog = false
                     },
-                    enabled = datePickerState.selectedDateMillis != null
+                    enabled = confirmEnabled
                 ) { Text("OK") }
             },
             dismissButton = { TextButton(onClick = { showStartDatePickerDialog = false }) { Text("Cancel") } }
         ) { DatePicker(state = datePickerState) }
     }
     if (showEndDatePickerDialog) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedEndDate?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli())
+        val currentEndDateMillis = remember(selectedEndDate) {
+            selectedEndDate?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
+        }
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = currentEndDateMillis)
+        // For end date, confirm is always enabled to allow clearing the date.
+        // val confirmEnabled by remember { derivedStateOf { datePickerState.selectedDateMillis != null } }
+
+
         DatePickerDialog(
             onDismissRequest = { showEndDatePickerDialog = false },
             confirmButton = {
@@ -490,17 +599,20 @@ fun EditLoanDialog(
                         selectedEndDate = datePickerState.selectedDateMillis?.let {
                             Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
                         }
+                        // If selectedDateMillis is null (user cleared it), selectedEndDate becomes null.
                         showEndDatePickerDialog = false
                     },
-                    enabled = true // Allow null selection
+                    // enabled = confirmEnabled // Or just true if you want to allow clearing
+                    enabled = true
                 ) { Text("OK") }
             },
             dismissButton = {
                 TextButton(onClick = {
-                    selectedEndDate = null // Clear if canceling from a set date
+                    // Optionally, if you want "Cancel" to explicitly clear the date:
+                    // selectedEndDate = null
                     showEndDatePickerDialog = false
-                }) { Text("Cancel") }
+                }) { Text("Clear/Cancel") } // "Clear" if pressing OK with no date selected clears it
             }
-        ) { DatePicker(state = datePickerState) }
+        ) { DatePicker(state = datePickerState, showModeToggle = true) } // showModeToggle allows easier clearing
     }
 }

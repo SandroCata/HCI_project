@@ -1,9 +1,7 @@
 package com.example.budgify.screen
 
 import android.util.Log
-import android.util.Patterns
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -15,6 +13,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.QuestionAnswer
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -298,43 +299,41 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
     var confirmPin by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    // State for password visibility
+    var newPinVisible by remember { mutableStateOf(false) }
+    var confirmPinVisible by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val scrollState = rememberScrollState() // Added for scrolling
+    val scrollState = rememberScrollState()
 
     var isPinSet by remember { mutableStateOf(getSavedPinFromContext(context) != null) }
     var savedSecurityQA by remember { mutableStateOf(getSavedSecurityQuestionAnswer(context)) }
 
-    // State for security question UI
     var selectedQuestionIndex by remember { mutableStateOf(savedSecurityQA?.questionIndex ?: 0) }
     var securityAnswerInput by remember { mutableStateOf(savedSecurityQA?.answer ?: "") }
     var securityQuestionDropdownExpanded by remember { mutableStateOf(false) }
 
 
-    LaunchedEffect(Unit) { // Load saved security question and answer
+    LaunchedEffect(Unit) {
         val loadedQA = getSavedSecurityQuestionAnswer(context)
         if (loadedQA != null) {
             selectedQuestionIndex = loadedQA.questionIndex
             securityAnswerInput = loadedQA.answer
         } else {
-            // Default to the first question if nothing is saved
             selectedQuestionIndex = 0
             securityAnswerInput = ""
         }
     }
 
-    // Determine if the security question/answer has been set at least once
     val isSecurityQASet = remember { mutableStateOf(savedSecurityQA != null) }
-    // If the saved Q&A changes, update isSecurityQASet
     LaunchedEffect(savedSecurityQA) {
         isSecurityQASet.value = savedSecurityQA != null
         if (savedSecurityQA != null && securityAnswerInput.isEmpty()) {
-            // Pre-fill if it was emptied and then saved (though less likely with this setup)
             securityAnswerInput = savedSecurityQA!!.answer
             selectedQuestionIndex = savedSecurityQA!!.questionIndex
         }
     }
-
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -345,6 +344,7 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
             .verticalScroll(scrollState)
     ) {
         Text(
+            // ... title text ...
             when {
                 isPinSet && isSecurityQASet.value -> "Manage PIN & Security Question"
                 isPinSet -> "Set Security Question & Manage PIN"
@@ -355,7 +355,6 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
             fontWeight = FontWeight.Bold
         )
 
-        // --- PIN Section ---
         if (isPinSet) {
             Text("Change Access PIN", style = MaterialTheme.typography.titleMedium)
         } else {
@@ -370,11 +369,20 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
             },
             label = { Text("New PIN (min 4 digits)") },
             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "New PIN") },
+            trailingIcon = { // Add trailing icon for visibility toggle
+                val image = if (newPinVisible)
+                    Icons.Filled.Visibility
+                else Icons.Filled.VisibilityOff
+                val description = if (newPinVisible) "Hide PIN" else "Show PIN"
+                IconButton(onClick = { newPinVisible = !newPinVisible }) {
+                    Icon(imageVector = image, description)
+                }
+            },
+            visualTransformation = if (newPinVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            isError = errorMessage?.contains("PIN", ignoreCase = true) == true // Make check case-insensitive
+            isError = errorMessage?.contains("PIN", ignoreCase = true) == true
         )
 
         TextField(
@@ -385,8 +393,17 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
             },
             label = { Text(if (isPinSet) "Confirm New PIN (if changing)" else "Confirm New PIN") },
             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Confirm PIN") },
+            trailingIcon = { // Add trailing icon for visibility toggle
+                val image = if (confirmPinVisible)
+                    Icons.Filled.Visibility
+                else Icons.Filled.VisibilityOff
+                val description = if (confirmPinVisible) "Hide PIN" else "Show PIN"
+                IconButton(onClick = { confirmPinVisible = !confirmPinVisible }) {
+                    Icon(imageVector = image, description)
+                }
+            },
+            visualTransformation = if (confirmPinVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             isError = errorMessage?.contains("PINs do not match", ignoreCase = true) == true
@@ -396,11 +413,13 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
         Text("Security Question for Temporary Access", style = MaterialTheme.typography.titleMedium)
 
         ExposedDropdownMenuBox(
+            // ... same as before ...
             expanded = securityQuestionDropdownExpanded,
             onExpandedChange = { securityQuestionDropdownExpanded = !securityQuestionDropdownExpanded },
             modifier = Modifier.fillMaxWidth()
         ) {
             TextField(
+                // ... same as before ...
                 value = securityQuestions[selectedQuestionIndex],
                 onValueChange = {}, // Not editable directly
                 readOnly = true,
@@ -413,6 +432,7 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
                     .fillMaxWidth()
             )
             ExposedDropdownMenu(
+                // ... same as before ...
                 expanded = securityQuestionDropdownExpanded,
                 onDismissRequest = { securityQuestionDropdownExpanded = false }
             ) {
@@ -430,23 +450,23 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
         }
 
         TextField(
+            // ... same as before ...
             value = securityAnswerInput,
             onValueChange = {
                 securityAnswerInput = it
                 errorMessage = null
             },
             label = { Text("Your Answer") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Security Answer") }, // Using Lock icon for answer too
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Security Answer") },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true, // Or false if answers can be long
+            singleLine = true,
             isError = errorMessage?.contains("answer", ignoreCase = true) == true
         )
 
-
-        // --- Error Message ---
-        errorMessage?.let { message ->
+        errorMessage?.let {
+            // ... same as before ...
             Text(
-                text = message,
+                text = it,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.fillMaxWidth(),
@@ -454,13 +474,14 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
             )
         }
 
-        // --- Buttons ---
         Row(
+            // ... Button row ...
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
         ) {
             if (isPinSet) {
                 Button(
+                    // ... Remove PIN button ...
                     onClick = {
                         try {
                             val masterKey = MasterKey.Builder(context)
@@ -491,6 +512,7 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
             }
 
             Button(
+                // ... Save button ...
                 onClick = {
                     errorMessage = null // Reset error
                     var changesMade = false
@@ -501,7 +523,6 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
                         errorMessage = "Security answer cannot be empty."
                         return@Button
                     }
-                    // Add any other answer validation if needed (e.g., min length)
 
                     // 2. Validate PIN (if trying to set/change PIN)
                     val isTryingToSetOrChangePin = newPin.isNotEmpty() || confirmPin.isNotEmpty()
@@ -520,7 +541,6 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
                     var pinSavedSuccessfully = true
                     var qaSavedSuccessfully = true
 
-                    // Save PIN if provided and valid
                     if (isTryingToSetOrChangePin && newPin.isNotBlank()) {
                         try {
                             val masterKey = MasterKey.Builder(context)
@@ -535,7 +555,7 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
                                 apply()
                             }
                             changesMade = true
-                            isPinSet = true // Update UI state
+                            isPinSet = true
                         } catch (e: Exception) {
                             Log.e("PinSettingsContent", "Error saving PIN", e)
                             errorMessage = "Error saving PIN."
@@ -543,7 +563,6 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
                         }
                     }
 
-                    // Save Security Question & Answer if changed or first time
                     val currentSavedQA = getSavedSecurityQuestionAnswer(context)
                     val qaChanged = currentSavedQA?.questionIndex != selectedQuestionIndex ||
                             currentSavedQA?.answer != securityAnswerInput
@@ -551,7 +570,7 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
 
                     if (qaChanged || isFirstTimeSettingQA) {
                         if (saveSecurityQuestionAnswer(context, selectedQuestionIndex, securityAnswerInput)) {
-                            savedSecurityQA = SecurityQuestionAnswer(selectedQuestionIndex, securityAnswerInput) // Update UI state
+                            savedSecurityQA = SecurityQuestionAnswer(selectedQuestionIndex, securityAnswerInput)
                             isSecurityQASet.value = true
                             changesMade = true
                         } else {
@@ -560,7 +579,6 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
                         }
                     }
 
-                    // Determine success message
                     if (changesMade) {
                         when {
                             isTryingToSetOrChangePin && newPin.isNotBlank() && (qaChanged || isFirstTimeSettingQA) ->
@@ -572,16 +590,11 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
                         }
                         scope.launch { snackbarHostState.showSnackbar(showSuccessMessage) }
                         if (isTryingToSetOrChangePin && pinSavedSuccessfully) {
-                            newPin = "" // Reset PIN fields after successful save
+                            newPin = ""
                             confirmPin = ""
                         }
-                        // Keep security answer input as is, user might want to see it
-                    } else if (errorMessage == null) { // No changes and no errors from previous steps
+                    } else if (errorMessage == null) {
                         scope.launch { snackbarHostState.showSnackbar("No changes were made.") }
-                    }
-
-                    if (!pinSavedSuccessfully || !qaSavedSuccessfully) {
-                        // Error message is already set by individual save attempts
                     }
 
                 },
@@ -644,7 +657,8 @@ fun ThemeSettingsContent(
                                 if (isUnlocked) {
                                     themePreferenceManager.saveTheme(theme) // Save the theme preference
                                     onThemeChange(theme) // Trigger the actual theme change
-                                    currentTheme = theme // Update local state for UI feedback (e.g., RadioButton)
+                                    currentTheme =
+                                        theme // Update local state for UI feedback (e.g., RadioButton)
                                 }
                             }
                             .padding(vertical = 12.dp, horizontal = 16.dp),
@@ -665,7 +679,9 @@ fun ThemeSettingsContent(
                         Text(
                             text = theme.displayName,
                             color = if (isUnlocked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            modifier = Modifier.weight(1f).padding(8.dp)
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(8.dp)
                         )
                         //Spacer(Modifier.weight(1f)) // Push lock icon/text to the end
                         if (!isUnlocked) {

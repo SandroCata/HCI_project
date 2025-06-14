@@ -16,5 +16,6 @@ data class Loan (
     val desc: String,
     val amount: Double,
     val startDate: LocalDate,
-    val endDate: LocalDate?
+    val endDate: LocalDate?,
+    var completed: Boolean = false
 )
