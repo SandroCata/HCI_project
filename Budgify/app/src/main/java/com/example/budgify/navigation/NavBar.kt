@@ -825,6 +825,8 @@ fun AddLoanDialog(
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
 
+    var showInsufficientBalanceDialog by remember { mutableStateOf(false) }
+
     fun triggerError(message: String) {
         errorMessage = message
         showErrorDialog = true
@@ -895,7 +897,7 @@ fun AddLoanDialog(
                     ) {
                         accounts.forEach { account ->
                             DropdownMenuItem(
-                                text = { Text(account.title) },
+                                text = { Text("${account.title} (${account.amount}€)") },
                                 onClick = {
                                     selectedAccountId = account.id // Store the ID
                                     accountExpanded = false
@@ -1011,6 +1013,19 @@ fun AddLoanDialog(
                             return@Button
                         }
 
+                        // selectedAccount non dovrebbe essere null qui grazie al check precedente
+                        val currentAccount = selectedAccount!!
+
+
+                        if (selectedType == LoanType.CREDIT && amountDouble > currentAccount.amount) {
+                            errorMessage = "The selected account '${currentAccount.title}' does not have enough balance to grant this credit.\n\n" +
+                                    "Required: $amountDouble €\n" +
+                                    "Available in '${currentAccount.title}': ${currentAccount.amount} €\n\n" +
+                                    "Please choose another account or add funds to this one."
+                            showInsufficientBalanceDialog = true // Mostra il dialogo di saldo insufficiente
+                            return@Button
+                        }
+
                         if (selectedStartDate == null) {
                             triggerError("Please select a start date.")
                             return@Button
@@ -1037,6 +1052,25 @@ fun AddLoanDialog(
                 }
             }
         }
+    }
+
+    // Dialogo di errore per Saldo Insufficiente
+    if (showInsufficientBalanceDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showInsufficientBalanceDialog = false
+                // Non resettare altri campi, l'utente potrebbe voler cambiare solo l'account o l'importo
+            },
+            title = { Text("Insufficient Balance") },
+            text = { Text(errorMessage) }, // L'errorMessage è già stato impostato con i dettagli
+            confirmButton = {
+                TextButton(onClick = {
+                    showInsufficientBalanceDialog = false
+                }) {
+                    Text("OK")
+                }
+            }
+        )
     }
 
     if (showDatePickerDialog) {

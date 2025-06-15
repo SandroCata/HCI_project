@@ -318,68 +318,6 @@ fun MonthlyCalendar(
     }
 }
 
-// Assume TransactionItem is a composable that displays a single transaction
-@OptIn(ExperimentalFoundationApi::class) // Opt-in for ExperimentalFoundationApi
-@Composable
-fun TransactionItem1(
-    transactionWithDetails: TransactionWithDetails,
-    onClick: (MyTransaction) -> Unit,
-    onLongClick: (MyTransaction) -> Unit // Add a long click lambda parameter
-) {
-    val myTransaction = transactionWithDetails.transaction
-    val account = transactionWithDetails.account
-    val category = transactionWithDetails.category
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .combinedClickable( // Use combinedClickable
-                onClick = {
-                    onClick(myTransaction)
-                },
-                onLongClick = {
-                    onLongClick(myTransaction) // Call the lambda on long click
-                }
-            ),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
-            val formattedDescription1 = buildAnnotatedString {
-                withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                    append(myTransaction.description)
-                }
-                append("  (")
-                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                    // Access the description from the related Category object
-                    append(category?.desc ?: "Uncategorized") // Use safe call and default if category is null
-                }
-                append(")")
-            }
-            Text(text = formattedDescription1, fontSize = 15.sp)
-            Spacer(modifier = Modifier.height(3.dp))
-            val formattedDescription2 = buildAnnotatedString {
-                withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                    // Access the title from the related Account object
-                    append(account.title)
-                }
-                append(" - ")
-                withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                    // Date formatting remains the same
-                    append(myTransaction.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
-                }
-            }
-            Text(text = formattedDescription2, fontFamily = FontFamily.SansSerif, fontSize = 12.sp)
-        }
-        Text(
-            text = "${if (myTransaction.type == TransactionType.INCOME) "+" else "-"} ${myTransaction.amount}€",
-            color = if (myTransaction.type == TransactionType.INCOME) Color(red = 0.0f, green = 0.6f, blue = 0.0f) else Color(red = 0.7f, green = 0.0f, blue = 0.0f),
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TransactionBox(
@@ -436,7 +374,7 @@ fun TransactionBox(
                         // Assicurati che TransactionItem1 sia definito o usa TransactionItem da Homepage.kt
                         // Se usi TransactionItem da Homepage.kt, assicurati che accetti gli stessi parametri.
                         // Per questo esempio, assumo che tu voglia usare TransactionItem1 come definito nel tuo codice.
-                        TransactionItem1( // O TransactionItem se hai adattato i parametri
+                        TransactionItem( // O TransactionItem se hai adattato i parametri
                             transactionWithDetails = transactionWithDetails,
                             onClick = { transaction -> // Il tipo di 'transaction' dovrebbe essere MyTransaction
                                 showSnackbar("Hold to edit or delete the transaction")

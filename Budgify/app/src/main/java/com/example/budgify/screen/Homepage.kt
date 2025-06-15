@@ -190,6 +190,27 @@ fun TransactionItem(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
+            // Modifica formattedDescription2 per includere l'importo
+            val amountText = "${if (myTransaction.type == TransactionType.INCOME) "+" else "-"} ${myTransaction.amount}€"
+            val amountColor = if (myTransaction.type == TransactionType.INCOME) Color(red = 0.0f, green = 0.6f, blue = 0.0f) else Color(red = 0.9f, green = 0.0f, blue = 0.0f)
+
+            val formattedDescription2 = buildAnnotatedString {
+                withStyle(style = SpanStyle(color = amountColor, fontWeight = FontWeight.Bold)) {
+                    append(amountText)
+                }
+                append("  ") // Aggiungi spazio dopo l'importo
+                withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
+                    append(account.title)
+                }
+                append(" - ")
+                withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
+                    append(myTransaction.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                }
+            }
+            Text(
+                text = formattedDescription2,
+                style = MaterialTheme.typography.bodyMedium
+            )
             val formattedDescription1 = buildAnnotatedString {
                 withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
                     append(myTransaction.description)
@@ -204,25 +225,13 @@ fun TransactionItem(
                 text = formattedDescription1,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            val formattedDescription2 = buildAnnotatedString {
-                withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                    append(account.title)
-                }
-                append(" - ")
-                withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                    append(myTransaction.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
-                }
-            }
-            Text(
-                text = formattedDescription2,
-                style = MaterialTheme.typography.bodySmall
-            )
         }
+        /*
         Text(
             text = "${if (myTransaction.type == TransactionType.INCOME) "+" else "-"} ${myTransaction.amount}€",
             color = if (myTransaction.type == TransactionType.INCOME) Color(red = 0.0f, green = 0.6f, blue = 0.0f) else Color(red = 0.7f, green = 0.0f, blue = 0.0f),
             fontWeight = FontWeight.Bold
-        )
+        )*/
     }
 }
 

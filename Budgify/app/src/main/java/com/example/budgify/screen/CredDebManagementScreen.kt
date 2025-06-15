@@ -151,6 +151,22 @@ fun CredDebManagementScreen(navController: NavController, viewModel: FinanceView
                     }
                 }
 
+                // --- TESTO ESPLICATIVO AGGIUNTO QUI ---
+                val explanatoryText = when (selectedSection) {
+                    LoanSectionType.CREDITS -> "Here you can track all the money you lent.\nDon't forget to reclaim it ;)"
+                    LoanSectionType.DEBTS -> "Here you can find all the money you borrowed.\nRemember to return it as soon as possible ;)"
+                }
+
+                Text(
+                    text = explanatoryText,
+                    style = MaterialTheme.typography.bodyMedium, // Puoi scegliere lo stile che preferisci
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp) // Aggiungi padding per spaziatura
+                )
+                // --- FINE TESTO ESPLICATIVO ---
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
