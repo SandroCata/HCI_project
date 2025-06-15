@@ -323,7 +323,7 @@ fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewMode
                                                     viewModel.completeLoanAndCreateTransaction(
                                                         loan = loan,
                                                         accountId = account.id,
-                                                        categoryId = null
+                                                        //categoryId = null
                                                     )
                                                     scope.launch {
                                                         snackbarHostState.showSnackbar(
