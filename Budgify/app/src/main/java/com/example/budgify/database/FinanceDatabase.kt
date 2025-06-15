@@ -84,7 +84,7 @@ class Converters {
         Category::class,
         Loan::class
    ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(Converters::class) // Se hai bisogno di TypeConverters
@@ -145,11 +145,17 @@ abstract class FinanceDatabase : RoomDatabase() {
             if (categoryDao.getCategoryByDescriptionSuspend(DefaultCategories.OBJECTIVES_INC.desc) == null) {
                 categoryDao.insert(DefaultCategories.OBJECTIVES_INC)
             }
-            if (categoryDao.getCategoryByDescriptionSuspend(DefaultCategories.LOANS_EXP.desc) == null) {
-                categoryDao.insert(DefaultCategories.LOANS_EXP)
+            if (categoryDao.getCategoryByDescriptionSuspend(DefaultCategories.CREDIT_EXP.desc) == null) {
+                categoryDao.insert(DefaultCategories.CREDIT_EXP)
             }
-            if (categoryDao.getCategoryByDescriptionSuspend(DefaultCategories.LOANS_INC.desc) == null) {
-                categoryDao.insert(DefaultCategories.LOANS_INC)
+            if (categoryDao.getCategoryByDescriptionSuspend(DefaultCategories.CREDIT_INC.desc) == null) {
+                categoryDao.insert(DefaultCategories.CREDIT_INC)
+            }
+            if (categoryDao.getCategoryByDescriptionSuspend(DefaultCategories.DEBT_EXP.desc) == null) {
+                categoryDao.insert(DefaultCategories.DEBT_EXP)
+            }
+            if (categoryDao.getCategoryByDescriptionSuspend(DefaultCategories.DEBT_INC.desc) == null) {
+                categoryDao.insert(DefaultCategories.DEBT_INC)
             }
             // You can log here if needed
             Log.d("AppDatabase", "Default categories pre-populated.")

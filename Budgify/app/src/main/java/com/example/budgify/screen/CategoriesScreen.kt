@@ -84,10 +84,20 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
     val allCategories by viewModel.allCategories.collectAsStateWithLifecycle()
 
     val expenseCategories = remember(allCategories, allCategories.size) { // Aggiunto allCategories.size per triggerare la ricomposizione
-        allCategories.filter { it.type == CategoryType.EXPENSE && it.desc != "Debts" && it.desc != "Objectives (Expense)" }
+        allCategories.filter {
+            it.type == CategoryType.EXPENSE &&
+                    it.desc != "Debts repaid" &&
+                    it.desc != "Credits contracted" &&
+                    it.desc != "Objectives (Expense)"
+        }
     }
     val incomeCategories = remember(allCategories, allCategories.size) { // Aggiunto allCategories.size
-        allCategories.filter { it.type == CategoryType.INCOME && it.desc != "Credits" && it.desc != "Objectives (Income)" }
+        allCategories.filter {
+            it.type == CategoryType.INCOME &&
+                    it.desc != "Credits collected" &&
+                    it.desc != "Debts contracted" &&
+                    it.desc != "Objectives (Income)"
+        }
     }
     val showSnackbar: (String) -> Unit = { message ->
         scope.launch {
