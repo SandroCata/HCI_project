@@ -335,7 +335,7 @@ fun ObjectiveItem(
                                             viewModel.completeObjectiveAndCreateTransaction(
                                                 objective = obj,
                                                 accountId = account.id,
-                                                categoryId = null
+                                                // categoryId = null
                                             )
                                             // You can still show a generic local snackbar if desired:
                                             showSnackbar("Objective '${obj.desc}' marked complete. Transaction created for '${account.title}'.")

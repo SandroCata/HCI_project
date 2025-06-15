@@ -345,7 +345,7 @@ fun LoanItem(
                                             viewModel.completeLoanAndCreateTransaction(
                                                 loan = loan,
                                                 accountId = account.id,
-                                                categoryId = null // Add category selection if needed later
+                                                // categoryId = null // Add category selection if needed later
                                             )
                                             showSnackbar("${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }} '${loan.desc}' marked complete. Transaction created for '${account.title}'.")
                                             showAccountSelectionForCompletionDialog = false

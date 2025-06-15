@@ -309,7 +309,7 @@ fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewMode
                                                 viewModel.completeLoanAndCreateTransaction(
                                                     loan = loan, // Pass the whole loan
                                                     accountId = account.id, // ViewModel will extract or use this
-                                                    categoryId = null // Add category selection if needed later
+                                                    // categoryId = null // Add category selection if needed later
                                                 )
                                                 scope.launch {
                                                     snackbarHostState.showSnackbar("${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }} '${loan.desc}' marked complete. Transaction created for '${account.title}'.")

@@ -90,6 +90,10 @@ class FinanceRepository(
         categoryDao.update(category)
     }
 
+    suspend fun getCategoryByDescription(description: String): Category? {
+        return categoryDao.getCategoryByDescriptionSuspend(description)
+    }
+
     // ACCOUNTS
     fun getAllAccounts(): Flow<List<Account>> {
         return accountDao.getAllAccounts()

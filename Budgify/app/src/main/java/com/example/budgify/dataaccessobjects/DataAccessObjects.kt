@@ -82,6 +82,9 @@ interface CategoryDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(category: Category)
 
+    @Query("SELECT * FROM categories WHERE `desc` = :description LIMIT 1")
+    suspend fun getCategoryByDescriptionSuspend(description: String): Category?
+
     @Update
     suspend fun update(category: Category)
 
@@ -91,7 +94,7 @@ interface CategoryDao {
     @Query("SELECT * FROM categories ORDER BY id ASC")
     fun getAllCategories(): Flow<List<Category>>
 
-    @Query("SELECT * FROM objectives WHERE id = :id")
+    @Query("SELECT * FROM categories WHERE id = :id")
     fun getCategoryById(id: Int): Flow<Category>
 }
 
