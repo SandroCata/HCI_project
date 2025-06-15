@@ -79,8 +79,8 @@ import androidx.compose.ui.text.style.TextOverflow
 
 // Enum for the sections in LoanManagementScreen, aligning with LoanType
 enum class LoanSectionType(val title: String, val loanType: LoanType) {
-    DEBTS("Debts", LoanType.DEBT),
-    CREDITS("Credits", LoanType.CREDIT); // Semicolon needed if you add functions/companion object
+    CREDITS("Credits", LoanType.CREDIT),
+    DEBTS("Debts", LoanType.DEBT); // Semicolon needed if you add functions/companion object
 
     companion object {
         fun fromLoanType(loanType: LoanType?): LoanSectionType {
@@ -177,7 +177,7 @@ fun CredDebManagementScreen(navController: NavController, viewModel: FinanceView
                         .padding(horizontal = 16.dp)
                         .padding(bottom = 16.dp)
                 ) {
-                    Text("Back to Loans overview")
+                    Text("Back to Loans Overview")
                 }
             }
         }

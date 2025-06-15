@@ -185,7 +185,7 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                         .padding(horizontal = 16.dp) // Padding orizzontale
                         .padding(bottom = 16.dp) // Padding dal fondo
                 ) {
-                    Text("Back to Objectives")
+                    Text("Back to Objectives Overview")
                 }
             }
         }

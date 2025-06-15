@@ -939,6 +939,7 @@ fun AddLoanDialog(
                 // TextButton(onClick = onDismiss) { Text("Cancel") }
                 // Spacer(modifier = Modifier.width(8.dp))
                 Button(
+                    enabled = description.isNotBlank() && amount.isNotBlank() && selectedStartDate != null,
                     onClick = {
                         if (description.isBlank()) {
                             triggerError("Description cannot be empty.")
@@ -975,7 +976,7 @@ fun AddLoanDialog(
                         onDismiss() // Chiudi il dialogo
                     }
                 ) {
-                    Text("Add Loan")
+                    Text("Add")
                 }
             }
         }
