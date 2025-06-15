@@ -171,14 +171,14 @@ fun CredDebManagementScreen(navController: NavController, viewModel: FinanceView
             ) {
                 Button(
                     onClick = {
-                        navController.navigate(ScreenRoutes.Objectives.route)
+                        navController.navigate(ScreenRoutes.CredDeb.route)
                     },
                     modifier = Modifier
                         .fillMaxWidth() // Fallo largo quanto il contenitore per centrarlo meglio con padding
                         .padding(horizontal = 16.dp) // Padding orizzontale
                         .padding(bottom = 16.dp) // Padding dal fondo
                 ) {
-                    Text("Back to Objectives Overview")
+                    Text("Back to Loans Overview")
                 }
             }
         }
