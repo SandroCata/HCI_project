@@ -96,6 +96,9 @@ interface CategoryDao {
 
     @Query("SELECT * FROM categories WHERE id = :id")
     fun getCategoryById(id: Int): Flow<Category>
+
+    @Query("SELECT * FROM categories WHERE id = :id")
+    suspend fun getCategoryByIdNonFlow(id: Int): Category?
 }
 
 

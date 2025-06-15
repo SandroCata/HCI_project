@@ -344,7 +344,9 @@ fun AddTransactionDialog(
 ) {
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
-    val categories by viewModel.allCategories.collectAsStateWithLifecycle()
+    val categoriesForDropdown by viewModel.categoriesForTransactionDialog.collectAsStateWithLifecycle(
+        initialValue = emptyList() // Provide an initial empty list
+    )
     var categoryExpanded by remember { mutableStateOf(false) }
     var selectedCategoryId by remember { mutableStateOf<Int?>(null) } // State for selected category
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
@@ -432,12 +434,12 @@ fun AddTransactionDialog(
                     },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                     )
-                    categories.forEach { category ->
+                    categoriesForDropdown.forEach { category ->
                         DropdownMenuItem(
                             text = { Text(category.desc) },
                             onClick = {
                                 selectedCategoryId = category.id // Store the ID
-                                selectedCategory = category
+                                // selectedCategory = category
                                 categoryExpanded = false
                             },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
@@ -620,7 +622,7 @@ fun AddTransactionDialog(
             onDismiss = { showAddCategoryDialog = false },
             initialType = null,
             onCategoryAdded = { newCategory ->
-//                selectedCategoryId = newCategory.id // Update the state in AddTransactionDialog
+                selectedCategoryId = newCategory.id // Update the state in AddTransactionDialog
 //                selectedCategory = newCategory // Update the state in AddTransactionDialog
                 showAddCategoryDialog = false
             }

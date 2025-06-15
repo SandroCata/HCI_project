@@ -503,6 +503,32 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
         SharingStarted.WhileSubscribed(5000),
         emptyList()
     )
+    private val defaultCategoryDescriptions = setOf(
+        DefaultCategories.OBJECTIVES_EXP.desc,
+        DefaultCategories.OBJECTIVES_INC.desc,
+        DefaultCategories.LOANS_INC.desc, // Assuming LOANS_INC is Credits
+        DefaultCategories.LOANS_EXP.desc  // Assuming LOANS_EXP is Debts
+    )
+    suspend fun isDefaultCategory(categoryId: Int?): Boolean {
+        if (categoryId == null) return false
+
+        // This will now call the suspend fun FinanceRepository.getCategoryById(Int)
+        // which in turn calls suspend fun CategoryDao.getCategoryById(Int)
+        val category = repository.getCategoryByIdNonFlow(categoryId)
+        return category?.desc in defaultCategoryDescriptions
+    }
+    val categoriesForTransactionDialog: Flow<List<Category>> = allCategories.map { categories ->
+        val defaultCategoryDescriptions = setOf(
+            DefaultCategories.OBJECTIVES_EXP.desc,
+            DefaultCategories.OBJECTIVES_INC.desc,
+            DefaultCategories.LOANS_INC.desc,
+            DefaultCategories.LOANS_EXP.desc
+        )
+        categories.filterNot { category ->
+            // Check if the category's description is in our set of default descriptions
+            defaultCategoryDescriptions.contains(category.desc)
+        }
+    }
     fun addCategory(category: Category) {
         viewModelScope.launch {
             repository.insertCategory(category)
