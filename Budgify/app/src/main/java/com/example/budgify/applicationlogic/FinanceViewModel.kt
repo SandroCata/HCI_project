@@ -633,9 +633,10 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
             initialValue = emptyList()
         )
 
-    val totalCreditLoans: StateFlow<Double> = allLoans
+    val totalActiveCreditLoans: StateFlow<Double> = allLoans
         .map { loans ->
-            loans.filter { it.type == LoanType.CREDIT }.sumOf { it.amount }
+            loans.filter { it.type == LoanType.CREDIT && !it.completed } // Filtra per TIPO e NON COMPLETATI
+                .sumOf { it.amount }
         }
         .stateIn(
             scope = viewModelScope,
@@ -643,9 +644,10 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
             initialValue = 0.0
         )
 
-    val totalDebtLoans: StateFlow<Double> = allLoans
+    val totalActiveDebtLoans: StateFlow<Double> = allLoans
         .map { loans ->
-            loans.filter { it.type == LoanType.DEBT }.sumOf { it.amount }
+            loans.filter { it.type == LoanType.DEBT && !it.completed } // Filtra per TIPO e NON COMPLETATI
+                .sumOf { it.amount }
         }
         .stateIn(
             scope = viewModelScope,
@@ -653,7 +655,7 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
             initialValue = 0.0
         )
 
-    val lastThreeLoans: StateFlow<List<Loan>> = allLoans
+    val latestActiveLoans: StateFlow<List<Loan>> = allLoans
         .map { loans ->
             // Il DAO già ordina per startDate DESC, quindi prendiamo solo i primi 3
             loans.takeLast(6).reversed()

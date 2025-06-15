@@ -439,7 +439,7 @@ fun AddTransactionDialog(
                             text = { Text(category.desc) },
                             onClick = {
                                 selectedCategoryId = category.id // Store the ID
-                                // selectedCategory = category
+                                selectedCategory = category
                                 categoryExpanded = false
                             },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding

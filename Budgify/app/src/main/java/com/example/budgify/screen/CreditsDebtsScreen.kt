@@ -82,11 +82,11 @@ fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewMode
     val currentRoute by remember { mutableStateOf(ScreenRoutes.CredDeb.route) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val totalCredits by viewModel.totalCreditLoans.collectAsStateWithLifecycle()
-    val totalDebits by viewModel.totalDebtLoans.collectAsStateWithLifecycle()
+    val totalActiveCredits by viewModel.totalActiveCreditLoans.collectAsStateWithLifecycle()
+    val totalActiveDebts by viewModel.totalActiveDebtLoans.collectAsStateWithLifecycle()
     // Filter out paid loans from lastThreeLoans if you only want to show active ones here
     // Or adjust LoanRow to visually indicate paid status
-    val lastThreeLoans by viewModel.lastThreeLoans.collectAsStateWithLifecycle()
+    val lastThreeLoans by viewModel.latestActiveLoans.collectAsStateWithLifecycle()
 
     // Stati per la gestione dei dialoghi e del prestito selezionato
     var showActionChoiceDialog by remember { mutableStateOf(false) }
@@ -126,14 +126,14 @@ fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewMode
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ClickableAmountArea(
-                    title = "Total Credits",
-                    amount = totalCredits,
+                    title = "Total Active Credits",
+                    amount = totalActiveCredits,
                     icon = Icons.Filled.ArrowUpward,
                     iconColor = Color(0xFF4CAF50)
                 ) { navController.navigate(ScreenRoutes.credDebManagementRouteWithArg(LoanType.CREDIT)) }
                 ClickableAmountArea(
-                    title = "Total Debts",
-                    amount = totalDebits,
+                    title = "Total Active Debts",
+                    amount = totalActiveDebts,
                     icon = Icons.Filled.ArrowDownward,
                     iconColor = Color(0xFFF44336)
                 ) { navController.navigate(ScreenRoutes.credDebManagementRouteWithArg(LoanType.DEBT)) }
@@ -515,12 +515,12 @@ fun ClickableAmountArea(
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold
         )
         Text(
             text = currencyFormat.format(amount), // Use the currency formatter
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
         )
     }
 }
