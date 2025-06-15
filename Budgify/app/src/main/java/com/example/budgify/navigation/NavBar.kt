@@ -812,6 +812,13 @@ fun AddLoanDialog(
     var selectedType by remember { mutableStateOf(LoanType.DEBT) }
     val loanTypes = LoanType.entries.toList()
 
+    val accounts by viewModel.allAccounts.collectAsStateWithLifecycle()
+    var accountExpanded by remember { mutableStateOf(false) }
+    var selectedAccountId by remember { mutableStateOf<Int?>(null) }
+    val selectedAccount = remember(accounts, selectedAccountId) {
+        accounts.firstOrNull { it.id == selectedAccountId }
+    }
+
     var showDatePickerDialog by remember { mutableStateOf(false) }
     var datePickerTarget by remember { mutableStateOf<String?>(null) }
 
@@ -859,6 +866,52 @@ fun AddLoanDialog(
                 // a meno che non si voglia un feedback immediato più complesso.
                 // isError = (amount.isBlank() || amount.replace(',', '.').toDoubleOrNull() == null || amount.replace(',', '.').toDoubleOrNull()!! <= 0) && showErrorDialog
             )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (accounts.isNotEmpty()) {
+                ExposedDropdownMenuBox(
+                    expanded = accountExpanded,
+                    onExpandedChange = { accountExpanded = !accountExpanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    TextField(
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        readOnly = true,
+                        value = selectedAccount?.title ?: "Select Account", // Display title or placeholder
+                        onValueChange = {},
+                        label = { Text("Account") }, // Label for clarity
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded)
+                        },
+                        colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                        isError = selectedAccountId == null && showErrorDialog // Error if no account selected and trying to save
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = accountExpanded,
+                        onDismissRequest = { accountExpanded = false }
+                    ) {
+                        accounts.forEach { account ->
+                            DropdownMenuItem(
+                                text = { Text(account.title) },
+                                onClick = {
+                                    selectedAccountId = account.id // Store the ID
+                                    accountExpanded = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
+                    }
+                }
+            } else {
+                Text(
+                    "No accounts available. Please create an account first to associate with this loan's transaction.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
 
             TextField(
@@ -937,11 +990,8 @@ fun AddLoanDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center // O Arrangement.End per allineare i pulsanti a destra
             ) {
-                // Potresti aggiungere un pulsante "Cancel" qui se lo desideri
-                // TextButton(onClick = onDismiss) { Text("Cancel") }
-                // Spacer(modifier = Modifier.width(8.dp))
                 Button(
-                    enabled = description.isNotBlank() && amount.isNotBlank() && selectedStartDate != null,
+                    enabled = description.isNotBlank() && amount.isNotBlank() && selectedStartDate != null && selectedAccountId != null && accounts.isNotEmpty(),
                     onClick = {
                         if (description.isBlank()) {
                             triggerError("Description cannot be empty.")
@@ -953,6 +1003,11 @@ fun AddLoanDialog(
 
                         if (amountDouble == null || amountDouble <= 0) {
                             triggerError("Please enter a valid amount greater than zero.")
+                            return@Button
+                        }
+
+                        if (selectedAccountId == null) {
+                            triggerError("Please select an account to associate with this loan's transaction.")
                             return@Button
                         }
 
@@ -973,7 +1028,7 @@ fun AddLoanDialog(
                             startDate = selectedStartDate!!,
                             endDate = selectedEndDate
                         )
-                        viewModel.addLoan(newLoan)
+                        viewModel.addLoan(newLoan, selectedAccountId!!)
                         onLoanAdded(newLoan) // Callback per notificare l'aggiunta
                         onDismiss() // Chiudi il dialogo
                     }

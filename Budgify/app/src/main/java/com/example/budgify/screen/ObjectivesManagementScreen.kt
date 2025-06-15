@@ -68,6 +68,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.budgify.applicationlogic.FinanceViewModel
+import com.example.budgify.entities.LoanType
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.navigation.BottomBar
@@ -208,6 +209,8 @@ fun ObjectiveItem(
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
     var showAccountSelectionForCompletionDialog by remember { mutableStateOf(false) }
+    var showInsufficientBalanceDialog by remember { mutableStateOf(false) }
+    var insufficientBalanceAccountInfo by remember { mutableStateOf<Pair<String, Double>?>(null) }
 
     val backgroundColor = when (obj.type) {
         ObjectiveType.INCOME -> Color(0xff0db201)
@@ -323,23 +326,23 @@ fun ObjectiveItem(
                                 items(accounts, key = { it.id }) { account ->
                                     ListItem(
                                         headlineContent = { Text(account.title) },
-                                        // supportingContent = { Text("Optional: Account type or balance") },
-                                        // leadingContent = {
-                                        //    Icon(
-                                        //        Icons.Filled.AccountBalanceWallet,
-                                        //        contentDescription = "Account",
-                                        //    )
-                                        // },
+                                        supportingContent = { Text("Balance: ${account.amount} €") },
                                         modifier = Modifier.clickable {
                                             Log.d("XP_DEBUG", "Account selected: ${account.title} for objective: ${obj.desc}. Calling completeObjectiveAndCreateTransaction.")
-                                            viewModel.completeObjectiveAndCreateTransaction(
-                                                objective = obj,
-                                                accountId = account.id,
-                                                // categoryId = null
-                                            )
-                                            // You can still show a generic local snackbar if desired:
-                                            showSnackbar("Objective '${obj.desc}' marked complete. Transaction created for '${account.title}'.")
-                                            showAccountSelectionForCompletionDialog = false
+                                            if (obj.type == ObjectiveType.EXPENSE && obj.amount > account.amount) {
+                                                insufficientBalanceAccountInfo = Pair(account.title, account.amount)
+                                                showInsufficientBalanceDialog = true
+                                                showAccountSelectionForCompletionDialog = false
+                                            } else {
+                                                viewModel.completeObjectiveAndCreateTransaction(
+                                                    objective = obj,
+                                                    accountId = account.id,
+                                                    // categoryId = null
+                                                )
+                                                // You can still show a generic local snackbar if desired:
+                                                showSnackbar("Objective '${obj.desc}' marked complete. Transaction created for '${account.title}'.")
+                                                showAccountSelectionForCompletionDialog = false
+                                            }
                                         },
                                         colors = ListItemDefaults.colors(
                                             containerColor = Color.Transparent
@@ -355,6 +358,33 @@ fun ObjectiveItem(
                 confirmButton = {} // Confirm button is handled by item clicks
             )
         }
+    }
+
+    if (showInsufficientBalanceDialog && insufficientBalanceAccountInfo != null) {
+        val (accTitle, accBalance) = insufficientBalanceAccountInfo!!
+        AlertDialog(
+            onDismissRequest = {
+                showInsufficientBalanceDialog = false
+                insufficientBalanceAccountInfo = null
+            },
+            title = { Text("Insufficient Balance") },
+            text = {
+                Text(
+                    "Account '${accTitle}' has insufficient balance.\n\n" +
+                            "Required: ${obj.amount} €\n" +
+                            "Available: $accBalance €\n\n" +
+                            "Please select another account or add funds."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showInsufficientBalanceDialog = false
+                    insufficientBalanceAccountInfo = null
+                }) {
+                    Text("OK")
+                }
+            }
+        )
     }
 
     // Dialogo di Modifica Obiettivo
