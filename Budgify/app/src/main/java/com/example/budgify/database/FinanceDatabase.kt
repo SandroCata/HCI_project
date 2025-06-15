@@ -1,11 +1,14 @@
 package com.example.budgify.database
 
 import android.content.Context
+import android.util.Log
+import androidx.activity.result.launch
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.budgify.dataaccessobjects.AccountDao
 import com.example.budgify.dataaccessobjects.CategoryDao
 import com.example.budgify.dataaccessobjects.LoanDao
@@ -14,11 +17,15 @@ import com.example.budgify.dataaccessobjects.TransactionDao
 import com.example.budgify.entities.Account
 import com.example.budgify.entities.Category
 import com.example.budgify.entities.CategoryType
+import com.example.budgify.entities.DefaultCategories
 import com.example.budgify.entities.Loan
 import com.example.budgify.entities.MyTransaction
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.entities.TransactionType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 class Converters {
@@ -77,7 +84,7 @@ class Converters {
         Category::class,
         Loan::class
    ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(Converters::class) // Se hai bisogno di TypeConverters
@@ -94,7 +101,7 @@ abstract class FinanceDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: FinanceDatabase? = null
 
-        fun getDatabase(context: Context): FinanceDatabase {
+        fun getDatabase(context: Context, scope: CoroutineScope): FinanceDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
@@ -104,10 +111,48 @@ abstract class FinanceDatabase : RoomDatabase() {
                     // Wipes and rebuilds instead of migrating if no Migration object.
                     // Migration is not covered in this codelab.
                     .fallbackToDestructiveMigration()
+                    .addCallback(FinanceDatabaseCallback(scope))
                     .build()
                 INSTANCE = instance
                 instance
             }
+        }
+    }
+
+    private class FinanceDatabaseCallback(
+        private val scope: CoroutineScope
+    ) : Callback() {
+
+        override fun onCreate(db: SupportSQLiteDatabase) {
+            super.onCreate(db)
+            INSTANCE?.let { database ->
+                scope.launch(Dispatchers.IO) { // Perform on a background thread
+                    populateDatabase(database.categoryDao())
+                }
+            }
+        }
+
+        suspend fun populateDatabase(categoryDao: CategoryDao) {
+            // Add default categories if the table is empty (which it will be on first create)
+            // You could add a check here if needed, but onCreate is usually sufficient.
+
+            // Check if default categories already exist (optional, but good for robustness
+            // if this callback were ever called under different circumstances, though onCreate is reliable)
+            // Check for existence before inserting
+            if (categoryDao.getCategoryByDescriptionSuspend(DefaultCategories.OBJECTIVES_EXP.desc) == null) {
+                categoryDao.insert(DefaultCategories.OBJECTIVES_EXP)
+            }
+            if (categoryDao.getCategoryByDescriptionSuspend(DefaultCategories.OBJECTIVES_INC.desc) == null) {
+                categoryDao.insert(DefaultCategories.OBJECTIVES_INC)
+            }
+            if (categoryDao.getCategoryByDescriptionSuspend(DefaultCategories.LOANS_EXP.desc) == null) {
+                categoryDao.insert(DefaultCategories.LOANS_EXP)
+            }
+            if (categoryDao.getCategoryByDescriptionSuspend(DefaultCategories.LOANS_INC.desc) == null) {
+                categoryDao.insert(DefaultCategories.LOANS_INC)
+            }
+            // You can log here if needed
+            Log.d("AppDatabase", "Default categories pre-populated.")
         }
     }
 }

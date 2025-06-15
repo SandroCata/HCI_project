@@ -49,6 +49,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -389,7 +390,7 @@ fun EditTransactionDialog(
     // Use the existing transaction data as initial state for editing
     var description by remember { mutableStateOf(transaction.description) }
     var amount by remember { mutableStateOf(transaction.amount.toString().replace('.', ',')) } // Use comma for display
-    val categories by viewModel.allCategories.collectAsStateWithLifecycle()
+    val categories by viewModel.categoriesForTransactionDialog.collectAsStateWithLifecycle(initialValue = emptyList())
     var categoryExpanded by remember { mutableStateOf(false) }
     var selectedCategoryId by remember { mutableStateOf<Int?>(transaction.categoryId) }
     val selectedCategory = remember(categories, selectedCategoryId) {
@@ -405,9 +406,19 @@ fun EditTransactionDialog(
     }
     val transactionTypes = listOf(TransactionType.EXPENSE, TransactionType.INCOME)
     var showDatePickerDialog by remember { mutableStateOf(false) }
+    var isOriginalCategoryDefault by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    // Check if the initial category is a default one
+    LaunchedEffect(key1 = transaction.categoryId) {
+        if (transaction.categoryId != null) {
+            isOriginalCategoryDefault = viewModel.isDefaultCategory(transaction.categoryId)
+        } else {
+            isOriginalCategoryDefault = false
+        }
+    }
+    val allCategoriesFromVm by viewModel.allCategories.collectAsStateWithLifecycle(initialValue = emptyList())
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -449,52 +460,72 @@ fun EditTransactionDialog(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Category Dropdown Menu
-            ExposedDropdownMenuBox(
-                expanded = categoryExpanded,
-                onExpandedChange = { categoryExpanded = !categoryExpanded },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                TextField(
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth(),
-                    readOnly = true,
-                    value = selectedCategory?.desc ?: "Uncategorized",
-                    onValueChange = {},
-                    label = { Text("Category") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
-                    },
-                    colors = ExposedDropdownMenuDefaults.textFieldColors(),
-                    // No specific error state needed here unless selection is mandatory and not made
-                )
-
-                ExposedDropdownMenu(
+            if (!isOriginalCategoryDefault) {
+                // Category Dropdown Menu
+                ExposedDropdownMenuBox(
                     expanded = categoryExpanded,
-                    onDismissRequest = { categoryExpanded = false }
+                    onExpandedChange = { categoryExpanded = !categoryExpanded },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("Uncategorized", style = TextStyle(fontWeight = FontWeight.Bold)) },
-                        onClick = {
-                            selectedCategoryId = null
-                            // selectedCategory will update via remember
-                            categoryExpanded = false
+                    TextField(
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        readOnly = true,
+                        value = selectedCategory?.desc ?: "Uncategorized",
+                        onValueChange = {},
+                        label = { Text("Category") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
                         },
-                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                        // No specific error state needed here unless selection is mandatory and not made
                     )
-                    categories.forEach { category ->
+
+                    ExposedDropdownMenu(
+                        expanded = categoryExpanded,
+                        onDismissRequest = { categoryExpanded = false }
+                    ) {
                         DropdownMenuItem(
-                            text = { Text(category.desc) },
+                            text = {
+                                Text(
+                                    "Uncategorized",
+                                    style = TextStyle(fontWeight = FontWeight.Bold)
+                                )
+                            },
                             onClick = {
-                                selectedCategoryId = category.id
+                                selectedCategoryId = null
                                 // selectedCategory will update via remember
                                 categoryExpanded = false
                             },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                         )
+                        categories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category.desc) },
+                                onClick = {
+                                    selectedCategoryId = category.id
+                                    // selectedCategory will update via remember
+                                    categoryExpanded = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
                     }
                 }
+            } else {
+                // Display the current default category as non-editable text
+                val originalCategoryName = remember(allCategoriesFromVm, transaction.categoryId) {
+                    allCategoriesFromVm.firstOrNull { it.id == transaction.categoryId }?.desc ?: "System Category"
+                }
+                TextField(
+                    value = originalCategoryName,
+                    onValueChange = {},
+                    label = { Text("Category (System)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    readOnly = true,
+                    enabled = false
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
 

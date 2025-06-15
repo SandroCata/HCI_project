@@ -83,11 +83,18 @@ class FinanceRepository(
     fun getCategoryById(id: Int): Flow<Category> {
         return categoryDao.getCategoryById(id)
     }
+    suspend fun getCategoryByIdNonFlow(id: Int): Category? {
+        return categoryDao.getCategoryByIdNonFlow(id) // Calls the new suspend fun in DAO
+    }
     suspend fun deleteCategory(category: Category) {
         categoryDao.delete(category)
     }
     suspend fun updateCategory(category: Category) {
         categoryDao.update(category)
+    }
+
+    suspend fun getCategoryByDescription(description: String): Category? {
+        return categoryDao.getCategoryByDescriptionSuspend(description)
     }
 
     // ACCOUNTS

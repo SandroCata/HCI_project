@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.budgify.entities.Account
 import com.example.budgify.entities.Category
+import com.example.budgify.entities.DefaultCategories
 import com.example.budgify.entities.Loan
 import com.example.budgify.entities.LoanType
 import com.example.budgify.entities.MyTransaction
@@ -194,20 +195,40 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
     fun completeLoanAndCreateTransaction(
         loan: Loan,
         accountId: Int,
-        categoryId: Int? = null,
+        // categoryId: Int? = null,
         // onCompletionFeedback: ((newLevel: Int, newlyUnlockedTheme: AppTheme?) -> Unit)? = null
     ) { // Added optional categoryId
         Log.d("XP_DEBUG", "completeObjectiveAndCreateTransaction called for objective: ${loan.desc}, accountId: $accountId")
         viewModelScope.launch {
             if (!loan.completed) {
-                // 1. Mark objective as completed
+                // 1. Mark loan as completed
                 val updatedLoan = loan.copy(completed = true)
                 repository.updateLoan(updatedLoan) // You already have this in your repository
 
                 // 2. Create a transaction
-                val transactionType = when (loan.type) {
-                    LoanType.DEBT -> TransactionType.EXPENSE
-                    LoanType.CREDIT -> TransactionType.INCOME
+                val transactionType: TransactionType
+                val defaultCategoryDescription: String
+                when (loan.type) {
+                    LoanType.DEBT -> { // You paid off a debt, so it's an EXPENSE transaction
+                        transactionType = TransactionType.EXPENSE
+                        defaultCategoryDescription = DefaultCategories.LOANS_EXP.desc // e.g., "Loan Repayment Made"
+                    }
+                    LoanType.CREDIT -> { // Someone paid you back, so it's an INCOME transaction
+                        transactionType = TransactionType.INCOME
+                        defaultCategoryDescription = DefaultCategories.LOANS_INC.desc // e.g., "Loan Repayment Received"
+                    }
+                }
+
+                Log.d("VM_LoanCategoryFetch", "ViewModel looking for loan category description: '$defaultCategoryDescription'")
+
+                val defaultCategory = withContext(Dispatchers.IO) {
+                    repository.getCategoryByDescription(defaultCategoryDescription)
+                }
+                val categoryIdForTransaction = defaultCategory?.id
+
+                if (categoryIdForTransaction == null) {
+                    Log.e("FinanceViewModel", "Could not find default category for loan: $defaultCategoryDescription. Transaction for loan '${loan.desc}' will have no category.")
+                    _snackbarMessages.emit("Error: Default category '$defaultCategoryDescription' not found for loan. Transaction created without category.")
                 }
 
                 val newTransaction = MyTransaction(
@@ -217,7 +238,7 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
                     date = LocalDate.now(), // Or objective.endDate, if preferred
                     description = "Loan: ${loan.desc}",
                     amount = loan.amount,
-                    categoryId = categoryId // Pass the selected categoryId, or null
+                    categoryId = categoryIdForTransaction // Pass the selected categoryId, or null
                 )
                 // Use your existing addTransaction function which also handles updating account balance
                 addTransaction(newTransaction)
@@ -238,7 +259,7 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
     fun completeObjectiveAndCreateTransaction(
         objective: Objective,
         accountId: Int,
-        categoryId: Int? = null,
+        // categoryId: Int? = null,
         // onCompletionFeedback: ((newLevel: Int, newlyUnlockedTheme: AppTheme?) -> Unit)? = null
     ) { // Added optional categoryId
         Log.d("XP_DEBUG", "completeObjectiveAndCreateTransaction called for objective: ${objective.desc}, accountId: $accountId")
@@ -248,11 +269,36 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
                 val updatedObjective = objective.copy(completed = true)
                 repository.updateObjective(updatedObjective) // You already have this in your repository
 
-                // 2. Create a transaction
-                val transactionType = when (objective.type) {
-                    ObjectiveType.INCOME -> TransactionType.INCOME
-                    ObjectiveType.EXPENSE -> TransactionType.EXPENSE
+                // 2. Determine TransactionType and fetch corresponding default Category ID
+                val transactionType: TransactionType
+                val defaultCategoryDescription: String
+
+                when (objective.type) {
+                    ObjectiveType.INCOME -> {
+                        transactionType = TransactionType.INCOME
+                        defaultCategoryDescription = DefaultCategories.OBJECTIVES_INC.desc // from your DefaultCategories object
+                    }
+                    ObjectiveType.EXPENSE -> {
+                        transactionType = TransactionType.EXPENSE
+                        defaultCategoryDescription = DefaultCategories.OBJECTIVES_EXP.desc // from your DefaultCategories object
+                    }
                 }
+
+                // Fetch the category ID from the repository
+                // Ensure your CategoryDao has a method like getCategoryByDescriptionSuspend
+                val defaultCategory = withContext(Dispatchers.IO) { // Perform DB operation off the main thread
+                    repository.getCategoryByDescription(defaultCategoryDescription)
+                }
+
+                val categoryIdForTransaction = defaultCategory?.id // Use the fetched category's ID
+
+                if (categoryIdForTransaction == null) {
+                    Log.e("FinanceViewModel", "Could not find default category: $defaultCategoryDescription. Transaction for objective '${objective.desc}' will have no category.")
+                    // Optionally, emit a snackbar message about the missing category
+                    _snackbarMessages.emit("Error: Default category '$defaultCategoryDescription' not found. Transaction created without category.")
+                }
+
+                // 3. Create a transaction
 
                 val newTransaction = MyTransaction(
                     // id will be auto-generated by Room
@@ -261,11 +307,12 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
                     date = LocalDate.now(), // Or objective.endDate, if preferred
                     description = "Objective: ${objective.desc}",
                     amount = objective.amount,
-                    categoryId = categoryId // Pass the selected categoryId, or null
+                    categoryId = categoryIdForTransaction // Pass the selected categoryId, or null
                 )
                 // Use your existing addTransaction function which also handles updating account balance
                 addTransaction(newTransaction)
 
+                // 4. Add XP
                 val xpGained = calculateXpForObjective(objective)
                 addXp(xpGained, null)
 
@@ -456,6 +503,32 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
         SharingStarted.WhileSubscribed(5000),
         emptyList()
     )
+    private val defaultCategoryDescriptions = setOf(
+        DefaultCategories.OBJECTIVES_EXP.desc,
+        DefaultCategories.OBJECTIVES_INC.desc,
+        DefaultCategories.LOANS_INC.desc, // Assuming LOANS_INC is Credits
+        DefaultCategories.LOANS_EXP.desc  // Assuming LOANS_EXP is Debts
+    )
+    suspend fun isDefaultCategory(categoryId: Int?): Boolean {
+        if (categoryId == null) return false
+
+        // This will now call the suspend fun FinanceRepository.getCategoryById(Int)
+        // which in turn calls suspend fun CategoryDao.getCategoryById(Int)
+        val category = repository.getCategoryByIdNonFlow(categoryId)
+        return category?.desc in defaultCategoryDescriptions
+    }
+    val categoriesForTransactionDialog: Flow<List<Category>> = allCategories.map { categories ->
+        val defaultCategoryDescriptions = setOf(
+            DefaultCategories.OBJECTIVES_EXP.desc,
+            DefaultCategories.OBJECTIVES_INC.desc,
+            DefaultCategories.LOANS_INC.desc,
+            DefaultCategories.LOANS_EXP.desc
+        )
+        categories.filterNot { category ->
+            // Check if the category's description is in our set of default descriptions
+            defaultCategoryDescriptions.contains(category.desc)
+        }
+    }
     fun addCategory(category: Category) {
         viewModelScope.launch {
             repository.insertCategory(category)

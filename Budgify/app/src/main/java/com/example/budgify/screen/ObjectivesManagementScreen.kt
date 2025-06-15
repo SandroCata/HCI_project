@@ -185,7 +185,7 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                         .padding(horizontal = 16.dp) // Padding orizzontale
                         .padding(bottom = 16.dp) // Padding dal fondo
                 ) {
-                    Text("Back to Objectives")
+                    Text("Back to Objectives Overview")
                 }
             }
         }
@@ -335,7 +335,7 @@ fun ObjectiveItem(
                                             viewModel.completeObjectiveAndCreateTransaction(
                                                 objective = obj,
                                                 accountId = account.id,
-                                                categoryId = null
+                                                // categoryId = null
                                             )
                                             // You can still show a generic local snackbar if desired:
                                             showSnackbar("Objective '${obj.desc}' marked complete. Transaction created for '${account.title}'.")

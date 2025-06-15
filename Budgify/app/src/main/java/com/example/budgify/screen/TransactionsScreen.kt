@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -43,6 +44,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -96,6 +98,7 @@ fun TransactionsScreen(navController: NavController, viewModel: FinanceViewModel
             snackbarHostState.showSnackbar(message)
         }
     }
+    val allTransactionsWithDetails by viewModel.allTransactionsWithDetails.collectAsStateWithLifecycle(initialValue = emptyList())
 
     Scaffold (
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -118,6 +121,7 @@ fun TransactionsScreen(navController: NavController, viewModel: FinanceViewModel
             item {
                 // Pass the onDaySelected lambda to update the selectedDate state
                 MonthlyCalendar(
+                    viewModel = viewModel,
                     onDaySelected = { date ->
                         selectedDate = date // Update the selected date state
                     }
@@ -141,10 +145,25 @@ fun TransactionsScreen(navController: NavController, viewModel: FinanceViewModel
 
 @Composable
 fun MonthlyCalendar(
+    viewModel: FinanceViewModel,
     onDaySelected: (LocalDate) -> Unit
 ) {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     val selectedDate = remember { mutableStateOf<LocalDate?>(null) }
+    val allTransactions by viewModel.allTransactionsWithDetails.collectAsStateWithLifecycle(emptyList())
+    val transactionDatesForCurrentMonth by remember(allTransactions, currentMonth) {
+        derivedStateOf {
+            allTransactions
+                .filter { transactionWithDetails ->
+                    val transactionDate = transactionWithDetails.transaction.date
+                    transactionDate.year == currentMonth.year && transactionDate.month == currentMonth.month
+                }
+                .map { it.transaction.date }
+                .distinct()
+                .toSet()
+        }
+    }
+
 
     val firstDayOfMonth = currentMonth.atDay(1)
     val daysInMonth = currentMonth.lengthOfMonth()
@@ -221,6 +240,7 @@ fun MonthlyCalendar(
                     week.forEach { day ->
                         val isSelected = selectedDate.value == day
                         val isToday = day == LocalDate.now()
+                        val hasTransactions = day != null && transactionDatesForCurrentMonth.contains(day)
 
                         Box(
                             modifier = Modifier
@@ -236,25 +256,48 @@ fun MonthlyCalendar(
                             contentAlignment = Alignment.Center
                         ) {
                             if (day != null) {
-                                Surface(
-                                    shape = MaterialTheme.shapes.small,
-                                    color = when {
-                                        isSelected -> MaterialTheme.colorScheme.primary
-                                        isToday -> MaterialTheme.colorScheme.primaryContainer
-                                        else -> Color.Transparent
-                                    }
+                                Column( // Use Column to stack Text and Dot
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxSize() // Allow Column to fill the Box for centering
                                 ) {
-                                    Text(
-                                        text = day.dayOfMonth.toString(),
-                                        fontSize = 14.sp,
-                                        textAlign = TextAlign.Center,
+                                    Surface( // Surface for the number background
+                                        modifier = Modifier.padding(2.dp), // Padding around the number surface
+                                        shape = MaterialTheme.shapes.small, // Or CircleShape
                                         color = when {
-                                            isSelected -> MaterialTheme.colorScheme.onPrimary
-                                            isToday -> MaterialTheme.colorScheme.onPrimaryContainer
-                                            else -> LocalContentColor.current
-                                        },
-                                        modifier = Modifier.padding(10.dp)
-                                    )
+                                            isSelected -> MaterialTheme.colorScheme.primary
+                                            isToday -> MaterialTheme.colorScheme.primaryContainer
+                                            else -> Color.Transparent
+                                        }
+                                    ) {
+                                        Text(
+                                            text = day.dayOfMonth.toString(),
+                                            fontSize = 14.sp,
+                                            textAlign = TextAlign.Center,
+                                            color = when {
+                                                isSelected -> MaterialTheme.colorScheme.onPrimary
+                                                isToday -> MaterialTheme.colorScheme.onPrimaryContainer
+                                                else -> LocalContentColor.current
+                                            },
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp) // Adjust padding for number
+                                        )
+                                    }
+
+                                    if (hasTransactions) {
+                                        Spacer(modifier = Modifier.height(2.dp)) // Space between number and dot
+                                        Box( // This is the dot
+                                            modifier = Modifier
+                                                .size(5.dp) // Size of the dot
+                                                .background(
+                                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                                                    shape = RoundedCornerShape(50) // Make it a circle
+                                                )
+                                        )
+                                    } else {
+                                        // If no transactions, add a spacer to maintain alignment if other days have dots
+                                        // Or remove this Spacer if you prefer days without dots to take less vertical space
+                                        Spacer(modifier = Modifier.height(7.dp)) // 5dp (dot size) + 2dp (spacer)
+                                    }
                                 }
                             }
                         }
@@ -525,7 +568,7 @@ fun EditTransactionDialog2(
     // Use the existing transaction data as initial state for editing
     var description by remember { mutableStateOf(transaction.description) }
     var amount by remember { mutableStateOf(transaction.amount.toString().replace('.', ',')) } // Use comma for display
-    val categories by viewModel.allCategories.collectAsStateWithLifecycle()
+    val categories by viewModel.categoriesForTransactionDialog.collectAsStateWithLifecycle(initialValue = emptyList())
     var categoryExpanded by remember { mutableStateOf(false) }
     var selectedCategoryId by remember { mutableStateOf<Int?>(transaction.categoryId) }
     val selectedCategory = remember(categories, selectedCategoryId) {
@@ -541,9 +584,17 @@ fun EditTransactionDialog2(
     }
     val transactionTypes = listOf(TransactionType.EXPENSE, TransactionType.INCOME)
     var showDatePickerDialog by remember { mutableStateOf(false) }
+    var isOriginalCategoryDefault by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    LaunchedEffect(key1 = transaction.categoryId) {
+        if (transaction.categoryId != null) {
+            isOriginalCategoryDefault = viewModel.isDefaultCategory(transaction.categoryId)
+        } else {
+            isOriginalCategoryDefault = false
+        }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -585,54 +636,78 @@ fun EditTransactionDialog2(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Category Dropdown Menu
-            ExposedDropdownMenuBox(
-                expanded = categoryExpanded,
-                onExpandedChange = { categoryExpanded = !categoryExpanded },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                TextField(
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth(),
-                    readOnly = true,
-                    value = selectedCategory?.desc ?: "Uncategorized",
-                    onValueChange = {},
-                    label = { Text("Category") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
-                    },
-                    colors = ExposedDropdownMenuDefaults.textFieldColors(),
-                    // No specific error state needed here unless selection is mandatory and not made
-                )
-
-                ExposedDropdownMenu(
+            if (!isOriginalCategoryDefault) {
+                // Category Dropdown Menu
+                ExposedDropdownMenuBox(
                     expanded = categoryExpanded,
-                    onDismissRequest = { categoryExpanded = false }
+                    onExpandedChange = { categoryExpanded = !categoryExpanded },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("Uncategorized", style = TextStyle(fontWeight = FontWeight.Bold)) },
-                        onClick = {
-                            selectedCategoryId = null
-                            // selectedCategory will update via remember
-                            categoryExpanded = false
+                    TextField(
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        readOnly = true,
+                        value = selectedCategory?.desc ?: "Uncategorized",
+                        onValueChange = {},
+                        label = { Text("Category") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
                         },
-                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                        // No specific error state needed here unless selection is mandatory and not made
                     )
-                    categories.forEach { category ->
+
+                    ExposedDropdownMenu(
+                        expanded = categoryExpanded,
+                        onDismissRequest = { categoryExpanded = false }
+                    ) {
                         DropdownMenuItem(
-                            text = { Text(category.desc) },
+                            text = {
+                                Text(
+                                    "Uncategorized",
+                                    style = TextStyle(fontWeight = FontWeight.Bold)
+                                )
+                            },
                             onClick = {
-                                selectedCategoryId = category.id
+                                selectedCategoryId = null
                                 // selectedCategory will update via remember
                                 categoryExpanded = false
                             },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                         )
+                        categories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category.desc) },
+                                onClick = {
+                                    selectedCategoryId = category.id
+                                    // selectedCategory will update via remember
+                                    categoryExpanded = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+            } else {
+                // Optionally, display the current default category as non-editable text
+                val currentTransactionCategory by viewModel.allCategories
+                    .collectAsStateWithLifecycle(initialValue = emptyList()) // Collect all to find the name
+                val originalCategoryName = remember(currentTransactionCategory, transaction.categoryId) {
+                    currentTransactionCategory.firstOrNull { it.id == transaction.categoryId }?.desc ?: "Default Category"
+                }
+
+                TextField(
+                    value = originalCategoryName,
+                    onValueChange = {},
+                    label = { Text("Category (System)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    readOnly = true,
+                    enabled = false // Visually indicate it's not interactive
+                )
+                Spacer(modifier = Modifier.height(8.dp))
             }
-            Spacer(modifier = Modifier.height(8.dp))
 
             // Account Dropdown Menu
             ExposedDropdownMenuBox(
