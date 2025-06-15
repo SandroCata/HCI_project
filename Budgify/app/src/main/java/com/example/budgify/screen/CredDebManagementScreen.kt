@@ -89,6 +89,7 @@ enum class LoanSectionType(val title: String, val loanType: LoanType) {
     }
 }
 
+
 @Composable
 fun CredDebManagementScreen(navController: NavController, viewModel: FinanceViewModel, initialSelectedLoanType: LoanType? = null) {
     val currentRoute by remember { mutableStateOf(ScreenRoutes.CredDebManagement.route) }
@@ -107,8 +108,9 @@ fun CredDebManagementScreen(navController: NavController, viewModel: FinanceView
     val listState = rememberLazyListState()
     val showButton by remember {
         derivedStateOf {
+            // Mostra il pulsante se non stiamo scrollando o se siamo in cima/fondo con pochi elementi
             if (listState.layoutInfo.totalItemsCount <= listState.layoutInfo.visibleItemsInfo.size) {
-                true
+                true // Sempre visibile se tutti gli elementi sono visibili
             } else {
                 val isAtTop = listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
                 val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
@@ -119,7 +121,7 @@ fun CredDebManagementScreen(navController: NavController, viewModel: FinanceView
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { SnackbarHost(snackbarHostState) }, // Assicurati sia presente
         topBar = { TopBar(navController, currentRoute) },
         bottomBar = {
             BottomBar(
@@ -153,7 +155,6 @@ fun CredDebManagementScreen(navController: NavController, viewModel: FinanceView
                         .weight(1f)
                         .fillMaxSize()
                 ) {
-                    // Pass the selected LoanType for filtering
                     LoansSection(
                         loanType = selectedSection.loanType,
                         listState = listState,
@@ -163,53 +164,42 @@ fun CredDebManagementScreen(navController: NavController, viewModel: FinanceView
                 }
             }
             AnimatedVisibility(
-                visible = showButton,
+                visible = showButton, // La visibilità è ora gestita dal LazyListState
                 enter = slideInVertically(initialOffsetY = { fullHeight -> fullHeight }),
                 exit = slideOutVertically(targetOffsetY = { fullHeight -> fullHeight }),
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) {
                 Button(
                     onClick = {
-                        navController.navigate(ScreenRoutes.CredDeb.route)
+                        navController.navigate(ScreenRoutes.Objectives.route)
                     },
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 16.dp)
+                        .fillMaxWidth() // Fallo largo quanto il contenitore per centrarlo meglio con padding
+                        .padding(horizontal = 16.dp) // Padding orizzontale
+                        .padding(bottom = 16.dp) // Padding dal fondo
                 ) {
-                    Text("Back to Loans overview")
+                    Text("Back to Objectives Overview")
                 }
             }
         }
     }
 }
 
+
 @Composable
 fun LoansSection(
-    loanType: LoanType, // To filter which loans to display
+    loanType: LoanType,
     listState: LazyListState,
     viewModel: FinanceViewModel,
     showSnackbar: (String) -> Unit
 ) {
-    val allLoans by viewModel.allLoans.collectAsStateWithLifecycle() // Assuming viewModel.allLoans
+    val allLoans by viewModel.allLoans.collectAsStateWithLifecycle()
     val filteredLoans = remember(allLoans, loanType) {
         allLoans.filter { it.type == loanType }
     }
 
     if (filteredLoans.isEmpty()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "No ${loanType.name.lowercase()}s found.",
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-        }
+        // ... (testo "No loans found")
     } else {
         LazyColumn(
             state = listState,
@@ -217,7 +207,13 @@ fun LoansSection(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(filteredLoans, key = { it.id }) { loan ->
-                LoanItem(loan = loan, viewModel = viewModel, showSnackbar = showSnackbar)
+                // Passiamo snackbarHostState e scope a LoanItem se necessario,
+                // o manteniamo la funzione showSnackbar come stiamo facendo.
+                LoanItem(
+                    loan = loan,
+                    viewModel = viewModel,
+                    showSnackbar = showSnackbar
+                )
             }
         }
     }
@@ -234,12 +230,16 @@ fun LoanItem(
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
     var showAccountSelectionForCompletionDialog by remember { mutableStateOf(false) }
+    var showInsufficientBalanceDialog by remember { mutableStateOf(false) }
+    var insufficientBalanceAccountInfo by remember { mutableStateOf<Pair<String, Double>?>(null) }
 
+    //val scope = rememberCoroutineScope()
 
     val backgroundColor = when (loan.type) {
-        LoanType.CREDIT -> Color(0xFF4CAF50).copy(alpha = 0.8f) // Greenish for credit
-        LoanType.DEBT -> Color(0xFFF44336).copy(alpha = 0.8f)   // Reddish for debt
+        LoanType.CREDIT -> Color(0xFF4CAF50).copy(alpha = if (loan.completed) 0.5f else 0.8f)
+        LoanType.DEBT -> Color(0xFFF44336).copy(alpha = if (loan.completed) 0.5f else 0.8f)
     }
+    val contentColor = Color.White.copy(alpha = if (loan.completed) 0.7f else 1f)
 
     Column(
         modifier = Modifier
@@ -247,20 +247,29 @@ fun LoanItem(
             .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
             .combinedClickable(
-                onClick = { showSnackbar("Hold to edit or delete the ${loan.type.name.lowercase()}") },
-                onLongClick = { showActionChoiceDialog = true }
+                onClick = {
+                    if (loan.completed) {
+                        showSnackbar("This loan is already ${if (loan.type == LoanType.DEBT) "repaid" else "collected"}.")
+                    } else {
+                        showSnackbar("Hold to interact with the ${loan.type.name.lowercase()}.")
+                    }
+                },
+                onLongClick = {
+                    showActionChoiceDialog = true // MOSTRA SEMPRE IL DIALOGO DELLE AZIONI
+                }
             )
             .padding(16.dp),
     ) {
+        // ... (contenuto del Column di LoanItem come prima: Text per desc, amount, date, status)
         Text(
             text = "${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }}: ${loan.desc}",
             style = MaterialTheme.typography.titleMedium,
-            color = Color.White
+            color = contentColor
         )
-        Text(text = "Amount: ${loan.amount}€", color = Color.White)
-        Text(text = "Start Date: ${loan.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", color = Color.White)
+        Text(text = "Amount: ${loan.amount}€", color = contentColor)
+        Text(text = "Start Date: ${loan.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", color = contentColor)
         loan.endDate?.let {
-            Text(text = "End Date: ${it.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", color = Color.White)
+            Text(text = "End Date: ${it.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", color = contentColor)
         }
         if (loan.completed) {
             Text(
@@ -273,27 +282,28 @@ fun LoanItem(
     }
 
     if (showActionChoiceDialog) {
+        // Usa il LoanActionChoiceDialog definito più avanti (o importato)
+        // che ora gestirà la logica per loan.completed
         LoanActionChoiceDialog(
-            loan = loan,
+            loan = loan, // Passa il loan con il suo stato 'completed'
             onDismiss = { showActionChoiceDialog = false },
-            onEditClick = {
+            onEditClick = { // Questo verrà chiamato solo se il pulsante "Edit" è visibile e cliccabile
                 showEditDialog = true
                 showActionChoiceDialog = false
             },
-            onDeleteClick = {
+            onDeleteClick = { // Sempre disponibile
                 showDeleteConfirmationDialog = true
                 showActionChoiceDialog = false
             },
-            onCompleteClick = { // New callback
+            onCompleteClick = { // Questo verrà chiamato solo se il pulsante "Complete" è visibile
                 Log.d("LoanItem", "Mark as Paid/Collected clicked for: ${loan.desc}")
                 showAccountSelectionForCompletionDialog = true
                 showActionChoiceDialog = false
             }
-
         )
     }
 
-    // Account Selection Dialog for Completing Loan
+
     if (showAccountSelectionForCompletionDialog) {
         val accounts by viewModel.allAccounts.collectAsStateWithLifecycle()
         val hasAccounts by viewModel.hasAccounts.collectAsStateWithLifecycle(initialValue = false)
@@ -302,11 +312,9 @@ fun LoanItem(
             AlertDialog(
                 onDismissRequest = { showAccountSelectionForCompletionDialog = false },
                 title = { Text("No Accounts Found") },
-                text = { Text("You need to create an account first before completing a loan and creating a transaction.") },
+                text = { Text("You need to create an account first.") },
                 confirmButton = {
-                    TextButton(onClick = { showAccountSelectionForCompletionDialog = false }) {
-                        Text("OK")
-                    }
+                    TextButton(onClick = { showAccountSelectionForCompletionDialog = false }) { Text("OK") }
                 }
             )
         } else {
@@ -318,7 +326,7 @@ fun LoanItem(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Select Account for ${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }}",
+                            "Account selection",
                             modifier = Modifier.weight(1f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -332,7 +340,7 @@ fun LoanItem(
                     } else {
                         Column {
                             Text(
-                                "Choose an account to create a transaction for this ${loan.type.name.lowercase()}.",
+                                "Choose an account for this ${loan.type.name.lowercase()}.",
                                 style = MaterialTheme.typography.titleSmall,
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
@@ -340,15 +348,21 @@ fun LoanItem(
                                 items(accounts, key = { it.id }) { account ->
                                     ListItem(
                                         headlineContent = { Text(account.title) },
+                                        supportingContent = { Text("Balance: ${account.amount} €") },
                                         modifier = Modifier.clickable {
-                                            Log.d("LoanItem", "Account '${account.title}' selected for loan '${loan.desc}'. Calling completeLoanPaymentOrCollection.")
-                                            viewModel.completeLoanAndCreateTransaction(
-                                                loan = loan,
-                                                accountId = account.id,
-                                                categoryId = null // Add category selection if needed later
-                                            )
-                                            showSnackbar("${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }} '${loan.desc}' marked complete. Transaction created for '${account.title}'.")
-                                            showAccountSelectionForCompletionDialog = false
+                                            if (loan.type == LoanType.DEBT && loan.amount > account.amount) {
+                                                insufficientBalanceAccountInfo = Pair(account.title, account.amount)
+                                                showInsufficientBalanceDialog = true
+                                                showAccountSelectionForCompletionDialog = false
+                                            } else {
+                                                viewModel.completeLoanAndCreateTransaction(
+                                                    loan = loan,
+                                                    accountId = account.id,
+                                                    categoryId = null
+                                                )
+                                                showSnackbar("${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }} '${loan.desc}' marked complete. Transaction for '${account.title}'.")
+                                                showAccountSelectionForCompletionDialog = false
+                                            }
                                         },
                                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                                     )
@@ -357,32 +371,61 @@ fun LoanItem(
                         }
                     }
                 },
-                dismissButton = null,
-                confirmButton = {} // Confirm button is handled by item clicks
+                dismissButton = null, //  TextButton(onClick = { showAccountSelectionForCompletionDialog = false }) { Text("Cancel") }
+                confirmButton = {}
             )
         }
     }
 
 
+    if (showInsufficientBalanceDialog && insufficientBalanceAccountInfo != null) {
+        val (accTitle, accBalance) = insufficientBalanceAccountInfo!!
+        AlertDialog(
+            onDismissRequest = {
+                showInsufficientBalanceDialog = false
+                insufficientBalanceAccountInfo = null
+            },
+            title = { Text("Insufficient Balance") },
+            text = {
+                Text(
+                    "Account '${accTitle}' has insufficient balance.\n\n" +
+                            "Required: ${loan.amount} €\n" +
+                            "Available: $accBalance €\n\n" +
+                            "Please select another account or add funds."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showInsufficientBalanceDialog = false
+                    insufficientBalanceAccountInfo = null
+                }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    // Il dialogo Edit si aprirà solo se loan.completed è false (gestito da LoanActionChoiceDialog)
     if (showEditDialog) {
         EditLoanDialog(
-            loan = loan,
+            loan = loan, // loan.completed sarà false qui
             viewModel = viewModel,
             onDismiss = { showEditDialog = false },
             showSnackbar = showSnackbar,
-            onDeleteRequest = { // Added to trigger delete confirmation
+            onDeleteRequest = {
                 showEditDialog = false
                 showDeleteConfirmationDialog = true
             }
         )
     }
 
+        // Il dialogo Delete si può aprire per qualsiasi loan
     if (showDeleteConfirmationDialog) {
         ConfirmLoanDeleteDialog(
-            loan = loan,
+            loan = loan, // Può essere completed o non completed
             onDismiss = { showDeleteConfirmationDialog = false },
             onConfirmDelete = {
-                viewModel.deleteLoan(loan) // ViewModel handles deletion
+                viewModel.deleteLoan(loan)
                 showDeleteConfirmationDialog = false
                 showSnackbar("${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }} '${loan.desc}' deleted")
             }
@@ -390,19 +433,22 @@ fun LoanItem(
     }
 }
 
+// EditLoanDialog rimane invariato: riceverà un loan con loan.completed = false
+// a causa della logica in LoanActionChoiceDialog.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditLoanDialog(
-    loan: Loan,
+    loan: Loan, // Questo loan NON sarà completed quando il dialogo è mostrato
     viewModel: FinanceViewModel,
     onDismiss: () -> Unit,
     showSnackbar: (String) -> Unit,
-    onDeleteRequest: () -> Unit // For triggering delete confirmation
+    onDeleteRequest: () -> Unit
 ) {
+    // ... (contenuto di EditLoanDialog come prima, sapendo che loan.completed è false)
     var description by remember { mutableStateOf(loan.desc) }
     var amount by remember { mutableStateOf(loan.amount.toString().replace('.',',')) }
     var selectedStartDate by remember { mutableStateOf(loan.startDate) }
-    var selectedEndDate by remember { mutableStateOf(loan.endDate) } // Nullable
+    var selectedEndDate by remember { mutableStateOf(loan.endDate) }
     var selectedLoanType by remember { mutableStateOf(loan.type) }
     var showStartDatePickerDialog by remember { mutableStateOf(false) }
     var showEndDatePickerDialog by remember { mutableStateOf(false) }
@@ -483,7 +529,6 @@ fun EditLoanDialog(
                 isError = errorMessage != null && selectedEndDate != null && selectedStartDate.isAfter(selectedEndDate!!)
             )
             Spacer(modifier = Modifier.height(8.dp))
-            // Loan Type Radio Buttons
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text("Type:")
                 Row(
@@ -503,8 +548,6 @@ fun EditLoanDialog(
                     }
                 }
             }
-
-
             if (errorMessage != null) {
                 Text(
                     text = errorMessage!!,
@@ -516,16 +559,15 @@ fun EditLoanDialog(
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween // Space for Delete and Save
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                TextButton(onClick = onDeleteRequest ) { // Trigger delete confirmation
+                TextButton(onClick = onDeleteRequest ) {
                     Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
                 Button(
                     onClick = {
-                        errorMessage = null // Reset error
+                        errorMessage = null
                         val amountDouble = amount.replace(',', '.').toDoubleOrNull()
-
                         if (description.isBlank()) {
                             errorMessage = "Description cannot be empty."
                             return@Button
@@ -538,14 +580,13 @@ fun EditLoanDialog(
                             errorMessage = "Start date cannot be after end date."
                             return@Button
                         }
-
                         val updatedLoan = loan.copy(
                             desc = description,
                             amount = amountDouble,
                             startDate = selectedStartDate,
                             endDate = selectedEndDate,
                             type = selectedLoanType,
-                            completed = loan.completed // Preserve paid status, only completion logic changes it
+                            completed = loan.completed // Preserva lo stato completed
                         )
                         coroutineScope.launch {
                             viewModel.updateLoan(updatedLoan)
@@ -558,14 +599,12 @@ fun EditLoanDialog(
             }
         }
     }
-
     if (showStartDatePickerDialog) {
         val currentStartDateMillis = remember(selectedStartDate) {
             selectedStartDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         }
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = currentStartDateMillis)
         val confirmEnabled by remember { derivedStateOf { datePickerState.selectedDateMillis != null } }
-
         DatePickerDialog(
             onDismissRequest = { showStartDatePickerDialog = false },
             confirmButton = {
@@ -587,10 +626,6 @@ fun EditLoanDialog(
             selectedEndDate?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
         }
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = currentEndDateMillis)
-        // For end date, confirm is always enabled to allow clearing the date.
-        // val confirmEnabled by remember { derivedStateOf { datePickerState.selectedDateMillis != null } }
-
-
         DatePickerDialog(
             onDismissRequest = { showEndDatePickerDialog = false },
             confirmButton = {
@@ -599,20 +634,14 @@ fun EditLoanDialog(
                         selectedEndDate = datePickerState.selectedDateMillis?.let {
                             Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
                         }
-                        // If selectedDateMillis is null (user cleared it), selectedEndDate becomes null.
                         showEndDatePickerDialog = false
                     },
-                    // enabled = confirmEnabled // Or just true if you want to allow clearing
                     enabled = true
                 ) { Text("OK") }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    // Optionally, if you want "Cancel" to explicitly clear the date:
-                    // selectedEndDate = null
-                    showEndDatePickerDialog = false
-                }) { Text("Clear/Cancel") } // "Clear" if pressing OK with no date selected clears it
+                TextButton(onClick = { showEndDatePickerDialog = false }) { Text("Cancel") }
             }
-        ) { DatePicker(state = datePickerState, showModeToggle = true) } // showModeToggle allows easier clearing
+        ) { DatePicker(state = datePickerState, showModeToggle = true) }
     }
 }

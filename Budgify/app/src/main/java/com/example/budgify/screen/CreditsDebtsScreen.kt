@@ -94,6 +94,8 @@ fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewMode
     var showEditLoanDialog by remember { mutableStateOf(false) }
     var showAccountSelectionForCompletionDialog by remember { mutableStateOf(false) } // New state
     var selectedLoan by remember { mutableStateOf<Loan?>(null) }
+    var showInsufficientBalanceDialog by remember { mutableStateOf(false) } // <--- NUOVO STATO
+    var insufficientBalanceAccountInfo by remember { mutableStateOf<Pair<String, Double>?>(null) } // <--- Per nome conto
 
     Scaffold(
         topBar = { TopBar(navController, currentRoute) },
@@ -172,6 +174,7 @@ fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewMode
                                     scope.launch {
                                         snackbarHostState.showSnackbar("This loan is already paid/collected.")
                                     }
+                                    selectedLoan = null
                                 }
                             }
                         )
@@ -279,7 +282,7 @@ fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewMode
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                "Select Account for ${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }}",
+                                "Account Selection",
                                 modifier = Modifier.weight(1f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -301,21 +304,36 @@ fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewMode
                                     modifier = Modifier.padding(bottom = 8.dp)
                                 )
                                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                                    items(accounts, key = { it.id }) { account ->
+                                    items(accounts, key = { it.id }) { account -> // account deve essere di tipo Account con un campo balance
                                         ListItem(
                                             headlineContent = { Text(account.title) },
+                                            supportingContent = {
+                                                Text("Balance: ${account.amount} €")
+                                            },
                                             modifier = Modifier.clickable {
-                                                Log.d("CreditsDebitsScreen", "Account '${account.title}' selected for loan '${loan.desc}'. Calling completeLoanPaymentOrCollection.")
-                                                viewModel.completeLoanAndCreateTransaction(
-                                                    loan = loan, // Pass the whole loan
-                                                    accountId = account.id, // ViewModel will extract or use this
-                                                    categoryId = null // Add category selection if needed later
-                                                )
-                                                scope.launch {
-                                                    snackbarHostState.showSnackbar("${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }} '${loan.desc}' marked complete. Transaction created for '${account.title}'.")
+                                                Log.d("CreditsDebitsScreen", "Attempting to complete loan '${loan.desc}' with account '${account.title}' (Balance: ${account.amount})")
+
+                                                if (loan.type == LoanType.DEBT && loan.amount > account.amount) {
+                                                    insufficientBalanceAccountInfo = Pair(account.title, account.amount)
+                                                    showInsufficientBalanceDialog = true // <--- MOSTRA IL DIALOGO DI ERRORE
+                                                    Log.w("CreditsDebitsScreen", "Insufficient balance in account '${account.title}' for debt '${loan.desc}'. Loan amount: ${loan.amount}, Account balance: ${account.amount}")
+                                                } else {
+                                                    // Saldo sufficiente o è un CREDITO
+                                                    Log.d("CreditsDebitsScreen", "Account '${account.title}' selected for loan '${loan.desc}'. Calling completeLoanPaymentOrCollection.")
+                                                    viewModel.completeLoanAndCreateTransaction(
+                                                        loan = loan,
+                                                        accountId = account.id,
+                                                        categoryId = null
+                                                    )
+                                                    scope.launch {
+                                                        snackbarHostState.showSnackbar(
+                                                            "${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }} '${loan.desc}' marked complete. " +
+                                                                    "Transaction created for '${account.title}'."
+                                                        )
+                                                    }
+                                                    showAccountSelectionForCompletionDialog = false
+                                                    selectedLoan = null
                                                 }
-                                                showAccountSelectionForCompletionDialog = false
-                                                selectedLoan = null // Reset after action
                                             },
                                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                                         )
@@ -329,26 +347,52 @@ fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewMode
                 )
             }
         }
+        if (showInsufficientBalanceDialog && selectedLoan != null && insufficientBalanceAccountInfo != null) {
+            val (accTitle, accBalance) = insufficientBalanceAccountInfo!!
+            AlertDialog(
+                onDismissRequest = {
+                    showInsufficientBalanceDialog = false
+                    insufficientBalanceAccountInfo = null // Resetta le informazioni
+                    // Non resettare selectedLoan qui, l'utente è ancora nel processo di selezione account
+                },
+                title = { Text("Insufficient Balance") },
+                text = {
+                    Text(
+                        "The selected account '${accTitle}' does not have enough balance to repay this debt.\n\n" +
+                                "Required: ${selectedLoan!!.amount} €\n" +
+                                "Available in '${accTitle}': $accBalance €\n\n" +
+                                "Please choose another account or add funds to this one."
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showInsufficientBalanceDialog = false
+                        insufficientBalanceAccountInfo = null
+                    }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
     }
 }
 
+
 // --- COMPOSABLE PER I DIALOGHI SPECIFICI ---
 
+// PUNTO 1: MODIFICA A LoanActionChoiceDialog
 @Composable
-fun LoanActionChoiceDialog( // This is the version specific to CreditsDebitsScreen
-    loan: Loan,
+fun LoanActionChoiceDialog(
+    loan: Loan, // Può essere 'completed' o meno
     onDismiss: () -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
-    onCompleteClick: () -> Unit // New callback
+    onCompleteClick: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "Action for '${loan.desc}'",
                     modifier = Modifier.weight(1f),
@@ -358,39 +402,51 @@ fun LoanActionChoiceDialog( // This is the version specific to CreditsDebitsScre
                 XButton(onDismiss)
             }
         },
-        text = { Text("What would you like to do with this loan?") },
+        text = {
+            if (loan.completed) {
+                Text("This loan is already ${if (loan.type == LoanType.DEBT) "repaid" else "collected"}. You can only delete it.")
+            } else {
+                Text("What would you like to do with this loan?")
+            }
+        },
         confirmButton = {
-            Column(modifier = Modifier.fillMaxWidth()) { // Use Column for multiple rows of buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                // Pulsante Delete SEMPRE disponibile
+                TextButton(
+                    onClick = {
+                        onDeleteClick()
+                        // onDismiss() // onDismiss è già gestito da XButton o dal chiamante che chiude showActionChoiceDialog
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    TextButton(onClick = onDeleteClick) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error)
-                    }
-                    // Edit should always be available if not paid, handled by caller
-                    TextButton(onClick = onEditClick) {
+                    Text("Delete")
+                }
+
+                // Pulsanti Edit e Complete SOLO se il prestito NON è completato
+                if (!loan.completed) {
+                    TextButton(onClick = {
+                        onEditClick()
+                        // onDismiss()
+                    }) {
                         Text("Edit")
                     }
-                }
-                // "Mark as Paid/Collected" button: Only if not already paid
-                // The check `!loan.isPaid` should ideally be done before showing this dialog via onLongPress,
-                // but adding it here too for safety.
-                if (!loan.completed) {
-                    TextButton(
-                        onClick = {
-                            Log.d("LoanActionChoice", "Mark as Paid/Collected clicked for: ${loan.desc}")
-                            onCompleteClick()
-                            // onDismiss() // Dismissal is handled by the caller or by XButton
-                        },
-                        modifier = Modifier.fillMaxWidth() // Make it full width for better tap target
-                    ) {
+                    TextButton(onClick = {
+                        onCompleteClick()
+                        // onDismiss()
+                    }) {
                         Text(if (loan.type == LoanType.DEBT) "Mark as Repaid" else "Mark as Collected")
                     }
                 }
             }
         },
-        dismissButton = null // Or a TextButton(onClick = onDismiss) { Text("Cancel") }
+        dismissButton = null // Gestito da XButton nel titolo
+        /* Oppure, se preferisci un pulsante "Cancel" esplicito in basso:
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+        */
     )
 }
 
