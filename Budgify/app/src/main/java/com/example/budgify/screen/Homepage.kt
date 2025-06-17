@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,10 +30,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.TrendingDown
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -135,7 +140,7 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
             showSnackbar = showSnackbar
         ) }
     ){
-        innerPadding ->
+            innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -145,7 +150,7 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
                 state = lazyListState,
                 modifier = Modifier
                     .fillMaxSize()
-                    //.padding(innerPadding)
+                //.padding(innerPadding)
             ) {
                 // Box per i pie chart e istogramma
                 item {
@@ -1366,7 +1371,8 @@ fun CategoryDistributionPieChart(
     transactionType: TransactionType,
     account: Account,
     allTransactions: List<TransactionWithDetails>,
-    colors: List<Color>
+    colors: List<Color>,
+    legendItemLimit: Int? = 3 // NEW: Parameter to control legend items
 ) {
     // Re-calculate the data map here to include uncategorized transactions.
     val categoryDataMap = remember(allTransactions, account, transactionType) {
@@ -1445,54 +1451,79 @@ fun CategoryDistributionPieChart(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    // The legend now correctly shows the top 3 categories by amount.
-                    pieSlices.take(3).forEach { slice ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = 1.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(slice.color, RoundedCornerShape(2.dp))
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "${slice.categoryName}: ${"%.2f".format(slice.amount)}€",
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    if (pieSlices.size > 3) {
-                        Text(
-                            text = "+ ${pieSlices.size - 3} more...",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontStyle = FontStyle.Italic,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(start = 12.dp)
-                        )
-                    }
-                }
+                // Use the new reusable legend composable
+                ChartLegend(
+                    items = pieSlices.map { it.categoryName to it.amount },
+                    colors = pieSlices.map { it.color },
+                    limit = legendItemLimit
+                )
             }
         }
     }
 }
 
+// NEW: Reusable Legend Composable
+@Composable
+fun ChartLegend(
+    items: List<Pair<String, Double>>,
+    colors: List<Color>,
+    limit: Int?
+) {
+    val itemsToShow = if (limit != null) items.take(limit) else items
+    val colorsToShow = if (limit != null) colors.take(limit) else colors
 
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
+    ) {
+        itemsToShow.forEachIndexed { index, item ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 1.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(colors[index], RoundedCornerShape(2.dp))
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "${item.first}: ${"%.2f".format(item.second)}€",
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        if (limit != null && items.size > limit) {
+            Text(
+                text = "+ ${items.size - limit} more...",
+                style = MaterialTheme.typography.labelSmall,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.padding(start = 12.dp)
+            )
+        }
+    }
+}
+
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GraficiBox(viewModel: FinanceViewModel) {
     val allAccounts by viewModel.allAccounts.collectAsStateWithLifecycle()
     val allTransactionsWithDetails by viewModel.allTransactionsWithDetails.collectAsStateWithLifecycle()
 
-    // State to hold the current chart type
+    // State for toggling between Pie and Histogram
     var currentChartType by remember { mutableStateOf(ChartType.PIE) }
+    // NEW: State for toggling between Expenses and Incomes
+    var displayedTransactionType by remember { mutableStateOf(TransactionType.EXPENSE) }
+
+    // NEW: State for the detail dialog
+    var showChartDetailDialog by remember { mutableStateOf(false) }
+    var selectedAccountForDetail by remember { mutableStateOf<Account?>(null) }
+
 
     val accountsWithTransactions = remember(allAccounts, allTransactionsWithDetails) {
         allAccounts.filter { account ->
@@ -1514,54 +1545,62 @@ fun GraficiBox(viewModel: FinanceViewModel) {
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(16.dp)
         ) {
-            Row( // Row to hold the title and the toggle button
+            Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Balance Overview",
+                    text = "Accounts Overview",
                     style = MaterialTheme.typography.titleLarge,
                 )
-                Box(
-                    contentAlignment = Alignment.Center, // To center IconButton if it's smaller than Box
+
+
+                // Container for the toggle buttons
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier
-                        .shadow(
-                            elevation = 4.dp, // Adjust shadow elevation as desired
-                            shape = RoundedCornerShape(16.dp) // Coherent roundness
-                        )
+                        .shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
                         .background(
-                            // Use a color from your theme, e.g., surfaceContainerHigh for a slightly elevated look
                             color = MaterialTheme.colorScheme.surfaceContainerHigh,
                             shape = RoundedCornerShape(16.dp)
                         )
-                    // .clip(RoundedCornerShape(16.dp)) // Optional: if you want to ensure ripple is contained,
-                    // though IconButton's ripple is circular.
+                        .padding(horizontal = 4.dp)
                 ) {
+                    // Button to toggle between Expense/Income
+                    IconButton(onClick = {
+                        displayedTransactionType = if (displayedTransactionType == TransactionType.EXPENSE) TransactionType.INCOME else TransactionType.EXPENSE
+                    }) {
+                        Icon(
+                            imageVector = if (displayedTransactionType == TransactionType.EXPENSE) Icons.Filled.TrendingDown else Icons.Filled.TrendingUp,
+                            contentDescription = "Toggle Expense/Income View",
+                            tint = if (displayedTransactionType == TransactionType.EXPENSE) expenseChartColors[0] else incomeChartColors[0]
+                        )
+                    }
+
+                    // Button to toggle between Pie/Histogram
                     IconButton(onClick = {
                         currentChartType = if (currentChartType == ChartType.PIE) ChartType.HISTOGRAM else ChartType.PIE
                     }) {
                         Icon(
                             imageVector = if (currentChartType == ChartType.PIE) Icons.Filled.PieChart else Icons.Filled.BarChart,
                             contentDescription = "Toggle Chart Type",
-                            // Optional: Tint the icon if needed based on the Box background
-                            // tint = MaterialTheme.colorScheme.onSurfaceContainerHigh
                         )
                     }
                 }
             }
+            Text(
+                text = "Hold on a chart to expand",
+                style = MaterialTheme.typography.bodySmall,
+            )
             Spacer(modifier = Modifier.height(4.dp))
 
             if (accountsWithTransactions.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(
-                            vertical = 50.dp,
-                            horizontal = 16.dp
-                        )
-                        .clip(RoundedCornerShape(16.dp))
-                        .padding(16.dp),
+                        .padding(vertical = 50.dp, horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -1575,31 +1614,55 @@ fun GraficiBox(viewModel: FinanceViewModel) {
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
                 ) {
-                    accountsWithTransactions.forEachIndexed { index, account ->
+                    accountsWithTransactions.forEach { account ->
                         SingleAccountChartsCard(
                             account = account,
                             chartType = currentChartType,
-                            allTransactions = allTransactionsWithDetails
+                            displayedTransactionType = displayedTransactionType,
+                            allTransactions = allTransactionsWithDetails,
+                            onLongClick = {
+                                selectedAccountForDetail = account
+                                showChartDetailDialog = true
+                            }
                         )
                     }
                 }
             }
         }
     }
+
+    // NEW: Show the detail dialog when triggered
+    if (showChartDetailDialog && selectedAccountForDetail != null) {
+        ChartDetailDialog(
+            account = selectedAccountForDetail!!,
+            chartType = currentChartType,
+            transactionType = displayedTransactionType,
+            allTransactions = allTransactionsWithDetails,
+            onDismiss = { showChartDetailDialog = false }
+        )
+    }
 }
 
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SingleAccountChartsCard(
     account: Account,
     chartType: ChartType,
-    allTransactions: List<TransactionWithDetails>
+    displayedTransactionType: TransactionType,
+    allTransactions: List<TransactionWithDetails>,
+    onLongClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
-            .width(350.dp) // Adjust width as needed, histograms might want more space
+            .width(250.dp) // Made the card narrower as it shows one chart now
             .padding(start = 0.dp, end = 16.dp, bottom = 8.dp, top = 8.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .combinedClickable(
+                onClick = {}, // Can add a snackbar here if needed
+                onLongClick = onLongClick
+            )
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -1612,53 +1675,139 @@ fun SingleAccountChartsCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp)
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+
+        // Show only one chart based on the displayedTransactionType
+        when (chartType) {
+            ChartType.PIE -> CategoryDistributionPieChart(
+                title = if (displayedTransactionType == TransactionType.EXPENSE) "Expenses" else "Incomes",
+                transactionType = displayedTransactionType,
+                account = account,
+                allTransactions = allTransactions,
+                colors = if (displayedTransactionType == TransactionType.EXPENSE) expenseChartColors else incomeChartColors,
+                legendItemLimit = 3
+            )
+            ChartType.HISTOGRAM -> CategoryDistributionHistogramChart(
+                title = if (displayedTransactionType == TransactionType.EXPENSE) "Expenses" else "Incomes",
+                transactionType = displayedTransactionType,
+                account = account,
+                allTransactions = allTransactions,
+                colors = if (displayedTransactionType == TransactionType.EXPENSE) expenseChartColors else incomeChartColors,
+                legendItemLimit = 3
+            )
+        }
+    }
+}
+
+// Composable for the detailed chart dialog
+@Composable
+fun ChartDetailDialog(
+    account: Account,
+    chartType: ChartType,
+    transactionType: TransactionType,
+    allTransactions: List<TransactionWithDetails>,
+    onDismiss: () -> Unit
+) {
+    val categoryDataMap = remember(allTransactions, account, transactionType) {
+        allTransactions
+            .filter { it.transaction.accountId == account.id && it.transaction.type == transactionType }
+            .groupBy { it.category?.desc ?: "Uncategorized" }
+            .mapValues { entry -> entry.value.sumOf { it.transaction.amount } }
+            .entries.sortedByDescending { it.value } // Already sorted
+    }
+
+    val colors = if (transactionType == TransactionType.EXPENSE) expenseChartColors else incomeChartColors
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(16.dp)
         ) {
-            // Expenses Chart
-            Box(modifier = Modifier.weight(1f)) {
-                when (chartType) {
-                    ChartType.PIE -> CategoryDistributionPieChart(
-                        title = "Expenses",
-                        transactionType = TransactionType.EXPENSE,
-                        account = account,
-                        allTransactions = allTransactions,
-                        colors = expenseChartColors
-                    )
-                    ChartType.HISTOGRAM -> CategoryDistributionHistogramChart(
-                        title = "Expenses",
-                        transactionType = TransactionType.EXPENSE,
-                        account = account,
-                        allTransactions = allTransactions,
-                        colors = expenseChartColors // Use same or different colors
-                    )
-                }
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // CHANGED: Title now correctly shows "Expenses" or "Incomes"
+                val typeLabel = if (transactionType == TransactionType.EXPENSE) "Expenses" else "Incomes"
+                Text(
+                    text = "${account.title}: $typeLabel",
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                XButton(onDismiss)
             }
-            // Incomes Chart
-            Box(modifier = Modifier.weight(1f)) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (categoryDataMap.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 50.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No data to display.")
+                }
+            } else {
+                // Chart Display
                 when (chartType) {
-                    ChartType.PIE -> CategoryDistributionPieChart(
-                        title = "Incomes",
-                        transactionType = TransactionType.INCOME,
-                        account = account,
-                        allTransactions = allTransactions,
-                        colors = incomeChartColors
-                    )
-                    ChartType.HISTOGRAM -> CategoryDistributionHistogramChart(
-                        title = "Incomes",
-                        transactionType = TransactionType.INCOME,
-                        account = account,
-                        allTransactions = allTransactions,
-                        colors = incomeChartColors // Use same or different colors
-                    )
+                    ChartType.PIE -> {
+                        val pieSlices = categoryDataMap.mapIndexedNotNull { index, entry ->
+                            if (entry.value > 0) PieSlice(entry.key, entry.value, colors[index % colors.size]) else null
+                        }
+                        PieChart(modifier = Modifier
+                            .size(180.dp)
+                            .align(Alignment.CenterHorizontally), slices = pieSlices)
+                    }
+                    ChartType.HISTOGRAM -> {
+                        val histogramBars = categoryDataMap.mapIndexedNotNull { index, entry ->
+                            if (entry.value > 0) HistogramBarData(entry.key, entry.value, colors[index % colors.size]) else null
+                        }
+                        HistogramChart(
+                            modifier = Modifier
+                                .height(180.dp)
+                                .fillMaxWidth(),
+                            bars = histogramBars,
+                            showValuesOnBars = false
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Full Legend in a LazyColumn
+                LazyColumn(modifier = Modifier.heightIn(max = 250.dp)) {
+                    val legendItems = categoryDataMap.map { it.key to it.value }
+                    val legendColors = categoryDataMap.mapIndexed { index, _ -> colors[index % colors.size] }
+
+                    items(legendItems.size) { index ->
+                        val item = legendItems[index]
+                        val color = legendColors[index]
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        ) {
+                            Box(modifier = Modifier
+                                .size(12.dp)
+                                .background(color, RoundedCornerShape(2.dp)))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "${item.first}: ${"%.2f".format(item.second)}€",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-// Data class for Histogram bars (similar to PieSlice)
+
 data class HistogramBarData(val categoryName: String, val amount: Double, val color: Color)
 
 
@@ -1668,7 +1817,8 @@ fun CategoryDistributionHistogramChart(
     transactionType: TransactionType,
     account: Account,
     allTransactions: List<TransactionWithDetails>,
-    colors: List<Color>
+    colors: List<Color>,
+    legendItemLimit: Int? = 3 // NEW: Parameter to control legend items
 ) {
     // Re-calculate the data map here to include uncategorized transactions.
     val categoryDataMap = remember(allTransactions, account, transactionType) {
@@ -1749,42 +1899,12 @@ fun CategoryDistributionHistogramChart(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Legend for the histogram chart (similar to pie chart)
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    // The legend now correctly shows the top 3 categories by amount.
-                    histogramBars.take(3).forEach { bar -> // Show legend for top 3 categories
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = 1.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(bar.color, RoundedCornerShape(2.dp))
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "${bar.categoryName}: ${"%.2f".format(bar.amount)}€",
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    if (histogramBars.size > 3) {
-                        Text(
-                            text = "+ ${histogramBars.size - 3} more...",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontStyle = FontStyle.Italic,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(start = 12.dp)
-                        )
-                    }
-                }
+                // Use the new reusable legend composable
+                ChartLegend(
+                    items = histogramBars.map { it.categoryName to it.amount },
+                    colors = histogramBars.map { it.color },
+                    limit = legendItemLimit
+                )
             }
         }
     }
