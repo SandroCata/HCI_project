@@ -498,11 +498,11 @@ fun CategoryActionChoiceDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly // O Arrangement.End
             ) {
-                TextButton(onClick = onDeleteClick) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
                 TextButton(onClick = onEditClick) {
                     Text("Edit")
+                }
+                TextButton(onClick = onDeleteClick) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
             }
         },
