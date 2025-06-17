@@ -242,7 +242,19 @@ fun LoansSection(
     }
 
     if (filteredLoans.isEmpty()) {
-        // ... (testo "No loans found")
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "No ${loanType.name.lowercase()}s found.",
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
     } else {
         LazyColumn(
             state = listState,

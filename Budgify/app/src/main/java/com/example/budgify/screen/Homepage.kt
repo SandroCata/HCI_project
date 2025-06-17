@@ -364,23 +364,28 @@ fun LastTransactionBox(
                 style = MaterialTheme.typography.titleLarge
             )
             Text(
-                text = "Hold on a transaction to edit it",
+                text = "Hold on a transaction to manage it",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Column(modifier = Modifier.fillMaxWidth()) {
-                transactionsWithDetails.takeLast(5).reversed().forEach { transactionWithDetails ->
-                    TransactionItem(
-                        transactionWithDetails = transactionWithDetails,
-                        onClick = { transaction ->
-                            showSnackbar("Hold to edit or delete the transaction")
-                        },
-                        onLongClick = { transaction ->
-                            transactionToAction = transaction
-                            showTransactionActionChoiceDialog = true
+            if (transactionsWithDetails.isEmpty()) {
+                Text("No transactions found.", style = MaterialTheme.typography.bodyMedium)
+            } else {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    transactionsWithDetails.takeLast(5).reversed()
+                        .forEach { transactionWithDetails ->
+                            TransactionItem(
+                                transactionWithDetails = transactionWithDetails,
+                                onClick = { transaction ->
+                                    showSnackbar("Hold to edit or delete the transaction")
+                                },
+                                onLongClick = { transaction ->
+                                    transactionToAction = transaction
+                                    showTransactionActionChoiceDialog = true
+                                }
+                            )
                         }
-                    )
                 }
             }
         }
@@ -872,7 +877,7 @@ fun ContiBox(
                 }
             }
             Text(
-                text = "Hold on an account to edit it",
+                text = "Hold on an account to manage it",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )

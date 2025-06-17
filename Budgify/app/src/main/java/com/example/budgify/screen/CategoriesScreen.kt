@@ -62,7 +62,7 @@ import kotlinx.coroutines.launch
 
 // Define the possible sections for categories
 enum class CategoriesTab(val title: String) {
-    Expenses("Expenses"),
+    Expenses("Expense"),
     Income("Income")
 }
 

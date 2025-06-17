@@ -798,6 +798,7 @@ fun ObjectivesSection(
             ObjectiveSectionType.EXPIRED -> objectives.filter { it.endDate.isBefore(now) || it.completed  }
         }
     }
+    val typeText = if (type.name.lowercase()== "active") "active" else "inactive"
 
     if (filteredObjectives.isEmpty()){
         Box(
@@ -807,7 +808,7 @@ fun ObjectivesSection(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "No ${type.name.lowercase()} objectives found.",
+                text = "No $typeText objectives found.",
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)

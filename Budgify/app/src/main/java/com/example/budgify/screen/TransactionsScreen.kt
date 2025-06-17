@@ -360,7 +360,7 @@ fun TransactionBox(
                 style = MaterialTheme.typography.titleLarge
             )
             Text(
-                text = "Hold on a transaction to edit it",
+                text = "Hold on a transaction to manage it",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
