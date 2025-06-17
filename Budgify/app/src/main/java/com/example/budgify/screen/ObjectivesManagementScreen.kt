@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -26,6 +27,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CheckCircleOutline
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
@@ -56,6 +59,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
@@ -66,6 +70,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.budgify.applicationlogic.FinanceViewModel
+import com.example.budgify.entities.LoanType
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.navigation.BottomBar
@@ -244,51 +249,74 @@ fun ObjectiveItem(
     var insufficientBalanceAccountInfo by remember { mutableStateOf<Pair<String, Double>?>(null) }
 
     val backgroundColor = when (obj.type) {
-        ObjectiveType.INCOME -> Color(0xff0db201)
-        ObjectiveType.EXPENSE -> Color(0xffff6f51)
+        ObjectiveType.INCOME -> Color(0xFF4CAF50).copy(alpha = if (obj.completed) 0.5f else 0.8f)
+        ObjectiveType.EXPENSE -> Color(0xFFF44336).copy(alpha = if (obj.completed) 0.5f else 0.8f)
     }
+    val contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = if (obj.completed) 0.7f else 1f)
 
     val isExpired = obj.endDate.isBefore(LocalDate.now())
+    val image = if (obj.completed) Icons.Filled.CheckCircleOutline else Icons.Filled.EmojiEvents
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(backgroundColor)
+            .clip(RoundedCornerShape(8.dp)) // Clip the Box so the icon is also clipped
+            .background(backgroundColor) // Apply background to the Box
             .combinedClickable(
                 onClick = { showSnackbar("Hold to edit or delete the objective") },
                 onLongClick = {
                     showActionChoiceDialog = true // Mostra il dialogo di scelta azione
                 }
             )
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = obj.desc, textAlign = TextAlign.Center)
-        Text(
-            text = "Start: ${obj.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}",
-            textAlign = TextAlign.Center
+        Icon(
+            imageVector = image, // Trophy icon
+            contentDescription = "Completed Objective",
+            modifier = Modifier
+                .align(Alignment.CenterEnd) // Align to the center-end of the Box
+                .size(80.dp) // Adjust size as needed
+                .padding(end = 16.dp) // Some padding from the edge
+                .alpha(0.5f), // Set transparency (0.0f is fully transparent, 1.0f is fully opaque)
+            tint = contentColor.copy(alpha = 0.7f) // Optional: tint to match content color with more alpha
         )
-        Text(
-            text = "End: ${obj.endDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}",
-            textAlign = TextAlign.Center
-        )
-        Text(text = "${obj.amount}€", textAlign = TextAlign.Center)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                // .clip(RoundedCornerShape(8.dp))
+                //.background(backgroundColor)
+//                .combinedClickable(
+//                    onClick = { showSnackbar("Hold to edit or delete the objective") },
+//                    onLongClick = {
+//                        showActionChoiceDialog = true // Mostra il dialogo di scelta azione
+//                    }
+//                )
+                .padding(16.dp),
+            //horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = obj.desc, style = MaterialTheme.typography.titleLarge, color = contentColor)
+            Text(text = "Amount: ${obj.amount}€", color = contentColor)
+            Text(
+                text = "Added: ${obj.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}",
+                color = contentColor
+            )
+            Text(
+                text = "Due date: ${obj.endDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}",
+                color = contentColor
+            )
 
-        if (obj.completed) {
-            Text(
-                "Status: Completed",
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.8f) // Make status visible
-            )
-        } else if (isExpired) {
-            Text(
-                "Status: Expired",
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.8f) // Make status visible
-            )
+            if (obj.completed) {
+                Text(
+                    "Status: Completed",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.8f) // Make status visible
+                )
+            } else if (isExpired) {
+                Text(
+                    "Status: Expired",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.8f) // Make status visible
+                )
+            }
         }
     }
 

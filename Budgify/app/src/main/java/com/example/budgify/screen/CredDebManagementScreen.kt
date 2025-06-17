@@ -74,7 +74,12 @@ import androidx.compose.material3.ListItem // For account selection
 import androidx.compose.material3.ListItemDefaults // For account selection
 import kotlinx.coroutines.flow.collectLatest // For global snackbar messages if you add them
 import android.util.Log // For debugging
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.CheckCircleOutline
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.RequestQuote
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextOverflow
 
 // Enum for the sections in LoanManagementScreen, aligning with LoanType
@@ -277,9 +282,12 @@ fun LoanItem(
         LoanType.CREDIT -> Color(0xFF4CAF50).copy(alpha = if (loan.completed) 0.5f else 0.8f)
         LoanType.DEBT -> Color(0xFFF44336).copy(alpha = if (loan.completed) 0.5f else 0.8f)
     }
-    val contentColor = Color.White.copy(alpha = if (loan.completed) 0.7f else 1f)
+    //val contentColor = Color.White.copy(alpha = if (loan.completed) 0.7f else 1f)
+    val contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = if (loan.completed) 0.7f else 1f)
 
-    Column(
+    val image = if (loan.completed) Icons.Filled.CheckCircleOutline else Icons.Filled.RequestQuote
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
@@ -296,26 +304,61 @@ fun LoanItem(
                     showActionChoiceDialog = true // MOSTRA SEMPRE IL DIALOGO DELLE AZIONI
                 }
             )
-            .padding(16.dp),
     ) {
-        // ... (contenuto del Column di LoanItem come prima: Text per desc, amount, date, status)
-        Text(
-            text = "${loan.type.name.lowercase().replaceFirstChar { it.titlecase() }}: ${loan.desc}",
-            style = MaterialTheme.typography.titleMedium,
-            color = contentColor
+        Icon(
+            imageVector = image, // Trophy icon
+            contentDescription = "Completed Loan",
+            modifier = Modifier
+                .align(Alignment.CenterEnd) // Align to the center-end of the Box
+                .size(80.dp) // Adjust size as needed
+                .padding(end = 16.dp) // Some padding from the edge
+                .alpha(0.5f), // Set transparency (0.0f is fully transparent, 1.0f is fully opaque)
+            tint = contentColor.copy(alpha = 0.7f) // Optional: tint to match content color with more alpha
         )
-        Text(text = "Amount: ${loan.amount}€", color = contentColor)
-        Text(text = "Start Date: ${loan.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", color = contentColor)
-        loan.endDate?.let {
-            Text(text = "End Date: ${it.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}", color = contentColor)
-        }
-        if (loan.completed) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+//                .clip(RoundedCornerShape(8.dp))
+//                .background(backgroundColor)
+//                .combinedClickable(
+//                    onClick = {
+//                        if (loan.completed) {
+//                            showSnackbar("This loan is already ${if (loan.type == LoanType.DEBT) "repaid" else "collected"}.")
+//                        } else {
+//                            showSnackbar("Hold to interact with the ${loan.type.name.lowercase()}.")
+//                        }
+//                    },
+//                    onLongClick = {
+//                        showActionChoiceDialog = true // MOSTRA SEMPRE IL DIALOGO DELLE AZIONI
+//                    }
+//                )
+                .padding(16.dp),
+        ) {
+            // ... (contenuto del Column di LoanItem come prima: Text per desc, amount, date, status)
             Text(
-                "Status: ${if (loan.type == LoanType.DEBT) "Repaid" else "Collected"}",
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.9f)
+                text = loan.desc,
+                style = MaterialTheme.typography.titleLarge,
+                color = contentColor
             )
+            Text(text = "Amount: ${loan.amount}€", color = contentColor)
+            Text(
+                text = "Added: ${loan.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}",
+                color = contentColor
+            )
+            loan.endDate?.let {
+                Text(
+                    text = "Due Date: ${it.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}",
+                    color = contentColor
+                )
+            }
+            if (loan.completed) {
+                Text(
+                    "Status: ${if (loan.type == LoanType.DEBT) "Repaid" else "Collected"}",
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodySmall,
+                    //color = Color.White.copy(alpha = 0.9f)
+                )
+            }
         }
     }
 
