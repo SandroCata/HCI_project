@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
@@ -63,8 +65,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
@@ -119,6 +119,7 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
             snackbarHostState.showSnackbar(message)
         }
     }
+    var balancesVisible by remember { mutableStateOf(false) }
 
     Scaffold (
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -144,6 +145,8 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
             item {
                 ContiBox(
                     viewModel,
+                    balancesVisible = balancesVisible,
+                    onToggleBalanceVisibility = { balancesVisible = !balancesVisible },
                     showSnackbar = { message ->
                         scope.launch {
                             snackbarHostState.showSnackbar(message)
@@ -724,6 +727,8 @@ fun EditTransactionDialog(
 @Composable
 fun ContiBox(
     viewModel: FinanceViewModel,
+    balancesVisible: Boolean,
+    onToggleBalanceVisibility: () -> Unit,
     showSnackbar: (String) -> Unit
 ) {
 
@@ -746,9 +751,26 @@ fun ContiBox(
                 .padding(16.dp)
         ) {
             Text(
-                text = "Total Balance: $totalBalance €",
-                style = MaterialTheme.typography.titleLarge
+                text = "Accounts",
+                style = MaterialTheme.typography.titleLarge,
+                //modifier = Modifier.align(Alignment.CenterHorizontally)
             )
+            Row( // Row for "Total Balance" and the visibility toggle icon
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (balancesVisible) "Total Balance: $totalBalance €" else "Total Balance: **** €",
+                    style = MaterialTheme.typography.titleSmall
+                )
+                IconButton(onClick = onToggleBalanceVisibility) { // <-- NEW: Toggle Icon
+                    Icon(
+                        imageVector = if (balancesVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                        contentDescription = if (balancesVisible) "Hide balances" else "Show balances"
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(4.dp))
 
             if (accounts.isEmpty()) {
@@ -771,6 +793,7 @@ fun ContiBox(
                     AccountItem(
                         account = account,
                         viewModel = viewModel,
+                        balancesVisible = balancesVisible,
                         showSnackbar = showSnackbar
                     )
                 }
@@ -832,6 +855,7 @@ fun AddAccountItem(
 fun AccountItem(
     account: Account,
     viewModel: FinanceViewModel,
+    balancesVisible: Boolean,
     showSnackbar: (String) -> Unit
 ) {
     // var isLongPressed by remember { mutableStateOf(false) } // Non più necessario direttamente per l'icona
@@ -863,7 +887,7 @@ fun AccountItem(
             verticalArrangement = Arrangement.Center,
         ) {
             Text(text = account.title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(text = "${account.amount}€", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = if (balancesVisible) "${account.amount}€" else "**** €", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
         // L'icona di eliminazione non è più mostrata direttamente qui,
@@ -1386,7 +1410,7 @@ fun GraficiBox(viewModel: FinanceViewModel) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Accounts Overview",
+                    text = "Balance Overview",
                     style = MaterialTheme.typography.titleLarge,
                 )
                 Box(
