@@ -313,26 +313,59 @@ fun CategoryGridSection(
     onCategoryLongClick: (Category) -> Unit, // Receive long click callback
     viewModel: FinanceViewModel // Receive viewModel
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2), // Or GridCells.Adaptive(minSize = 120.dp)
-        contentPadding = PaddingValues(vertical = 16.dp, horizontal = 8.dp), // Adjust padding as needed
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Add the "Add Category" button as the first item
-        item {
-            AddCategoryButton(categoryType = categoryType, onClick = onAddClick)
+    if (categories.isEmpty()) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2), // Or GridCells.Adaptive(minSize = 120.dp)
+            contentPadding = PaddingValues(
+                vertical = 16.dp,
+                horizontal = 8.dp
+            ), // Adjust padding as needed
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Add the "Add Category" button as the first item
+            item {
+                AddCategoryButton(categoryType = categoryType, onClick = onAddClick)
+            }
         }
-
-        // Display the list of categories
-        items(categories, key = { it.id }) { category -> // Add a key for performance
-            CategoryItem(
-                category = category,
-                viewModel = viewModel, // Pass viewModel
-                backgroundColor = backgroundColor,
-                onClick = onCategoryClick,
-                onLongClick = onCategoryLongClick // Pass callback
+        Box(
+            modifier = Modifier
+                .fillMaxSize() // Fill the available space
+                .padding(16.dp), // Add some padding
+            contentAlignment = Alignment.Center // Center the text
+        ) {
+            Text(
+                text = "No categories found for ${categoryType.name.lowercase()}.\nTap the '+' button to add a new one!",
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) // Make it slightly less prominent
             )
+        }
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2), // Or GridCells.Adaptive(minSize = 120.dp)
+            contentPadding = PaddingValues(
+                vertical = 16.dp,
+                horizontal = 8.dp
+            ), // Adjust padding as needed
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Add the "Add Category" button as the first item
+            item {
+                AddCategoryButton(categoryType = categoryType, onClick = onAddClick)
+            }
+
+            // Display the list of categories
+            items(categories, key = { it.id }) { category -> // Add a key for performance
+                CategoryItem(
+                    category = category,
+                    viewModel = viewModel, // Pass viewModel
+                    backgroundColor = backgroundColor,
+                    onClick = onCategoryClick,
+                    onLongClick = onCategoryLongClick // Pass callback
+                )
+            }
         }
     }
 }

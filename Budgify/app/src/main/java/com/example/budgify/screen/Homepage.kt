@@ -750,6 +750,16 @@ fun ContiBox(
                 style = MaterialTheme.typography.titleLarge
             )
             Spacer(modifier = Modifier.height(4.dp))
+
+            if (accounts.isEmpty()) {
+                Text(
+                    text = "No accounts found. Tap the '+' button to add a new one!",
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
+
             //Sezione scrollable
             Row(
                 modifier = Modifier

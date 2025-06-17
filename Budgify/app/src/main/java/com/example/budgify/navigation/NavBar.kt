@@ -228,20 +228,8 @@ fun BottomBar(
                     ) {
                         Button(
                             onClick = {
-                                when (hasAccounts) {
-                                    true -> {
-                                        showAddTransactionDialog = true
-                                        showDialog = false
-                                    }
-                                    false -> {
-                                        showSnackbar("Please add an account first")
-                                        showForceAddAccountDialog = true
-                                        showDialog = false
-                                    }
-                                    null -> {
-                                        showSnackbar("Checking for accounts...")
-                                    }
-                                }
+                                showAddTransactionDialog = true
+                                showDialog = false
                             },
                             modifier = Modifier
                                 .padding(0.dp)
@@ -457,42 +445,51 @@ fun AddTransactionDialog(
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Account Dropdown Menu
-            ExposedDropdownMenuBox(
-                expanded = accountExpanded,
-                onExpandedChange = { accountExpanded = !accountExpanded },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                TextField(
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth(),
-                    readOnly = true,
-                    value = selectedAccount?.title ?: "Select Account", // Display title or placeholder
-                    onValueChange = {},
-                    label = { Text("Account") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded)
-                    },
-                    colors = ExposedDropdownMenuDefaults.textFieldColors()
-                )
-
-                ExposedDropdownMenu(
+            if (accounts.isNotEmpty()) {
+                // Account Dropdown Menu
+                ExposedDropdownMenuBox(
                     expanded = accountExpanded,
-                    onDismissRequest = { accountExpanded = false }
+                    onExpandedChange = { accountExpanded = !accountExpanded },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    accounts.forEach { account ->
-                        DropdownMenuItem(
-                            text = { Text(account.title) },
-                            onClick = {
-                                selectedAccountId = account.id // Store the ID
-                                accountExpanded = false
-                            },
-                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                        )
+                    TextField(
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        readOnly = true,
+                        value = selectedAccount?.title ?: "Select Account", // Display title or placeholder
+                        onValueChange = {},
+                        label = { Text("Account") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded)
+                        },
+                        colors = ExposedDropdownMenuDefaults.textFieldColors()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = accountExpanded,
+                        onDismissRequest = { accountExpanded = false }
+                    ) {
+                        accounts.forEach { account ->
+                            DropdownMenuItem(
+                                text = { Text(account.title) },
+                                onClick = {
+                                    selectedAccountId = account.id // Store the ID
+                                    accountExpanded = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
                     }
                 }
+            } else {
+                Text(
+                    "No accounts available. Please create an account first to save transactions.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
+
             Spacer(modifier = Modifier.height(8.dp))
 
 
