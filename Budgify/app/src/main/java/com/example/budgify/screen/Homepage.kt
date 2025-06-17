@@ -154,7 +154,8 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
             ) {
                 // Box per i pie chart e istogramma
                 item {
-                    GraficiBox(viewModel = viewModel)
+                    GraficiBox(viewModel = viewModel,
+                            showSnackbar = showSnackbar)
                 }
 
                 // Box per i conti e il saldo totale
@@ -1511,7 +1512,8 @@ fun ChartLegend(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun GraficiBox(viewModel: FinanceViewModel) {
+fun GraficiBox(viewModel: FinanceViewModel,
+               showSnackbar: (String) -> Unit) {
     val allAccounts by viewModel.allAccounts.collectAsStateWithLifecycle()
     val allTransactionsWithDetails by viewModel.allTransactionsWithDetails.collectAsStateWithLifecycle()
 
@@ -1620,6 +1622,7 @@ fun GraficiBox(viewModel: FinanceViewModel) {
                             chartType = currentChartType,
                             displayedTransactionType = displayedTransactionType,
                             allTransactions = allTransactionsWithDetails,
+                            showSnackbar = showSnackbar,
                             onLongClick = {
                                 selectedAccountForDetail = account
                                 showChartDetailDialog = true
@@ -1651,7 +1654,8 @@ fun SingleAccountChartsCard(
     chartType: ChartType,
     displayedTransactionType: TransactionType,
     allTransactions: List<TransactionWithDetails>,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    showSnackbar: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -1660,7 +1664,9 @@ fun SingleAccountChartsCard(
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .combinedClickable(
-                onClick = {}, // Can add a snackbar here if needed
+                onClick = {
+                    showSnackbar("Hold on the chart to expand")
+                }, // Can add a snackbar here if needed
                 onLongClick = onLongClick
             )
             .padding(12.dp),
