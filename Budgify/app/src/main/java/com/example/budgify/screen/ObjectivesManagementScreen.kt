@@ -1,7 +1,6 @@
 package com.example.budgify.screen
 
 import android.util.Log
-import androidx.activity.result.launch
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -29,7 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -68,7 +66,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.budgify.applicationlogic.FinanceViewModel
-import com.example.budgify.entities.LoanType
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
 import com.example.budgify.navigation.BottomBar
@@ -158,15 +155,34 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                     ObjectivesManagementSection.Active -> "Here you can track all your active objectives.\nTry to complete them before they expire!"
                     ObjectivesManagementSection.Expired -> "Here you can find all completed and/or expired objectives.\nYou can still complete expired objectives."
                 }
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(color = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Text(
+                            text = explanatoryText,
+                            style = MaterialTheme.typography.bodyMedium, // Puoi scegliere lo stile che preferisci
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp), // Aggiungi padding per spaziatura
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                }
 
                 Text(
-                    text = explanatoryText,
-                    style = MaterialTheme.typography.bodyMedium, // Puoi scegliere lo stile che preferisci
+                    text = "Hold on an objective to manage it",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp), // Aggiungi padding per spaziatura
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    modifier = Modifier.fillMaxWidth().padding(top = 5.dp)
                 )
 
                 Box(

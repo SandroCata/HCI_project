@@ -57,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color.Companion.Transparent
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -372,6 +373,12 @@ fun AddTransactionDialog(
                 )
                 XButton(onDismiss)
             }
+            Text("Add a transaction to record an expense or income in your account.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier.padding(top = 8.dp)
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             TextField(
@@ -415,7 +422,7 @@ fun AddTransactionDialog(
                     expanded = categoryExpanded,
                     onDismissRequest = { categoryExpanded = false }
                 ) {
-                    DropdownMenuItem(text = { Text("Uncategorized", style = TextStyle(fontWeight = FontWeight.Bold)) }, onClick = {
+                    DropdownMenuItem(text = { Text("Uncategorized", style = TextStyle(fontWeight = FontWeight.Bold), fontStyle = FontStyle.Italic) }, onClick = {
                         selectedCategoryId = null
                         selectedCategory = null
                         categoryExpanded = false
@@ -424,7 +431,7 @@ fun AddTransactionDialog(
                     )
                     categoriesForDropdown.forEach { category ->
                         DropdownMenuItem(
-                            text = { Text(category.desc) },
+                            text = { Text("${category.desc} (${category.type})") },
                             onClick = {
                                 selectedCategoryId = category.id // Store the ID
                                 selectedCategory = category
@@ -434,7 +441,7 @@ fun AddTransactionDialog(
                         )
                     }
                     DropdownMenuItem(
-                        text = { Text("Add New Category...", style = TextStyle(fontWeight = FontWeight.Bold)) },
+                        text = { Text("Add New Category...", style = TextStyle(fontWeight = FontWeight.Bold), fontStyle = FontStyle.Italic) },
                         onClick = {
                             categoryExpanded = false // Close the category dropdown
                             showAddCategoryDialog = true // Show the Add Category dialog
@@ -657,6 +664,12 @@ fun AddObjectiveDialog(
                 Text("Add Objective", style = MaterialTheme.typography.titleLarge)
                 XButton(onDismiss)
             }
+            Text("Add an objective to record a sum of money you want to obtain or spend in the future.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier.padding(top = 8.dp)
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
              // Input fields for transaction details
@@ -844,6 +857,12 @@ fun AddLoanDialog(
                 Text("Add Loan", style = MaterialTheme.typography.titleLarge)
                 XButton(onDismiss)
             }
+            Text("Add a loan to record a credit or a debit you have contracted to your account.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier.padding(top = 8.dp)
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             TextField(

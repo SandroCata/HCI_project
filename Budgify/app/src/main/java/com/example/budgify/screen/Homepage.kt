@@ -11,9 +11,11 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,6 +23,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -120,6 +124,7 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
         }
     }
     var balancesVisible by remember { mutableStateOf(false) }
+    val lazyListState = rememberLazyListState()
 
     Scaffold (
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -130,41 +135,131 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
             showSnackbar = showSnackbar
         ) }
     ){
-            innerPadding ->
-        LazyColumn(
+        innerPadding ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(innerPadding) // Apply innerPadding to the Box
         ) {
-            // Box per i pie chart e istogramma
-            item {
-                GraficiBox(viewModel = viewModel)
-            }
+            LazyColumn(
+                state = lazyListState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    //.padding(innerPadding)
+            ) {
+                // Box per i pie chart e istogramma
+                item {
+                    GraficiBox(viewModel = viewModel)
+                }
 
-            // Box per i conti e il saldo totale
-            item {
-                ContiBox(
-                    viewModel,
-                    balancesVisible = balancesVisible,
-                    onToggleBalanceVisibility = { balancesVisible = !balancesVisible },
-                    showSnackbar = { message ->
-                        scope.launch {
-                            snackbarHostState.showSnackbar(message)
+                // Box per i conti e il saldo totale
+                item {
+                    ContiBox(
+                        viewModel,
+                        balancesVisible = balancesVisible,
+                        onToggleBalanceVisibility = { balancesVisible = !balancesVisible },
+                        showSnackbar = { message ->
+                            scope.launch {
+                                snackbarHostState.showSnackbar(message)
+                            }
+
                         }
+                    )
+                }
 
-                    }
-                )
+                item {
+                    LastTransactionBox(
+                        viewModel = viewModel,
+                        showSnackbar = showSnackbar
+                    )
+                }
             }
+//            CustomVerticalLazyListScrollbar(
+//                        lazyListState = lazyListState,
+//                modifier = Modifier
+//                    .fillMaxHeight()
+//                    .width(8.dp) // Width of the scrollbar
+//                    .align(Alignment.CenterEnd) // Position it to the right
+//                    .padding(vertical = 4.dp) // Optional vertical padding for the scrollbar itself
+//            )
+        }
+    }
+}
 
-            item {
-                LastTransactionBox(
-                    viewModel = viewModel,
-                    showSnackbar = showSnackbar
+@Composable
+fun CustomVerticalLazyListScrollbar(
+    lazyListState: LazyListState,
+    modifier: Modifier = Modifier,
+    thumbColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+    trackColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+) {
+    val layoutInfo = lazyListState.layoutInfo
+    val totalItemsCount = layoutInfo.totalItemsCount
+    val visibleItemsInfo = layoutInfo.visibleItemsInfo
+
+    if (totalItemsCount == 0 || visibleItemsInfo.isEmpty()) {
+        return // No items or no visible items, no scrollbar needed
+    }
+
+    // Calculate if scrolling is possible
+    val firstVisibleItem = visibleItemsInfo.first()
+    val lastVisibleItem = visibleItemsInfo.last()
+
+    // Estimate total content height and viewport height
+    // This is an estimation because item heights can vary.
+    val averageItemHeight = visibleItemsInfo.sumOf { it.size } / visibleItemsInfo.size.toFloat()
+    val estimatedTotalContentHeight = totalItemsCount * averageItemHeight
+    val viewportHeight = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset.toFloat()
+
+    if (estimatedTotalContentHeight <= viewportHeight) {
+        return // Content fits within viewport, no scrollbar needed
+    }
+
+    val density = LocalDensity.current
+
+    BoxWithConstraints(modifier = modifier) {
+        val maxHeightPx = constraints.maxHeight.toFloat() // Height of the scrollbar track area
+
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .background(trackColor, RoundedCornerShape(4.dp))
+        ) {
+            // Calculate thumb size and position
+            val thumbSizeRatio = (viewportHeight / estimatedTotalContentHeight)
+                .coerceIn(0.05f, 1f) // Ensure thumb has a minimum size
+            val minThumbHeightPx = with(density) { 16.dp.toPx() }
+            val thumbHeightPx = (thumbSizeRatio * maxHeightPx).coerceAtLeast(minThumbHeightPx)
+
+            val totalScrollableRange = (estimatedTotalContentHeight - viewportHeight).coerceAtLeast(0.01f)
+            val scrolledPx = (firstVisibleItem.index * averageItemHeight) + (-firstVisibleItem.offset)
+
+            // Calculate current scroll progress
+            // firstVisibleItemScrollOffset is negative or zero.
+            // It's the offset of the first visible item from the start of the viewport.
+            // val scrolledThroughItemsHeight = firstVisibleItem.index * averageItemHeight + (-firstVisibleItem.offset)
+            val scrollProgress = (scrolledPx / totalScrollableRange).coerceIn(0f, 1f)
+
+            val availableTrackSpaceForThumb = maxHeightPx - thumbHeightPx
+            val thumbOffsetYPx = scrollProgress * availableTrackSpaceForThumb
+
+            if (thumbHeightPx > 0f && thumbHeightPx < maxHeightPx) { // Ensure thumb is drawable and smaller than track
+                // Ensure thumbOffsetYPx does not cause the thumb to go out of bounds
+                val finalThumbOffsetYPx = thumbOffsetYPx.coerceIn(0f, maxHeightPx - thumbHeightPx)
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(with(density) { thumbHeightPx.toDp() })
+                        .align(Alignment.TopStart)
+                        .padding(top = with(density) { finalThumbOffsetYPx.toDp() }) // Use coerced value
+                        .background(thumbColor, RoundedCornerShape(4.dp))
                 )
             }
         }
     }
 }
+
 
 //Composbale per visualizzare le transazioni
 @OptIn(ExperimentalFoundationApi::class)
@@ -267,6 +362,11 @@ fun LastTransactionBox(
             Text(
                 text = "Latest Transactions",
                 style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                text = "Hold on a transaction to edit it",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -771,6 +871,11 @@ fun ContiBox(
                     )
                 }
             }
+            Text(
+                text = "Hold on an account to edit it",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
             Spacer(modifier = Modifier.height(4.dp))
 
             if (accounts.isEmpty()) {

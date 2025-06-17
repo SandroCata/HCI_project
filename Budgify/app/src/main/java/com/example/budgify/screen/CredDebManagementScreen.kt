@@ -157,16 +157,36 @@ fun CredDebManagementScreen(navController: NavController, viewModel: FinanceView
                     LoanSectionType.DEBTS -> "Here you can find all the money you borrowed.\nRemember to return it as soon as possible ;)"
                 }
 
-                Text(
-                    text = explanatoryText,
-                    style = MaterialTheme.typography.bodyMedium, // Puoi scegliere lo stile che preferisci
-                    textAlign = TextAlign.Center,
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp), // Aggiungi padding per spaziatura
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(color = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Text(
+                            text = explanatoryText,
+                            style = MaterialTheme.typography.bodyMedium, // Puoi scegliere lo stile che preferisci
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp), // Aggiungi padding per spaziatura
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                }
                 // --- FINE TESTO ESPLICATIVO ---
+
+                Text(
+                    text = "Hold on a loan to manage it",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 5.dp)
+                )
 
                 Box(
                     modifier = Modifier

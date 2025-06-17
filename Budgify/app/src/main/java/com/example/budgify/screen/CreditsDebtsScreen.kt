@@ -77,6 +77,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import android.util.Log // For debugging
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewModel) {
@@ -157,7 +158,14 @@ fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewMode
             Text(
                 text = "Recent Active Loans", // Consider renaming if you filter for !isPaid
                 style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Text(
+                text = "Hold on a loan to manage it",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 5.dp)
             )
 
             val displayLoans = lastThreeLoans.filter { !it.completed } // Optionally filter to show only active loans

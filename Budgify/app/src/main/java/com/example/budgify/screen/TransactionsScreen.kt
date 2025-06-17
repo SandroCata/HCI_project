@@ -359,6 +359,11 @@ fun TransactionBox(
                 text = if (selectedDate != null) selectedDate.format(DateTimeFormatter.ofPattern("dd MMMM yyyy")) else "Latest Transactions",
                 style = MaterialTheme.typography.titleLarge
             )
+            Text(
+                text = "Hold on a transaction to edit it",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
             Spacer(modifier = Modifier.height(8.dp))
             Column(modifier = Modifier.fillMaxWidth()) {
                 if (transactionsForSelectedDate.isEmpty() && selectedDate != null) {
