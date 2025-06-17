@@ -191,7 +191,7 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
         }
     }
 }
-
+/*
 @Composable
 fun CustomVerticalLazyListScrollbar(
     lazyListState: LazyListState,
@@ -264,7 +264,7 @@ fun CustomVerticalLazyListScrollbar(
             }
         }
     }
-}
+}*/
 
 
 //Composbale per visualizzare le transazioni
@@ -295,7 +295,8 @@ fun TransactionItem(
     ) {
         Column {
             // Modifica formattedDescription2 per includere l'importo
-            val amountText = "${if (myTransaction.type == TransactionType.INCOME) "+" else "-"} ${myTransaction.amount}€"
+            val formattedAmount = String.format(java.util.Locale.US, "%.2f", myTransaction.amount)
+            val amountText = "${if (myTransaction.type == TransactionType.INCOME) "+" else "-"}$formattedAmount €"
             val amountColor = if (myTransaction.type == TransactionType.INCOME) Color(red = 0.0f, green = 0.6f, blue = 0.0f) else Color(red = 0.9f, green = 0.0f, blue = 0.0f)
 
             val formattedDescription2 = buildAnnotatedString {
@@ -512,6 +513,7 @@ fun EditTransactionDialog(
 ) {
     // Use the existing transaction data as initial state for editing
     var description by remember { mutableStateOf(transaction.description) }
+    var descriptionError by remember { mutableStateOf<String?>(null) } // Nuovo per errore descrizione
     var amount by remember { mutableStateOf(transaction.amount.toString().replace('.', ',')) } // Use comma for display
     val categories by viewModel.categoriesForTransactionDialog.collectAsStateWithLifecycle(initialValue = emptyList())
     var categoryExpanded by remember { mutableStateOf(false) }
@@ -566,10 +568,25 @@ fun EditTransactionDialog(
 
             TextField(
                 value = description,
-                onValueChange = { description = it },
-                label = { Text("Description") },
+                onValueChange = { newValue ->
+                    var cleanedValue = newValue.replace("\n", "").replace("\t", "")
+                    cleanedValue = cleanedValue.replace(Regex("\\s+"), " ")
+                    if (cleanedValue.length <= 30) {
+                        description = cleanedValue
+                        descriptionError = null
+                    } else {
+                        description = cleanedValue.take(30)
+                        descriptionError = "Max 30 characters."
+                    }
+                },
+                label = { Text("Description (max 30 characters)") }, // Aggiornato label
                 modifier = Modifier.fillMaxWidth(),
-                isError = description.isBlank() && errorMessage != null
+                isError = descriptionError != null || (description.isBlank() && errorMessage != null),
+                /*supportingText = {
+                    if (descriptionError != null) {
+                        Text(descriptionError!!, color = MaterialTheme.colorScheme.error)
+                    }
+                }*/
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -754,6 +771,25 @@ fun EditTransactionDialog(
                     // The enabled state logic is now part of the validation check before saving
                     onClick = {
                         errorMessage = null // Reset error message at the start of save attempt
+                        descriptionError = null // Reset description error
+
+                        val finalDescription = description.trim()
+                        if (finalDescription.isBlank()) {
+                            descriptionError = "Description cannot be empty."
+                            // Assegna anche a errorMessage per la visualizzazione generica se preferisci
+                            errorMessage = descriptionError
+                            return@Button
+                        }
+                        if (finalDescription.length > 30) { // Ricontrolla al submit
+                            descriptionError = "Max 30 characters."
+                            errorMessage = descriptionError
+                            return@Button
+                        }
+
+                        if (descriptionError != null) { // Se c'è un errore di descrizione, non procedere
+                            errorMessage = descriptionError
+                            return@Button
+                        }
                         val amountDouble = amount.replace(',', '.').toDoubleOrNull()
 
                         if (description.isBlank()) {
@@ -849,6 +885,9 @@ fun ContiBox(
     // Calcola il saldo totale from the collected accounts
     val totalBalance = accounts.sumOf { it.amount }
 
+    val formattedTotAmount = String.format(java.util.Locale.US, "%.2f", totalBalance)
+    val totAmountText = "$formattedTotAmount €"
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -872,7 +911,7 @@ fun ContiBox(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (balancesVisible) "Total Balance: $totalBalance €" else "Total Balance: **** €",
+                    text = if (balancesVisible) "Total Balance: $totAmountText" else "Total Balance: **** €",
                     style = MaterialTheme.typography.titleSmall
                 )
                 IconButton(onClick = onToggleBalanceVisibility) { // <-- NEW: Toggle Icon
@@ -981,6 +1020,9 @@ fun AccountItem(
 
     val coroutineScope = rememberCoroutineScope()
 
+    val formattedAmount = String.format(java.util.Locale.US, "%.2f", account.amount)
+    val amountText = "$formattedAmount €"
+
     Box(modifier = Modifier
         .padding(8.dp)
         .width(150.dp)
@@ -1003,7 +1045,7 @@ fun AccountItem(
             verticalArrangement = Arrangement.Center,
         ) {
             Text(text = account.title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(text = if (balancesVisible) "${account.amount}€" else "**** €", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = if (balancesVisible) amountText else "**** €", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
         // L'icona di eliminazione non è più mostrata direttamente qui,
@@ -1111,7 +1153,10 @@ fun AddAccountDialog(
 ) {
     // State for input fields
     var accountTitle by remember { mutableStateOf("") }
+    var accountTitleError by remember { mutableStateOf<String?>(null) } // Nuovo per errore titolo
     var initialBalance by remember { mutableStateOf("") }
+    var balanceError by remember { mutableStateOf<String?>(null) } // Nuovo per errore bilancio
+
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -1137,18 +1182,51 @@ fun AddAccountDialog(
 
             TextField(
                 value = accountTitle,
-                onValueChange = { accountTitle = it },
-                label = { Text("Account Name") },
-                modifier = Modifier.fillMaxWidth()
+                onValueChange = { newValue ->
+                    var cleanedValue = newValue.replace("\n", "").replace("\t", "")
+                    cleanedValue = cleanedValue.replace(Regex("\\s+"), " ")
+                    if (cleanedValue.length <= 15) {
+                        accountTitle = cleanedValue
+                        accountTitleError = null
+                    } else {
+                        accountTitle = cleanedValue.take(15)
+                        accountTitleError = "Max 15 characters."
+                    }
+                },
+                label = { Text("Account Name (max 15 characters)") }, // Aggiornato label
+                modifier = Modifier.fillMaxWidth(),
+                isError = accountTitleError != null,
+                /*supportingText = {
+                    if (accountTitleError != null) {
+                        Text(accountTitleError!!, color = MaterialTheme.colorScheme.error)
+                    }
+                }*/
             )
             Spacer(modifier = Modifier.height(8.dp))
 
             TextField(
                 value = initialBalance,
-                onValueChange = { initialBalance = it },
+                onValueChange = { newValue ->
+                    initialBalance = newValue
+                    // Validazione quando l'utente digita:
+                    // controlla se, dopo aver rimpiazzato la virgola, è un numero valido.
+                    // Mostra l'errore solo se non è vuoto e non è valido.
+                    val balanceToCheck = newValue.replace(',', '.')
+                    if (balanceToCheck.isNotBlank() && balanceToCheck.toDoubleOrNull() == null) {
+                        balanceError = "Invalid number."
+                    } else {
+                        balanceError = null
+                    }
+                },
                 label = { Text("Balance") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = balanceError != null,
+                supportingText = {
+                    if (balanceError != null) {
+                        Text(balanceError!!, color = MaterialTheme.colorScheme.error)
+                    }
+                }
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -1160,24 +1238,35 @@ fun AddAccountDialog(
 //                    Text("Cancel")
 //                }
                 Button(
-                    enabled = accountTitle.isNotBlank() && initialBalance.isNotBlank(),
+                    enabled = accountTitle.trim().isNotBlank() && initialBalance.isNotBlank() && accountTitleError == null && balanceError == null,
                     onClick = {
-                        val balanceDouble = initialBalance.toDoubleOrNull()
-                        // Basic validation
-                        if (accountTitle.isNotBlank() && balanceDouble != null) {
-                            // Create a new Account object
-                            val newAccount = Account(
-                                title = accountTitle,
-                                amount = balanceDouble,
-                                initialAmount = balanceDouble
-                            )
-                            // Insert the new account using the ViewModel
-                            viewModel.addAccount(newAccount)
-                            onAccountAdded(newAccount)
-                            //onDismiss() // Close the dialog
+                        val finalAccountTitle = accountTitle.trim()
+                        // SOSTITUISCI LA VIRGOLA CON IL PUNTO PRIMA DELLA CONVERSIONE
+                        val balanceStringWithDot = initialBalance.replace(',', '.')
+                        val balanceDouble = balanceStringWithDot.toDoubleOrNull()
+
+                        // Ricontrolla la validazione prima di aggiungere
+                        if (finalAccountTitle.isBlank() || finalAccountTitle.length > 15) {
+                            accountTitleError = if (finalAccountTitle.isBlank()) "Cannot be empty." else "Max 15 characters."
+                            return@Button
                         } else {
-                            Log.d("AddAccountDialog", "Validation failed")
+                            accountTitleError = null
                         }
+
+                        if (balanceDouble == null) {
+                            balanceError = "Invalid balance."
+                            return@Button
+                        } else {
+                            balanceError = null
+                        }
+
+                        val newAccount = Account(
+                            title = finalAccountTitle,
+                            amount = balanceDouble,
+                            initialAmount = balanceDouble
+                        )
+                        viewModel.addAccount(newAccount)
+                        onAccountAdded(newAccount)
                     }) {
                     Text("Add")
                 }
@@ -1194,16 +1283,13 @@ fun EditAccountDialog(
     onAccountUpdated: (Account) -> Unit // Potresti anche rimuovere il parametro Account qui se non lo usi più
 ) {
     var accountTitle by remember { mutableStateOf(accountToEdit.title) }
-
-    // Mostra l'amount ATTUALE nel TextField, ma ricorda l'initialAmount originale
-    // per calcolare la DIFFERENZA che l'utente vuole applicare all'initialAmount.
+    var accountTitleError by remember { mutableStateOf<String?>(null) } // Nuovo
     var currentBalanceDisplayString by remember {
         mutableStateOf(accountToEdit.amount.toString().replace('.', ','))
     }
-    val originalInitialAmount = accountToEdit.initialAmount // Conserva l'initialAmount originale
-
+    val originalInitialAmount = accountToEdit.initialAmount
     val coroutineScope = rememberCoroutineScope()
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) } // Usato per errori generali
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -1225,21 +1311,40 @@ fun EditAccountDialog(
 
             TextField(
                 value = accountTitle,
-                onValueChange = { accountTitle = it },
-                label = { Text("Account Name") },
+                onValueChange = { newValue ->
+                    var cleanedValue = newValue.replace("\n", "").replace("\t", "")
+                    cleanedValue = cleanedValue.replace(Regex("\\s+"), " ")
+                    if (cleanedValue.length <= 15) {
+                        accountTitle = cleanedValue
+                        accountTitleError = null
+                    } else {
+                        accountTitle = cleanedValue.take(15)
+                        accountTitleError = "Max 15 characters."
+                    }
+                    errorMessage = null // Pulisci l'errore generale quando il titolo cambia
+                },
+                label = { Text("Account Name (max 15 characters)") }, // Aggiornato label
                 modifier = Modifier.fillMaxWidth(),
-                isError = accountTitle.isBlank() && errorMessage != null
+                isError = accountTitleError != null || (accountTitle.isBlank() && errorMessage != null && errorMessage == "Account name cannot be empty."),
+                /*supportingText = {
+                    if (accountTitleError != null) {
+                        Text(accountTitleError!!, color = MaterialTheme.colorScheme.error)
+                    }
+                }*/
             )
             Spacer(modifier = Modifier.height(8.dp))
 
             // L'utente vede e modifica questo campo, che inizialmente mostra l'AMOUNT attuale
             TextField(
                 value = currentBalanceDisplayString,
-                onValueChange = { currentBalanceDisplayString = it },
-                label = { Text("Balance") }, // Etichetta cambiata per chiarezza
+                onValueChange = {
+                    currentBalanceDisplayString = it
+                    errorMessage = null // Pulisci l'errore quando il bilancio cambia
+                },
+                label = { Text("Balance") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
-                isError = currentBalanceDisplayString.replace(',', '.').toDoubleOrNull() == null && errorMessage != null
+                isError = errorMessage != null && errorMessage == "Please enter a valid balance." // Errore specifico per il bilancio
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -1268,6 +1373,20 @@ fun EditAccountDialog(
 
                         if (newDisplayedBalanceDouble == null) {
                             errorMessage = "Please enter a valid balance."
+                            return@Button
+                        }
+
+                        accountTitleError = null // Reset title error
+
+                        val finalAccountTitle = accountTitle.trim()
+                        if (finalAccountTitle.isBlank()) {
+                            accountTitleError = "Account name cannot be empty."
+                            errorMessage = accountTitleError // Mostra l'errore
+                            return@Button
+                        }
+                        if (finalAccountTitle.length > 15) {
+                            accountTitleError = "Max 15 characters."
+                            errorMessage = accountTitleError // Mostra l'errore
                             return@Button
                         }
 

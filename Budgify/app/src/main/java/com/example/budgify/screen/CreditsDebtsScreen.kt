@@ -78,6 +78,7 @@ import androidx.compose.material3.ListItemDefaults
 import android.util.Log // For debugging
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.ui.text.style.TextAlign
+import com.example.budgify.entities.TransactionType
 
 @Composable
 fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewModel) {
@@ -517,7 +518,8 @@ fun ClickableAmountArea(
     onClick: () -> Unit
 ) {
     // ... (your existing ClickableAmountArea implementation - looks good)
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(java.util.Locale("it", "IT")) } // Example for Euro formatting
+    val formattedAmount = String.format(java.util.Locale.US, "%.2f", amount)
+    val amountText = "${formattedAmount} €"
 
     Column(
         modifier = Modifier
@@ -542,7 +544,7 @@ fun ClickableAmountArea(
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = currencyFormat.format(amount), // Use the currency formatter
+            text = amountText, // Use the currency formatter
             style = MaterialTheme.typography.bodyMedium,
         )
     }
@@ -557,9 +559,11 @@ fun LoanRow(
     showSnackbar: (String) -> Unit,
 ) {
     val amountColor = if (loan.type == LoanType.CREDIT) Color(0xFF4CAF50) else Color(0xFFF44336)
-    val sign = if (loan.type == LoanType.CREDIT) "+" else "-"
+    //val sign = if (loan.type == LoanType.CREDIT) "+" else "-"
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd MMM yyyy") }
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(java.util.Locale("it", "IT")) }
+    //val currencyFormat = remember { NumberFormat.getCurrencyInstance(java.util.Locale("it", "IT")) }
+    val formattedAmount = String.format(java.util.Locale.US, "%.2f", loan.amount)
+    val amountText = "${formattedAmount} €"
 
     val cardAlpha = if (loan.completed) 0.6f else 1f // Visual indication for paid loans
 
@@ -627,7 +631,7 @@ fun LoanRow(
                 }
             }
             Text(
-                text = "$sign${currencyFormat.format(loan.amount)}",
+                text = amountText,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 color = amountColor.copy(alpha = cardAlpha)
@@ -652,6 +656,7 @@ fun EditLoanDialog( // This is the version for CreditsDebitsScreen
     // For now, assume we only edit !isPaid loans from this screen's flow.
 
     var description by remember { mutableStateOf(loanToEdit.desc) }
+    var descriptionError by remember { mutableStateOf<String?>(null) } // Nuovo per errore descrizione
     var amountString by remember { mutableStateOf(loanToEdit.amount.toString().replace('.',',')) } // Use comma for display
     var selectedStartDate by remember { mutableStateOf<LocalDate?>(loanToEdit.startDate) }
     var selectedEndDate by remember { mutableStateOf<LocalDate?>(loanToEdit.endDate) }
@@ -668,6 +673,8 @@ fun EditLoanDialog( // This is the version for CreditsDebitsScreen
         val errors = mutableListOf<String>()
         if (description.isBlank()) {
             errors.add("Description cannot be empty.")
+        } else if (description.length > 30) {
+            errors.add("Description cannot exceed 30 characters.")
         }
         val amountDouble = amountString.replace(',', '.').toDoubleOrNull() // Convert to dot for Double
         if (amountDouble == null || amountDouble <= 0) {
@@ -708,10 +715,25 @@ fun EditLoanDialog( // This is the version for CreditsDebitsScreen
 
                 TextField(
                     value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Description") },
+                    onValueChange = { newValue ->
+                        var cleanedValue = newValue.replace("\n", "").replace("\t", "") // Pulisci
+                        cleanedValue = cleanedValue.replace(Regex("\\s+"), " ") // Rimuovi spazi extra
+                        if (cleanedValue.length <= 50) { // Limite di esempio, puoi cambiarlo
+                            description = cleanedValue
+                            descriptionError = null
+                        } else {
+                            description = cleanedValue.take(50)
+                            descriptionError = "Max 30 characters."
+                        }
+                    },
+                    label = { Text("Description (max 30 characters)") },
                     modifier = Modifier.fillMaxWidth(),
-                    isError = errorMessages.any { it.contains("Description", ignoreCase = true) }
+                    isError = descriptionError != null || (description.isBlank() && (descriptionError !=null)), //Mostra errore solo se c'è un errore generale */),
+                    /*supportingText = {
+                        if (descriptionError != null) {
+                            Text(descriptionError!!, color = MaterialTheme.colorScheme.error)
+                        }
+                    }*/
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 

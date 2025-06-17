@@ -78,9 +78,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.RequestQuote
+import androidx.compose.material.icons.filled.TimerOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import java.time.LocalDate
 
 // Enum for the sections in LoanManagementScreen, aligning with LoanType
 enum class LoanSectionType(val title: String, val loanType: LoanType) {
@@ -190,7 +193,9 @@ fun CredDebManagementScreen(navController: NavController, viewModel: FinanceView
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(top = 5.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 5.dp)
                 )
 
                 Box(
@@ -288,16 +293,34 @@ fun LoanItem(
     var showInsufficientBalanceDialog by remember { mutableStateOf(false) }
     var insufficientBalanceAccountInfo by remember { mutableStateOf<Pair<String, Double>?>(null) }
 
-    //val scope = rememberCoroutineScope()
-
-    val backgroundColor = when (loan.type) {
-        LoanType.CREDIT -> Color(0xFF4CAF50).copy(alpha = if (loan.completed) 0.5f else 0.8f)
-        LoanType.DEBT -> Color(0xFFF44336).copy(alpha = if (loan.completed) 0.5f else 0.8f)
+    val isExpired = remember(loan) { // Calcola se è scaduto
+        loan.endDate != null && loan.endDate!!.isBefore(LocalDate.now()) && !loan.completed
     }
-    //val contentColor = Color.White.copy(alpha = if (loan.completed) 0.7f else 1f)
-    val contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = if (loan.completed) 0.7f else 1f)
 
-    val image = if (loan.completed) Icons.Filled.CheckCircleOutline else Icons.Filled.RequestQuote
+    val backgroundColor = when {
+        isExpired -> Color.Gray.copy(alpha = 0.7f) // Colore per i prestiti scaduti
+        loan.type == LoanType.CREDIT -> Color(0xFF4CAF50).copy(alpha = if (loan.completed) 0.5f else 0.8f)
+        loan.type == LoanType.DEBT -> Color(0xFFF44336).copy(alpha = if (loan.completed) 0.5f else 0.8f)
+        else -> MaterialTheme.colorScheme.surfaceVariant // Fallback
+    }
+
+    val contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = if (loan.completed || isExpired) 0.7f else 1f)
+
+    val iconImage = when {
+        loan.completed -> Icons.Filled.CheckCircleOutline
+        isExpired -> Icons.Filled.TimerOff // Icona per scaduto (o un'altra a tua scelta)
+        else -> Icons.Filled.RequestQuote
+    }
+
+    val statusText = when {
+        loan.completed -> if (loan.type == LoanType.DEBT) "Repaid" else "Collected"
+        isExpired -> "Expired"
+        else -> "Active" // Nessun testo di stato se attivo e non scaduto
+    }
+
+
+    val formattedAmount = String.format(java.util.Locale.US, "%.2f", loan.amount)
+    val amountText = "$formattedAmount €"
 
     Box(
         modifier = Modifier
@@ -308,67 +331,69 @@ fun LoanItem(
                 onClick = {
                     if (loan.completed) {
                         showSnackbar("This loan is already ${if (loan.type == LoanType.DEBT) "repaid" else "collected"}.")
+                    } else if (isExpired) {
+                        showSnackbar("This loan is expired. Hold to interact.")
                     } else {
                         showSnackbar("Hold to interact with the ${loan.type.name.lowercase()}.")
                     }
                 },
                 onLongClick = {
-                    showActionChoiceDialog = true // MOSTRA SEMPRE IL DIALOGO DELLE AZIONI
+                    showActionChoiceDialog = true
                 }
             )
+            .padding(vertical = 8.dp, horizontal = 16.dp) // Aggiustato padding per coerenza
     ) {
-        Icon(
-            imageVector = image, // Trophy icon
-            contentDescription = "Completed Loan",
-            modifier = Modifier
-                .align(Alignment.CenterEnd) // Align to the center-end of the Box
-                .size(80.dp) // Adjust size as needed
-                .padding(end = 16.dp) // Some padding from the edge
-                .alpha(0.5f), // Set transparency (0.0f is fully transparent, 1.0f is fully opaque)
-            tint = contentColor.copy(alpha = 0.7f) // Optional: tint to match content color with more alpha
-        )
+        // Colonna principale per le informazioni del prestito
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-//                .clip(RoundedCornerShape(8.dp))
-//                .background(backgroundColor)
-//                .combinedClickable(
-//                    onClick = {
-//                        if (loan.completed) {
-//                            showSnackbar("This loan is already ${if (loan.type == LoanType.DEBT) "repaid" else "collected"}.")
-//                        } else {
-//                            showSnackbar("Hold to interact with the ${loan.type.name.lowercase()}.")
-//                        }
-//                    },
-//                    onLongClick = {
-//                        showActionChoiceDialog = true // MOSTRA SEMPRE IL DIALOGO DELLE AZIONI
-//                    }
-//                )
-                .padding(16.dp),
+                .padding(end = 88.dp) // Aggiungi padding a destra per fare spazio all'icona e al testo di stato
         ) {
-            // ... (contenuto del Column di LoanItem come prima: Text per desc, amount, date, status)
             Text(
                 text = loan.desc,
                 style = MaterialTheme.typography.titleLarge,
-                color = contentColor
+                color = contentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Text(text = "Amount: ${loan.amount}€", color = contentColor)
+            Text(text = "Amount: $amountText", color = contentColor, style = MaterialTheme.typography.bodyMedium)
             Text(
-                text = "Added: ${loan.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}",
-                color = contentColor
+                text = "Start Date: ${loan.startDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}",
+                color = contentColor,
+                style = MaterialTheme.typography.bodySmall
             )
             loan.endDate?.let {
                 Text(
                     text = "Due Date: ${it.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}",
-                    color = contentColor
+                    color = contentColor,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        // Evidenzia la data di scadenza se è scaduta
+                        color = if (isExpired) MaterialTheme.colorScheme.error else contentColor
+                    )
                 )
             }
-            if (loan.completed) {
+        }
+
+        // Colonna per Icona e Testo di Stato allineata a destra
+        Column(
+            modifier = Modifier.align(Alignment.CenterEnd),
+            horizontalAlignment = Alignment.CenterHorizontally // Centra l'icona e il testo sottostante
+        ) {
+            Icon(
+                imageVector = iconImage,
+                contentDescription = statusText ?: "Loan Status",
+                modifier = Modifier
+                    .size(if (statusText != null) 60.dp else 80.dp) // Riduci un po' l'icona se c'è testo sotto
+                    .alpha(if (statusText != null) 0.7f else 0.5f),
+                tint = contentColor.copy(alpha = 0.8f)
+            )
+            statusText?.let {
                 Text(
-                    "Status: ${if (loan.type == LoanType.DEBT) "Repaid" else "Collected"}",
+                    text = it,
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = if (isExpired) MaterialTheme.colorScheme.error.copy(alpha = contentColor.alpha) else contentColor,
                     textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodySmall,
-                    //color = Color.White.copy(alpha = 0.9f)
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
         }
@@ -539,6 +564,7 @@ fun EditLoanDialog(
 ) {
     // ... (contenuto di EditLoanDialog come prima, sapendo che loan.completed è false)
     var description by remember { mutableStateOf(loan.desc) }
+    var descriptionError by remember { mutableStateOf<String?>(null) } // Nuovo per errore descrizione
     var amount by remember { mutableStateOf(loan.amount.toString().replace('.',',')) }
     var selectedStartDate by remember { mutableStateOf(loan.startDate) }
     var selectedEndDate by remember { mutableStateOf(loan.endDate) }
@@ -568,10 +594,25 @@ fun EditLoanDialog(
 
             TextField(
                 value = description,
-                onValueChange = { description = it },
-                label = { Text("Description") },
+                onValueChange = { newValue ->
+                    var cleanedValue = newValue.replace("\n", "").replace("\t", "") // Pulisci
+                    cleanedValue = cleanedValue.replace(Regex("\\s+"), " ") // Rimuovi spazi extra
+                    if (cleanedValue.length <= 50) { // Limite di esempio, puoi cambiarlo
+                        description = cleanedValue
+                        descriptionError = null
+                    } else {
+                        description = cleanedValue.take(50)
+                        descriptionError = "Max 30 characters."
+                    }
+                },
+                label = { Text("Description (max 30 characters)") },
                 modifier = Modifier.fillMaxWidth(),
-                isError = description.isBlank() && errorMessage != null && errorMessage!!.contains("Description",ignoreCase = true)
+                isError = descriptionError != null || (description.isBlank() && (descriptionError !=null)), //Mostra errore solo se c'è un errore generale */),
+                /*supportingText = {
+                    if (descriptionError != null) {
+                        Text(descriptionError!!, color = MaterialTheme.colorScheme.error)
+                    }
+                }*/
             )
             Spacer(modifier = Modifier.height(8.dp))
             TextField(
@@ -660,6 +701,9 @@ fun EditLoanDialog(
                         val amountDouble = amount.replace(',', '.').toDoubleOrNull()
                         if (description.isBlank()) {
                             errorMessage = "Description cannot be empty."
+                            return@Button
+                        } else if (description.length > 30) {
+                            errorMessage = "Description cannot exceed 30 characters."
                             return@Button
                         }
                         if (amountDouble == null || amountDouble <= 0) {

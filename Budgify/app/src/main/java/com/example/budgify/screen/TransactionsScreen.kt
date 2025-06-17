@@ -510,6 +510,7 @@ fun EditTransactionDialog2(
 ) {
     // Use the existing transaction data as initial state for editing
     var description by remember { mutableStateOf(transaction.description) }
+    var descriptionError by remember { mutableStateOf<String?>(null) } // Nuovo per errore descrizione
     var amount by remember { mutableStateOf(transaction.amount.toString().replace('.', ',')) } // Use comma for display
     val categories by viewModel.categoriesForTransactionDialog.collectAsStateWithLifecycle(initialValue = emptyList())
     var categoryExpanded by remember { mutableStateOf(false) }
@@ -562,10 +563,25 @@ fun EditTransactionDialog2(
 
             TextField(
                 value = description,
-                onValueChange = { description = it },
-                label = { Text("Description") },
+                onValueChange = { newValue ->
+                    var cleanedValue = newValue.replace("\n", "").replace("\t", "")
+                    cleanedValue = cleanedValue.replace(Regex("\\s+"), " ")
+                    if (cleanedValue.length <= 30) {
+                        description = cleanedValue
+                        descriptionError = null
+                    } else {
+                        description = cleanedValue.take(30)
+                        descriptionError = "Max 30 characters."
+                    }
+                },
+                label = { Text("Description (max 30 characters)") }, // Aggiornato label
                 modifier = Modifier.fillMaxWidth(),
-                isError = description.isBlank() && errorMessage != null
+                isError = descriptionError != null || (description.isBlank() && errorMessage != null),
+                /*supportingText = {
+                    if (descriptionError != null) {
+                        Text(descriptionError!!, color = MaterialTheme.colorScheme.error)
+                    }
+                }*/
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -754,6 +770,25 @@ fun EditTransactionDialog2(
                     // The enabled state logic is now part of the validation check before saving
                     onClick = {
                         errorMessage = null // Reset error message at the start of save attempt
+                        descriptionError = null // Reset description error
+
+                        val finalDescription = description.trim()
+                        if (finalDescription.isBlank()) {
+                            descriptionError = "Description cannot be empty."
+                            // Assegna anche a errorMessage per la visualizzazione generica se preferisci
+                            errorMessage = descriptionError
+                            return@Button
+                        }
+                        if (finalDescription.length > 30) { // Ricontrolla al submit
+                            descriptionError = "Max 30 characters."
+                            errorMessage = descriptionError
+                            return@Button
+                        }
+
+                        if (descriptionError != null) { // Se c'è un errore di descrizione, non procedere
+                            errorMessage = descriptionError
+                            return@Button
+                        }
                         val amountDouble = amount.replace(',', '.').toDoubleOrNull()
 
                         if (description.isBlank()) {

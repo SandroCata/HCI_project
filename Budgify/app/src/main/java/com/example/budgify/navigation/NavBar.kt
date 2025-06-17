@@ -353,6 +353,8 @@ fun AddTransactionDialog(
     var showDatePickerDialog by remember { mutableStateOf(false) }
 
     var showAddCategoryDialog by remember { mutableStateOf(false) }
+
+    var descriptionError by remember { mutableStateOf<String?>(null) }
     
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -383,9 +385,25 @@ fun AddTransactionDialog(
 
             TextField(
                 value = description,
-                onValueChange = { description = it },
-                label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth()
+                onValueChange = { newValue ->
+                    var cleanedValue = newValue.replace("\n", "").replace("\t", "")
+                    cleanedValue = cleanedValue.replace(Regex("\\s+"), " ")
+                    if (cleanedValue.length <= 30) {
+                        description = cleanedValue
+                        descriptionError = null
+                    } else {
+                        description = cleanedValue.take(30)
+                        descriptionError = "Max 30 characters allowed."
+                    }
+                },
+                label = { Text("Description (max 30 characters)") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = descriptionError != null,
+                /*supportingText = {
+                    if (descriptionError != null) {
+                        Text(descriptionError!!, color = MaterialTheme.colorScheme.error)
+                    }
+                }*/
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -649,6 +667,8 @@ fun AddObjectiveDialog(
     var showDatePickerDialog by remember { mutableStateOf(false) }
     val objectiveTypes = ObjectiveType.entries.toList()
 
+    var descriptionError by remember { mutableStateOf<String?>(null) }
+
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
@@ -664,7 +684,7 @@ fun AddObjectiveDialog(
                 Text("Add Objective", style = MaterialTheme.typography.titleLarge)
                 XButton(onDismiss)
             }
-            Text("Add an objective to record a sum of money you want to obtain or spend in the future.",
+            Text("Add an objective to record a sum of money you want to gain or spend in the future.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 modifier = Modifier.padding(top = 8.dp)
@@ -674,12 +694,28 @@ fun AddObjectiveDialog(
 
              // Input fields for transaction details
              // For example, using TextField:
-             TextField(
-                 value = description,
-                 onValueChange = { description = it },
-                 label = { Text("Description") },
-                 modifier = Modifier.fillMaxWidth()
-             )
+            TextField(
+                value = description,
+                onValueChange = { newValue ->
+                    var cleanedValue = newValue.replace("\n", "").replace("\t", "")
+                    cleanedValue = cleanedValue.replace(Regex("\\s+"), " ")
+                    if (cleanedValue.length <= 30) {
+                        description = cleanedValue
+                        descriptionError = null
+                    } else {
+                        description = cleanedValue.take(30)
+                        descriptionError = "Max 30 characters allowed."
+                    }
+                },
+                label = { Text("Description (max 30 characters)") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = descriptionError != null,
+                /*supportingText = {
+                    if (descriptionError != null) {
+                        Text(descriptionError!!, color = MaterialTheme.colorScheme.error)
+                    }
+                }*/
+            )
              Spacer(modifier = Modifier.height(8.dp))
              TextField(
                  value = amount,
@@ -837,6 +873,8 @@ fun AddLoanDialog(
 
     var showInsufficientBalanceDialog by remember { mutableStateOf(false) }
 
+    var descriptionError by remember { mutableStateOf<String?>(null) }
+
     fun triggerError(message: String) {
         errorMessage = message
         showErrorDialog = true
@@ -867,10 +905,25 @@ fun AddLoanDialog(
 
             TextField(
                 value = description,
-                onValueChange = { description = it },
-                label = { Text("Description") },
+                onValueChange = { newValue ->
+                    var cleanedValue = newValue.replace("\n", "").replace("\t", "")
+                    cleanedValue = cleanedValue.replace(Regex("\\s+"), " ")
+                    if (cleanedValue.length <= 30) {
+                        description = cleanedValue
+                        descriptionError = null
+                    } else {
+                        description = cleanedValue.take(30)
+                        descriptionError = "Max 30 characters allowed."
+                    }
+                },
+                label = { Text("Description (max 30 characters)") },
                 modifier = Modifier.fillMaxWidth(),
-                isError = description.isBlank() && showErrorDialog // Mostra errore solo se si tenta di salvare e il campo è vuoto
+                isError = descriptionError != null || (description.isBlank() && showErrorDialog), // Errore se troppo lungo o vuoto al submit
+                /*supportingText = {
+                    if (descriptionError != null) {
+                        Text(descriptionError!!, color = MaterialTheme.colorScheme.error)
+                    }
+                }*/
             )
             Spacer(modifier = Modifier.height(8.dp))
 
