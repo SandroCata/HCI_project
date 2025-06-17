@@ -1,30 +1,60 @@
 package com.example.budgify.screen
 
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -35,9 +65,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.example.budgify.R
+import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.navigation.BottomBar
 import com.example.budgify.navigation.TopBar
-import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.navigation.getSavedPinFromContext
 import com.example.budgify.routes.ScreenRoutes
 import com.example.budgify.userpreferences.AppTheme
@@ -511,99 +542,119 @@ fun PinSettingsContent(snackbarHostState: SnackbarHostState) {
                 }
             }
 
-            Button(
-                // ... Save button ...
-                onClick = {
-                    errorMessage = null // Reset error
-                    var changesMade = false
-                    var showSuccessMessage = "Settings updated."
-
-                    // 1. Validate Security Answer (Mandatory if not yet set, or if changed)
-                    if (securityAnswerInput.isBlank()) {
-                        errorMessage = "Security answer cannot be empty."
-                        return@Button
-                    }
-
-                    // 2. Validate PIN (if trying to set/change PIN)
-                    val isTryingToSetOrChangePin = newPin.isNotEmpty() || confirmPin.isNotEmpty()
-                    if (isTryingToSetOrChangePin) {
-                        if (newPin.length < 4) {
-                            errorMessage = "New PIN must be at least 4 digits long."
-                            return@Button
-                        }
-                        if (newPin != confirmPin) {
-                            errorMessage = "PINs do not match."
-                            return@Button
-                        }
-                    }
-
-                    // 3. Save Logic
-                    var pinSavedSuccessfully = true
-                    var qaSavedSuccessfully = true
-
-                    if (isTryingToSetOrChangePin && newPin.isNotBlank()) {
-                        try {
-                            val masterKey = MasterKey.Builder(context)
-                                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
-                            val sharedPreferences = EncryptedSharedPreferences.create(
-                                context, "AppSettings", masterKey,
-                                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                            )
-                            with(sharedPreferences.edit()) {
-                                putString("access_pin", newPin)
-                                apply()
-                            }
-                            changesMade = true
-                            isPinSet = true
-                        } catch (e: Exception) {
-                            Log.e("PinSettingsContent", "Error saving PIN", e)
-                            errorMessage = "Error saving PIN."
-                            pinSavedSuccessfully = false
-                        }
-                    }
-
-                    val currentSavedQA = getSavedSecurityQuestionAnswer(context)
-                    val qaChanged = currentSavedQA?.questionIndex != selectedQuestionIndex ||
-                            currentSavedQA?.answer != securityAnswerInput
-                    val isFirstTimeSettingQA = currentSavedQA == null
-
-                    if (qaChanged || isFirstTimeSettingQA) {
-                        if (saveSecurityQuestionAnswer(context, selectedQuestionIndex, securityAnswerInput)) {
-                            savedSecurityQA = SecurityQuestionAnswer(selectedQuestionIndex, securityAnswerInput)
-                            isSecurityQASet.value = true
-                            changesMade = true
-                        } else {
-                            errorMessage = (errorMessage ?: "") + " Error saving security question."
-                            qaSavedSuccessfully = false
-                        }
-                    }
-
-                    if (changesMade) {
-                        when {
-                            isTryingToSetOrChangePin && newPin.isNotBlank() && (qaChanged || isFirstTimeSettingQA) ->
-                                showSuccessMessage = if (pinSavedSuccessfully && qaSavedSuccessfully) "PIN and security question updated." else "Partial update. Check errors."
-                            isTryingToSetOrChangePin && newPin.isNotBlank() ->
-                                showSuccessMessage = if (pinSavedSuccessfully) "PIN updated." else "Error saving PIN."
-                            qaChanged || isFirstTimeSettingQA ->
-                                showSuccessMessage = if (qaSavedSuccessfully) "Security question updated." else "Error saving security question."
-                        }
-                        scope.launch { snackbarHostState.showSnackbar(showSuccessMessage) }
-                        if (isTryingToSetOrChangePin && pinSavedSuccessfully) {
-                            newPin = ""
-                            confirmPin = ""
-                        }
-                    } else if (errorMessage == null) {
-                        scope.launch { snackbarHostState.showSnackbar("No changes were made.") }
-                    }
-
-                },
-                enabled = securityAnswerInput != (savedSecurityQA?.answer ?: "") ||
-                        selectedQuestionIndex != (savedSecurityQA?.questionIndex ?: 0) ||
-                        newPin.isNotEmpty() || confirmPin.isNotEmpty() ||
-                        (!isSecurityQASet.value && securityAnswerInput.isNotBlank())
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
             ) {
-                Text("Save")
+                Button(
+                    // ... Save button ...
+                    onClick = {
+                        errorMessage = null // Reset error
+                        var changesMade = false
+                        var showSuccessMessage = "Settings updated."
+
+                        // 1. Validate Security Answer (Mandatory if not yet set, or if changed)
+                        if (securityAnswerInput.isBlank()) {
+                            errorMessage = "Security answer cannot be empty."
+                            return@Button
+                        }
+
+                        // 2. Validate PIN (if trying to set/change PIN)
+                        val isTryingToSetOrChangePin =
+                            newPin.isNotEmpty() || confirmPin.isNotEmpty()
+                        if (isTryingToSetOrChangePin) {
+                            if (newPin.length < 4) {
+                                errorMessage = "New PIN must be at least 4 digits long."
+                                return@Button
+                            }
+                            if (newPin != confirmPin) {
+                                errorMessage = "PINs do not match."
+                                return@Button
+                            }
+                        }
+
+                        // 3. Save Logic
+                        var pinSavedSuccessfully = true
+                        var qaSavedSuccessfully = true
+
+                        if (isTryingToSetOrChangePin && newPin.isNotBlank()) {
+                            try {
+                                val masterKey = MasterKey.Builder(context)
+                                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+                                val sharedPreferences = EncryptedSharedPreferences.create(
+                                    context, "AppSettings", masterKey,
+                                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                                )
+                                with(sharedPreferences.edit()) {
+                                    putString("access_pin", newPin)
+                                    apply()
+                                }
+                                changesMade = true
+                                isPinSet = true
+                            } catch (e: Exception) {
+                                Log.e("PinSettingsContent", "Error saving PIN", e)
+                                errorMessage = "Error saving PIN."
+                                pinSavedSuccessfully = false
+                            }
+                        }
+
+                        val currentSavedQA = getSavedSecurityQuestionAnswer(context)
+                        val qaChanged = currentSavedQA?.questionIndex != selectedQuestionIndex ||
+                                currentSavedQA?.answer != securityAnswerInput
+                        val isFirstTimeSettingQA = currentSavedQA == null
+
+                        if (qaChanged || isFirstTimeSettingQA) {
+                            if (saveSecurityQuestionAnswer(
+                                    context,
+                                    selectedQuestionIndex,
+                                    securityAnswerInput
+                                )
+                            ) {
+                                savedSecurityQA = SecurityQuestionAnswer(
+                                    selectedQuestionIndex,
+                                    securityAnswerInput
+                                )
+                                isSecurityQASet.value = true
+                                changesMade = true
+                            } else {
+                                errorMessage =
+                                    (errorMessage ?: "") + " Error saving security question."
+                                qaSavedSuccessfully = false
+                            }
+                        }
+
+                        if (changesMade) {
+                            when {
+                                isTryingToSetOrChangePin && newPin.isNotBlank() && (qaChanged || isFirstTimeSettingQA) ->
+                                    showSuccessMessage =
+                                        if (pinSavedSuccessfully && qaSavedSuccessfully) "PIN and security question updated." else "Partial update. Check errors."
+
+                                isTryingToSetOrChangePin && newPin.isNotBlank() ->
+                                    showSuccessMessage =
+                                        if (pinSavedSuccessfully) "PIN updated." else "Error saving PIN."
+
+                                qaChanged || isFirstTimeSettingQA ->
+                                    showSuccessMessage =
+                                        if (qaSavedSuccessfully) "Security question updated." else "Error saving security question."
+                            }
+                            scope.launch { snackbarHostState.showSnackbar(showSuccessMessage) }
+                            if (isTryingToSetOrChangePin && pinSavedSuccessfully) {
+                                newPin = ""
+                                confirmPin = ""
+                            }
+                        } else if (errorMessage == null) {
+                            scope.launch { snackbarHostState.showSnackbar("No changes were made.") }
+                        }
+
+                    },
+                    enabled = securityAnswerInput != (savedSecurityQA?.answer ?: "") ||
+                            selectedQuestionIndex != (savedSecurityQA?.questionIndex ?: 0) ||
+                            newPin.isNotEmpty() || confirmPin.isNotEmpty() ||
+                            (!isSecurityQASet.value && securityAnswerInput.isNotBlank()),
+                ) {
+                    Text("Save")
+                }
             }
         }
     }
@@ -710,12 +761,20 @@ fun AboutSettingsContent() {
         modifier = Modifier.padding(16.dp)
     ) {
         Text("Budgify", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Version: 1.0.0", style = MaterialTheme.typography.bodyLarge)
-        Text("Developers: A. Catalano, A. Rocchi, O. Iacobelli", style = MaterialTheme.typography.bodyLarge)
+        Image(
+            painter = painterResource(id = R.drawable.ic_launcher), // Replace with your actual icon name
+            contentDescription = "App Icon",
+            modifier = Modifier
+                .size(96.dp) // Adjust size as needed
+                .padding(bottom = 16.dp) // Add some space below the icon
+        )
         Text(
-            "Your personal finance manager.",
+            "Your personal finance manager",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
+        Text("Version: 1.0.0", style = MaterialTheme.typography.bodyLarge)
+        Text("Developers:", style = MaterialTheme.typography.bodyLarge)
+        Text("A. Catalano, A. Rocchi, O. Iacobelli", style = MaterialTheme.typography.bodyLarge)
     }
 }

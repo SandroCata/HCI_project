@@ -296,7 +296,7 @@ fun LastTransactionBox(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Transaction: '${transactionToAction?.description}'",
+                        text = "'${transactionToAction?.description}'",
                         modifier = Modifier.weight(1f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -307,21 +307,12 @@ fun LastTransactionBox(
                     })
                 }
             },
-            text = { Text("What would you like to do?") },
+            text = { Text("What would you like to do with this transaction?") },
             confirmButton = {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    TextButton(
-                        onClick = {
-                            showDeleteTransactionConfirmationDialog = true
-                            showTransactionActionChoiceDialog = false
-                            // transactionToAction remains set for the delete confirmation
-                        }
-                    ) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error)
-                    }
                     TextButton(
                         onClick = {
                             showEditTransactionDialog = true
@@ -330,6 +321,15 @@ fun LastTransactionBox(
                         }
                     ) {
                         Text("Edit")
+                    }
+                    TextButton(
+                        onClick = {
+                            showDeleteTransactionConfirmationDialog = true
+                            showTransactionActionChoiceDialog = false
+                            // transactionToAction remains set for the delete confirmation
+                        }
+                    ) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
                     }
                 }
             },
@@ -881,14 +881,14 @@ fun AccountItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Account: '${account.title}'",
+                        text = "'${account.title}'",
                         modifier = Modifier.weight(1f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     XButton({ showActionChoiceDialog = false })
                 }},
-            text = { Text("What would you like to do?") },
+            text = { Text("What would you like to do with this account?") },
             confirmButton = {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -896,19 +896,19 @@ fun AccountItem(
                 ) {
                     TextButton(
                         onClick = {
-                            showDeleteConfirmationDialog = true
-                            showActionChoiceDialog = false
-                        }
-                    ) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error)
-                    }
-                    TextButton(
-                        onClick = {
                             showEditAccountDialog = true
                             showActionChoiceDialog = false
                         }
                     ) {
                         Text("Edit")
+                    }
+                    TextButton(
+                        onClick = {
+                            showDeleteConfirmationDialog = true
+                            showActionChoiceDialog = false
+                        }
+                    ) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
                     }
                 }
             },

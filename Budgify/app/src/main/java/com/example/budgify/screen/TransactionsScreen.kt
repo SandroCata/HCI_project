@@ -403,7 +403,7 @@ fun TransactionBox(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Transaction: '${transactionToAction?.description}'",
+                    text = "'${transactionToAction?.description}'",
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -414,21 +414,12 @@ fun TransactionBox(
                 })
             }
                     },
-            text = { Text("What would you like to do?") },
+            text = { Text("What would you like to do with this transaction?") },
             confirmButton = {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    TextButton(
-                        onClick = {
-                            showDeleteTransactionConfirmationDialog = true
-                            showTransactionActionChoiceDialog = false
-                            // transactionToAction remains set for the delete confirmation
-                        }
-                    ) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error)
-                    }
                     TextButton(
                         onClick = {
                             showEditTransactionDialog = true
@@ -437,6 +428,15 @@ fun TransactionBox(
                         }
                     ) {
                         Text("Edit")
+                    }
+                    TextButton(
+                        onClick = {
+                            showDeleteTransactionConfirmationDialog = true
+                            showTransactionActionChoiceDialog = false
+                            // transactionToAction remains set for the delete confirmation
+                        }
+                    ) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
                     }
                 }
             },

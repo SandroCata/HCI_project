@@ -163,7 +163,8 @@ fun CredDebManagementScreen(navController: NavController, viewModel: FinanceView
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp) // Aggiungi padding per spaziatura
+                        .padding(horizontal = 16.dp, vertical = 8.dp), // Aggiungi padding per spaziatura
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
                 // --- FINE TESTO ESPLICATIVO ---
 
@@ -576,11 +577,8 @@ fun EditLoanDialog(
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.Center
             ) {
-                TextButton(onClick = onDeleteRequest ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
                 Button(
                     onClick = {
                         errorMessage = null

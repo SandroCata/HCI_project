@@ -411,25 +411,31 @@ fun LoanActionChoiceDialog(
         },
         confirmButton = {
             Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                // Pulsante Delete SEMPRE disponibile
-                TextButton(
-                    onClick = {
-                        onDeleteClick()
-                        // onDismiss() // onDismiss è già gestito da XButton o dal chiamante che chiude showActionChoiceDialog
-                    },
-                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Text("Delete")
-                }
-
-                // Pulsanti Edit e Complete SOLO se il prestito NON è completato
-                if (!loan.completed) {
-                    TextButton(onClick = {
-                        onEditClick()
-                        // onDismiss()
-                    }) {
-                        Text("Edit")
+                    // Pulsanti Edit e Complete SOLO se il prestito NON è completato
+                    if (!loan.completed) {
+                        TextButton(onClick = {
+                            onEditClick()
+                            // onDismiss()
+                        }) {
+                            Text("Edit")
+                        }
                     }
+                    // Pulsante Delete SEMPRE disponibile
+                    TextButton(
+                        onClick = {
+                            onDeleteClick()
+                            // onDismiss() // onDismiss è già gestito da XButton o dal chiamante che chiude showActionChoiceDialog
+                        },
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Delete")
+                    }
+                }
+                if (!loan.completed) {
                     TextButton(onClick = {
                         onCompleteClick()
                         // onDismiss()

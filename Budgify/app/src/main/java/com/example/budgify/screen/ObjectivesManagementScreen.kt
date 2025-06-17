@@ -154,6 +154,21 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                     }
                 }
 
+                val explanatoryText = when (selectedSection) {
+                    ObjectivesManagementSection.Active -> "Here you can track all your active objectives.\nTry to complete them before they expire!"
+                    ObjectivesManagementSection.Expired -> "Here you can find all completed and/or expired objectives.\nYou can still complete expired objectives."
+                }
+
+                Text(
+                    text = explanatoryText,
+                    style = MaterialTheme.typography.bodyMedium, // Puoi scegliere lo stile che preferisci
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp), // Aggiungi padding per spaziatura
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -433,14 +448,14 @@ fun ObjectiveActionChoiceDialog(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Objective: '${objective.desc}'",
+                text = "'${objective.desc}'",
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             XButton(onDismiss)
         } },
-        text = { Text("What would you like to do?")
+        text = { Text("What would you like to do with this objective?")
         },
         confirmButton = {
             Column {
@@ -448,12 +463,12 @@ fun ObjectiveActionChoiceDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
+                    if (!objective.completed && !hasExpired)
+                        TextButton(onClick = onEditClick) {
+                            Text("Edit")
+                        }
                     TextButton(onClick = onDeleteClick) {
                         Text("Delete", color = MaterialTheme.colorScheme.error)
-                    }
-                    if (!objective.completed && !hasExpired)
-                    TextButton(onClick = onEditClick) {
-                        Text("Edit")
                     }
                 }
                 // "Complete" button: Only if not completed and not expired
