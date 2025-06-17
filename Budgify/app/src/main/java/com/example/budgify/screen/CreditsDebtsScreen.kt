@@ -76,6 +76,7 @@ import java.time.format.DateTimeFormatter
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import android.util.Log // For debugging
+import androidx.compose.material3.SnackbarHost
 
 @Composable
 fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewModel) {
@@ -97,7 +98,14 @@ fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewMode
     var showInsufficientBalanceDialog by remember { mutableStateOf(false) } // <--- NUOVO STATO
     var insufficientBalanceAccountInfo by remember { mutableStateOf<Pair<String, Double>?>(null) } // <--- Per nome conto
 
+    val showSnackbar: (String) -> Unit = { message ->
+        scope.launch {
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = { TopBar(navController, currentRoute) },
         bottomBar = {
             BottomBar(
@@ -164,6 +172,7 @@ fun CreditsDebitsScreen(navController: NavController, viewModel: FinanceViewMode
                     items(displayLoans, key = { loan -> loan.id }) { loan ->
                         LoanRow( // LoanRow will now also need to know about onLongPress
                             loan = loan,
+                            showSnackbar = showSnackbar,
                             onLongPress = { currentLoan ->
                                 selectedLoan = currentLoan
                                 // Only show actions if not paid.
@@ -535,8 +544,9 @@ fun ClickableAmountArea(
 @Composable
 fun LoanRow(
     loan: Loan,
-    onLongPress: (Loan) -> Unit // Keep this for interaction
-    // onClick: (Loan) -> Unit // Optional: if you want a different action for normal click
+    onLongPress: (Loan) -> Unit, // Keep this for interaction
+    //onClick: (Loan) -> Unit, // Optional: if you want a different action for normal click
+    showSnackbar: (String) -> Unit,
 ) {
     val amountColor = if (loan.type == LoanType.CREDIT) Color(0xFF4CAF50) else Color(0xFFF44336)
     val sign = if (loan.type == LoanType.CREDIT) "+" else "-"
@@ -551,9 +561,7 @@ fun LoanRow(
             .padding(bottom = 2.dp)
             .combinedClickable(
                 onClick = {
-                    // Example: Log or show a toast that it's paid if clicked and paid
-                    // if (loan.isPaid) { Log.d("LoanRow", "${loan.desc} is already paid.") }
-                    // else { onClick(loan) } // Or some other action for unpaid items
+                    showSnackbar("Hold to interact with the ${loan.type.name.lowercase()}.")
                 },
                 onLongClick = {
                     if (!loan.completed) { // Only allow long press actions if not paid
