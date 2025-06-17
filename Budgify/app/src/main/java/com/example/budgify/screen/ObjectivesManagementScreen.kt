@@ -160,7 +160,7 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                 }
 
                 val explanatoryText = when (selectedSection) {
-                    ObjectivesManagementSection.Active -> "Here you can track all your active objectives.\nTry to complete them before they expire!"
+                    ObjectivesManagementSection.Active -> "Here you can find all currently active objectives.\nTry to complete them before they expire!"
                     ObjectivesManagementSection.Expired -> "Here you can find all completed and/or expired objectives.\nYou can still complete expired objectives."
                 }
                 Box(

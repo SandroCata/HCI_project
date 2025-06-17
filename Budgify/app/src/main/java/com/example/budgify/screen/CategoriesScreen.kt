@@ -2,6 +2,7 @@ package com.example.budgify.screen
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -44,6 +46,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
@@ -54,6 +57,7 @@ import androidx.navigation.NavController
 import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.entities.Category
 import com.example.budgify.entities.CategoryType
+import com.example.budgify.entities.LoanType
 import com.example.budgify.navigation.BottomBar
 import com.example.budgify.navigation.TopBar
 import com.example.budgify.navigation.XButton
@@ -129,6 +133,41 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
                 }
             }
 
+            val explanatoryText = when (selectedTab) {
+                CategoriesTab.Expenses -> "Here you can find all the expense categories you have created."
+                CategoriesTab.Income -> "Here you can find all the income categories you have created."
+            }
+
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(color = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Text(
+                        text = explanatoryText,
+                        style = MaterialTheme.typography.bodyMedium, // Puoi scegliere lo stile che preferisci
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp), // Aggiungi padding per spaziatura
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
+            }
+
+            Text(
+                text = "Hold on a category to manage it",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 5.dp)
+            )
+
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -140,7 +179,7 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
                         CategoryGridSection(
                             categories = expenseCategories,
                             categoryType = CategoryType.EXPENSE,
-                            backgroundColor = Color(0xffff6f51), // Red
+                            backgroundColor = Color(0xFFF44336), // Red
                             onAddClick = { showAddDialog = true },
                             onCategoryClick = { showSnackbar("Hold to choose an action for the category") },
                             onCategoryLongClick = { category ->
@@ -154,7 +193,7 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
                         CategoryGridSection(
                             categories = incomeCategories,
                             categoryType = CategoryType.INCOME,
-                            backgroundColor = Color(0xff0db201), // Green
+                            backgroundColor = Color(0xFF4CAF50), // Green
                             onAddClick = { showAddDialog = true },
                             onCategoryClick = { showSnackbar("Hold to choose an action for the category") },
                             onCategoryLongClick = { category ->
@@ -258,25 +297,48 @@ fun CategoryItem(
     onClick: (Category) -> Unit,
     onLongClick: (Category) -> Unit // Callback for long click
 ) {
-    Column(
+
+    val contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 1f)
+    val image = Icons.Filled.Sell
+
+    Box(
         modifier = Modifier
             .width(150.dp) // Fixed width for better alignment in grid
             .height(80.dp) // Fixed height
             .clip(RoundedCornerShape(16.dp)) // Rounded corners
-            .background(backgroundColor) // Apply background color
+            .background(MaterialTheme.colorScheme.surface) // Apply background color
+            .border( // Add the border modifier
+                width = 2.dp, // Specify the border width
+                color = backgroundColor, // Use the provided border color
+                shape = RoundedCornerShape(16.dp) // Apply the same rounded corner shape to the border
+            )
             .combinedClickable( // Handle long click
                 onClick = { onClick(category) },
                 onLongClick = { onLongClick(category) } // Trigger the long click callback
             )
             .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = category.desc,
-            textAlign = TextAlign.Center,
-            color = Color.White // Make text visible on colored background
+        Icon(
+            imageVector = image, // Trophy icon
+            contentDescription = "Category",
+            modifier = Modifier
+                .align(Alignment.CenterEnd) // Align to the center-end of the Box
+                .size(50.dp) // Adjust size as needed
+                .padding(end = 8.dp) // Some padding from the edge
+                .alpha(0.5f), // Set transparency (0.0f is fully transparent, 1.0f is fully opaque)
+            tint = contentColor.copy(alpha = 0.7f) // Optional: tint to match content color with more alpha
         )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = category.desc,
+                textAlign = TextAlign.Center,
+                color = contentColor // Make text visible on colored background
+            )
+        }
     }
 }
 
