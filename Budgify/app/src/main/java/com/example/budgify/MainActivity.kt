@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
             var correctSecurityAnswer by remember { mutableStateOf<String?>(null) }
             var securityAnswerInput by remember { mutableStateOf("") }
             var securityQuestionErrorMessage by remember { mutableStateOf<String?>(null) }
-
+            var showPinSuccessfullyResetDialog by remember { mutableStateOf(false) }
 
             val startDestination = if (requiresPinEntry) {
                 ScreenRoutes.AccessPin.route
@@ -124,6 +124,7 @@ class MainActivity : ComponentActivity() {
                                     showSecurityQuestionDialog = false
                                     securityAnswerInput = "" // Clear input
                                     securityQuestionErrorMessage = null // Clear error
+                                    showPinSuccessfullyResetDialog = true
                                     navController.navigate(ScreenRoutes.Home.route) {
                                         popUpTo(navController.graph.startDestinationId) { inclusive = true }
                                         launchSingleTop = true
@@ -161,6 +162,17 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
+
+                    if (showPinSuccessfullyResetDialog) {
+                        PinSuccessfullyResetDialog(
+                            onDismiss = {
+                                showPinSuccessfullyResetDialog = false
+                                // Optional: You could navigate here if you didn't do it in step 2,
+                                // but doing it earlier ensures the background is already Home.
+                            }
+                        )
+                    }
+
 
                     NavGraph(
                         navController = navController,
@@ -241,6 +253,22 @@ class MainActivity : ComponentActivity() {
             Log.e("MainActivity", "Error clearing PIN", e)
         }
     }
+}
+
+@Composable
+fun PinSuccessfullyResetDialog(
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss, // Or make it non-dismissable on outside click if preferred
+        title = { Text("Your PIN has been reset!") },
+        text = { Text("Since you've performed access via a security question, your PIN has been reset. You can set a new PIN in the Settings if you wish.") },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("OK")
+            }
+        }
+    )
 }
 
 @Composable
