@@ -107,6 +107,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.compose.material3.Checkbox // Import Checkbox
 import androidx.compose.material.icons.filled.FilterList // Import FilterList icon
+import androidx.compose.runtime.saveable.rememberSaveable
 
 // Definisci gli stili del testo
 val smallTextStyle = TextStyle(fontSize = 11.8.sp)
@@ -134,7 +135,21 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
     val lazyListState = rememberLazyListState()
 
     // NEW: State to hold the IDs of accounts selected for filtering charts
-    var selectedChartAccountIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var selectedChartAccountIds by rememberSaveable { mutableStateOf<Set<Int>>(emptySet()) }
+
+    // Collect all accounts to determine initial selection
+    val allAccounts by viewModel.allAccounts.collectAsStateWithLifecycle()
+
+    // Use LaunchedEffect to initialize selectedChartAccountIds once when allAccounts loads
+    LaunchedEffect(allAccounts) {
+        // Only set the initial selection if selectedChartAccountIds is currently empty.
+        // This prevents overwriting user's filter choices if they already made one.
+        // The `rememberSaveable` already ensures it persists.
+        // This LaunchedEffect will primarily run on the very first app launch or after process death.
+        if (selectedChartAccountIds.isEmpty() && allAccounts.isNotEmpty()) {
+            selectedChartAccountIds = allAccounts.map { it.id }.toSet()
+        }
+    }
 
 
     Scaffold (
