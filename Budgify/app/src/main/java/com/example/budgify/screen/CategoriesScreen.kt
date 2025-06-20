@@ -565,11 +565,11 @@ fun CategoryActionChoiceDialog(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
-            Text("Category: '${category.desc}'")
+            Text("'${category.desc}'")
             XButton(onDismiss)
         }
                 },
-        text = { Text("What would you like to do?") },
+        text = { Text("What would you like to do with this category?") },
         confirmButton = { // Questo blocco contiene i pulsanti di azione
             Row(
                 modifier = Modifier.fillMaxWidth(),
