@@ -1725,7 +1725,7 @@ fun GraficiBox(viewModel: FinanceViewModel,
                     modifier = Modifier
                         .shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
                         .background(
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             shape = RoundedCornerShape(16.dp)
                         )
                         .padding(horizontal = 4.dp)

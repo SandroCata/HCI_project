@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -306,12 +307,16 @@ fun CategoryItem(
             .width(150.dp) // Fixed width for better alignment in grid
             .height(80.dp) // Fixed height
             .clip(RoundedCornerShape(16.dp)) // Rounded corners
-            .background(MaterialTheme.colorScheme.surface) // Apply background color
-            .border( // Add the border modifier
-                width = 2.dp, // Specify the border width
-                color = backgroundColor, // Use the provided border color
-                shape = RoundedCornerShape(16.dp) // Apply the same rounded corner shape to the border
-            )
+//            .background(MaterialTheme.colorScheme.surface) // Apply background color
+//            .drawBehind {
+//                drawRect(color = backgroundColor.copy(alpha = 0.1f))
+//            }
+//            .border( // Add the border modifier
+//                width = 2.dp, // Specify the border width
+//                color = backgroundColor, // Use the provided border color
+//                shape = RoundedCornerShape(16.dp) // Apply the same rounded corner shape to the border
+//            )
+            .background(backgroundColor.copy(alpha = 0.8f))
             .combinedClickable( // Handle long click
                 onClick = { onClick(category) },
                 onLongClick = { onLongClick(category) } // Trigger the long click callback
@@ -326,7 +331,7 @@ fun CategoryItem(
                 .align(Alignment.CenterEnd) // Align to the center-end of the Box
                 .size(50.dp) // Adjust size as needed
                 .padding(end = 8.dp) // Some padding from the edge
-                .alpha(0.5f), // Set transparency (0.0f is fully transparent, 1.0f is fully opaque)
+                .alpha(0.2f), // Set transparency (0.0f is fully transparent, 1.0f is fully opaque)
             tint = contentColor.copy(alpha = 0.7f) // Optional: tint to match content color with more alpha
         )
         Column(
