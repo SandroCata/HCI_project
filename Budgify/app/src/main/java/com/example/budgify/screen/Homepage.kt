@@ -105,6 +105,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import androidx.compose.material3.Checkbox // Import Checkbox
+import androidx.compose.material.icons.filled.FilterList // Import FilterList icon
 
 // Definisci gli stili del testo
 val smallTextStyle = TextStyle(fontSize = 11.8.sp)
@@ -131,6 +133,10 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
     var balancesVisible by remember { mutableStateOf(false) }
     val lazyListState = rememberLazyListState()
 
+    // NEW: State to hold the IDs of accounts selected for filtering charts
+    var selectedChartAccountIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
+
+
     Scaffold (
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { TopBar(navController, currentRoute) },
@@ -155,7 +161,11 @@ fun Homepage(navController: NavController, viewModel: FinanceViewModel) {
                 // Box per i pie chart e istogramma
                 item {
                     GraficiBox(viewModel = viewModel,
-                            showSnackbar = showSnackbar)
+                            showSnackbar = showSnackbar,
+                            // NEW: Pass the selectedAccountIds for filtering
+                            selectedChartAccountIds = selectedChartAccountIds,
+                            onSelectedChartAccountsChanged = { selectedChartAccountIds = it }
+                        )
                 }
 
                 // Box per i conti e il saldo totale
@@ -1632,7 +1642,11 @@ fun ChartLegend(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GraficiBox(viewModel: FinanceViewModel,
-               showSnackbar: (String) -> Unit) {
+               showSnackbar: (String) -> Unit,
+                // NEW: Add parameters for selected accounts and a callback to update them
+               selectedChartAccountIds: Set<Int>,
+               onSelectedChartAccountsChanged: (Set<Int>) -> Unit
+) {
     val allAccounts by viewModel.allAccounts.collectAsStateWithLifecycle()
     val allTransactionsWithDetails by viewModel.allTransactionsWithDetails.collectAsStateWithLifecycle()
 
@@ -1645,11 +1659,23 @@ fun GraficiBox(viewModel: FinanceViewModel,
     var showChartDetailDialog by remember { mutableStateOf(false) }
     var selectedAccountForDetail by remember { mutableStateOf<Account?>(null) }
 
+    // NEW: State to control the visibility of the Account Filter Dialog
+    var showAccountFilterDialog by remember { mutableStateOf(false) }
 
-    val accountsWithTransactions = remember(allAccounts, allTransactionsWithDetails) {
-        allAccounts.filter { account ->
-            allTransactionsWithDetails.any { transactionDetail ->
-                transactionDetail.transaction.accountId == account.id
+
+
+    // Filter accounts based on selectedChartAccountIds
+    val accountsToDisplayInCharts = remember(allAccounts, allTransactionsWithDetails, selectedChartAccountIds) { // Added allTransactionsWithDetails to remember key
+        if (selectedChartAccountIds.isEmpty()) {
+            // NEW LOGIC: If selectedChartAccountIds is explicitly empty, show an empty list
+            emptyList()
+        } else {
+            // Otherwise, filter based on the selected IDs, ensuring they also have transactions
+            allAccounts.filter { account ->
+                selectedChartAccountIds.contains(account.id) &&
+                        allTransactionsWithDetails.any { transactionDetail ->
+                            transactionDetail.transaction.accountId == account.id
+                        }
             }
         }
     }
@@ -1672,7 +1698,7 @@ fun GraficiBox(viewModel: FinanceViewModel,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Accounts Overview",
+                    text = "Overview",
                     style = MaterialTheme.typography.titleLarge,
                 )
 
@@ -1689,6 +1715,16 @@ fun GraficiBox(viewModel: FinanceViewModel,
                         )
                         .padding(horizontal = 4.dp)
                 ) {
+
+                    // NEW: Filter Button
+                    IconButton(onClick = { showAccountFilterDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = "Filter Accounts",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
                     // Button to toggle between Expense/Income
                     IconButton(onClick = {
                         displayedTransactionType = if (displayedTransactionType == TransactionType.EXPENSE) TransactionType.INCOME else TransactionType.EXPENSE
@@ -1717,7 +1753,7 @@ fun GraficiBox(viewModel: FinanceViewModel,
             )
             Spacer(modifier = Modifier.height(4.dp))
 
-            if (accountsWithTransactions.isEmpty()) {
+            if (accountsToDisplayInCharts.isEmpty()) { // Use accountsToDisplayInCharts
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1726,7 +1762,7 @@ fun GraficiBox(viewModel: FinanceViewModel,
                 ) {
                     Text(
                         if (allAccounts.isEmpty()) "No accounts yet. Add an account to see charts."
-                        else "No accounts with transactions to display."
+                        else "No accounts with transactions to display for the current filter." // Updated message
                     )
                 }
             } else {
@@ -1735,7 +1771,7 @@ fun GraficiBox(viewModel: FinanceViewModel,
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
                 ) {
-                    accountsWithTransactions.forEach { account ->
+                    accountsToDisplayInCharts.forEach { account -> // Iterate over filtered accounts
                         SingleAccountChartsCard(
                             account = account,
                             chartType = currentChartType,
@@ -1762,6 +1798,129 @@ fun GraficiBox(viewModel: FinanceViewModel,
             allTransactions = allTransactionsWithDetails,
             onDismiss = { showChartDetailDialog = false }
         )
+    }
+
+    // NEW: Account Filter Dialog
+    if (showAccountFilterDialog) {
+        AccountFilterDialog(
+            allAccounts = allAccounts,
+            selectedAccountIds = selectedChartAccountIds,
+            onSelectionChanged = onSelectedChartAccountsChanged,
+            onDismiss = { showAccountFilterDialog = false }
+        )
+    }
+}
+
+// NEW: Composable for the Account Filter Dialog
+@Composable
+fun AccountFilterDialog(
+    allAccounts: List<Account>,
+    selectedAccountIds: Set<Int>,
+    onSelectionChanged: (Set<Int>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    // Local state for the checkboxes within the dialog
+    var internalSelectedAccountIds by remember { mutableStateOf(selectedAccountIds) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Filter Accounts",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                XButton(onDismiss)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (allAccounts.isEmpty()) {
+                Text("No accounts available to filter.")
+            } else {
+                // Option to select/deselect all
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            if (internalSelectedAccountIds.size == allAccounts.size) {
+                                internalSelectedAccountIds = emptySet()
+                            } else {
+                                internalSelectedAccountIds = allAccounts.map { it.id }.toSet()
+                            }
+                        }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = internalSelectedAccountIds.size == allAccounts.size && allAccounts.isNotEmpty(),
+                        onCheckedChange = { isChecked ->
+                            if (isChecked) {
+                                internalSelectedAccountIds = allAccounts.map { it.id }.toSet()
+                            } else {
+                                internalSelectedAccountIds = emptySet()
+                            }
+                        }
+                    )
+                    Text("Select All / Deselect All", style = MaterialTheme.typography.bodyLarge)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                LazyColumn(modifier = Modifier.heightIn(max = 250.dp)) {
+                    items(allAccounts.size) { index ->
+                        val account = allAccounts[index]
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    internalSelectedAccountIds = if (internalSelectedAccountIds.contains(account.id)) {
+                                        internalSelectedAccountIds - account.id
+                                    } else {
+                                        internalSelectedAccountIds + account.id
+                                    }
+                                }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = internalSelectedAccountIds.contains(account.id),
+                                onCheckedChange = { isChecked ->
+                                    internalSelectedAccountIds = if (isChecked) {
+                                        internalSelectedAccountIds + account.id
+                                    } else {
+                                        internalSelectedAccountIds - account.id
+                                    }
+                                }
+                            )
+                            Text(account.title, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Button(
+                    onClick = {
+                        onSelectionChanged(internalSelectedAccountIds) // Apply the changes
+                        onDismiss()
+                    }
+                ) {
+                    Text("Apply Filter")
+                }
+            }
+        }
     }
 }
 
