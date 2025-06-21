@@ -110,7 +110,7 @@ import androidx.compose.material.icons.filled.FilterList // Import FilterList ic
 import androidx.compose.runtime.saveable.rememberSaveable
 
 // Definisci gli stili del testo
-val smallTextStyle = TextStyle(fontSize = 11.8.sp)
+val smallTextStyle = TextStyle(fontSize = 11.sp)
 
 // Definisco la lista di schermate
 val items = listOf(
