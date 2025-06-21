@@ -637,7 +637,7 @@ fun EditTransactionDialog2(
                         )
                         categories.forEach { category ->
                             DropdownMenuItem(
-                                text = { Text(category.desc) },
+                                text = { Text("${category.desc} (${category.type})") },
                                 onClick = {
                                     selectedCategoryId = category.id
                                     // selectedCategory will update via remember

@@ -533,9 +533,35 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
             defaultCategoryDescriptions.contains(category.desc)
         }
     }
-    fun addCategory(category: Category) {
+    fun addCategory(category: Category, onCategoryCreated: (Category) -> Unit) {
         viewModelScope.launch {
-            repository.insertCategory(category)
+            val newId = repository.insertCategory(category) // This now returns Long
+            if (newId != -1L) { // Check if insert was successful (Room returns -1 on conflict if OnConflictStrategy.IGNORE fails to insert)
+                val createdCategory = category.copy(id = newId.toInt())
+                onCategoryCreated(createdCategory)
+            } else {
+                // Handle the case where the category was not inserted
+                // (e.g., if a category with the same unique properties already exists and IGNORE prevented insertion)
+                // You might want to fetch the existing category and pass it to the callback,
+                // or signal an error, depending on desired behavior.
+                // For now, we'll assume successful insertion or it's handled by IGNORE.
+                // If you need to get the existing one:
+                // val existingCategory = repository.getCategoryByDescription(category.desc)
+                // if (existingCategory != null) {
+                //     onCategoryCreated(existingCategory)
+                // } else {
+                //     // Log error or some other handling
+                // }
+                Log.w("FinanceViewModel", "Category '${category.desc}' might not have been inserted (newId: $newId). It might already exist.")
+                // Optionally, try to fetch it by description if newId is -1 to handle IGNORE cases.
+                val existingCategory = repository.getCategoryByDescription(category.desc)
+                if (existingCategory != null) {
+                    onCategoryCreated(existingCategory)
+                } else {
+                    // Log an error or handle as appropriate if it truly wasn't inserted and cannot be found.
+                    Log.e("FinanceViewModel", "Failed to insert or find existing category: ${category.desc}")
+                }
+            }
         }
     }
     fun updateCategory(category: Category) {

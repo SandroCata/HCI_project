@@ -80,7 +80,7 @@ interface ObjectiveDao {
 @Dao
 interface CategoryDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(category: Category)
+    suspend fun insert(category: Category): Long
 
     @Query("SELECT * FROM categories WHERE `desc` = :description LIMIT 1")
     suspend fun getCategoryByDescriptionSuspend(description: String): Category?

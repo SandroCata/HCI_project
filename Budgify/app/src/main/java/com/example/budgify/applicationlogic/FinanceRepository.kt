@@ -77,8 +77,8 @@ class FinanceRepository(
     fun getAllCategories(): Flow<List<Category>> {
         return categoryDao.getAllCategories()
     }
-    suspend fun insertCategory(category: Category) {
-        categoryDao.insert(category)
+    suspend fun insertCategory(category: Category): Long {
+        return categoryDao.insert(category)
     }
     fun getCategoryById(id: Int): Flow<Category> {
         return categoryDao.getCategoryById(id)

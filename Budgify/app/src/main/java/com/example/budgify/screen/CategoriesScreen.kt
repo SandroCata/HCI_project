@@ -541,8 +541,9 @@ fun AddCategoryDialog(
                                         type = selectedType, // selectedType non può essere null qui
                                         desc = finalDescription
                                     )
-                                    viewModel.addCategory(newCategory)
-                                    onCategoryAdded(newCategory)
+                                    viewModel.addCategory(newCategory) { createdCategoryWithId ->
+                                        onCategoryAdded(createdCategoryWithId)
+                                    }
                                 }
                             }
                         },

@@ -645,7 +645,7 @@ fun AddTransactionDialog(
             initialType = null,
             onCategoryAdded = { newCategory ->
                 selectedCategoryId = newCategory.id // Update the state in AddTransactionDialog
-//                selectedCategory = newCategory // Update the state in AddTransactionDialog
+                selectedCategory = newCategory // Update the state in AddTransactionDialog
                 showAddCategoryDialog = false
             }
         )
