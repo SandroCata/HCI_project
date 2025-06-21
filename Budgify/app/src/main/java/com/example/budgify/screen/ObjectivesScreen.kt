@@ -3,6 +3,7 @@ package com.example.budgify.screen
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,6 +38,7 @@ import androidx.compose.ui.graphics.ColorFilter.Companion.tint
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -87,6 +89,30 @@ fun ObjectivesScreen(navController: NavController, viewModel: FinanceViewModel) 
             ) {
 
                 Column {
+
+                    val explanatoryText = "Here you can check your stats and access objective management.\nComplete objectives, repay debts or collect credits to gain XP and increase your level.\nBy increasing your level you can unlock new themes!"
+
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 0.dp, vertical = 16.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(color = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Text(
+                                text = explanatoryText,
+                                style = MaterialTheme.typography.bodyMedium, // Puoi scegliere lo stile che preferisci
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp), // Aggiungi padding per spaziatura
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
                     // Section 1: Profile Picture, Level, and Level Bar
                     ProfileAndLevelSection(
                         profilePicture = rememberVectorPainter(Icons.Filled.Person),
