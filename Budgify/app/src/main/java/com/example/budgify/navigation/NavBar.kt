@@ -93,8 +93,8 @@ import java.time.format.DateTimeFormatter
 fun TopBar(navController: NavController, currentRoute: String) {
     val title = when (currentRoute) {
         "home_screen" -> "Dashboard"
-        "objectives_screen" -> "Objectives"
-        "objectives_management_screen" -> "Manage Objectives"
+        "objectives_screen" -> "Goals and Stats"
+        "objectives_management_screen" -> "Manage Goals"
         "settings_screen" -> "Settings"
         "transactions_screen" -> "Transactions"
         "cred_deb_screen" -> "Loans"
@@ -252,7 +252,7 @@ fun BottomBar(
                                 .height(50.dp)
                                 .padding(0.dp)
                         ) {
-                            Text("Objective")
+                            Text("Goal")
                         }
 
                         Spacer(modifier = Modifier.height(10.dp))
@@ -293,7 +293,7 @@ fun BottomBar(
                 viewModel = viewModel,
                 onObjectiveAdded = { objective ->
                     showAddObjectiveDialog = false
-                    showSnackbar("Objective '${objective.desc}' added!")
+                    showSnackbar("Goal '${objective.desc}' added!")
                 }
             )
         }
@@ -681,10 +681,10 @@ fun AddObjectiveDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Add Objective", style = MaterialTheme.typography.titleLarge)
+                Text("Add Goal", style = MaterialTheme.typography.titleLarge)
                 XButton(onDismiss)
             }
-            Text("Add an objective to record a sum of money you want to gain or spend in the future.",
+            Text("Add a goal to record a sum of money you want to gain or spend in the future.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 modifier = Modifier.padding(top = 8.dp)

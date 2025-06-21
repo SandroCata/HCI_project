@@ -16,8 +16,8 @@ data class Category(
 )
 
 object DefaultCategories {
-    val OBJECTIVES_EXP = Category(desc = "Objectives (Expense)", type = CategoryType.EXPENSE) // Or your chosen type
-    val OBJECTIVES_INC = Category(desc = "Objectives (Income)", type = CategoryType.INCOME)
+    val OBJECTIVES_EXP = Category(desc = "Goals (Expense)", type = CategoryType.EXPENSE) // Or your chosen type
+    val OBJECTIVES_INC = Category(desc = "Goals (Income)", type = CategoryType.INCOME)
     val CREDIT_INC = Category(desc = "Credits collected", type = CategoryType.INCOME)          // Or your chosen type
     val CREDIT_EXP = Category(desc = "Credits contracted", type = CategoryType.EXPENSE)          // Or your chosen type
     val DEBT_EXP = Category(desc = "Debts repaid", type = CategoryType.EXPENSE)

@@ -2,7 +2,6 @@ package com.example.budgify.screen
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,7 +47,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -58,7 +56,6 @@ import androidx.navigation.NavController
 import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.entities.Category
 import com.example.budgify.entities.CategoryType
-import com.example.budgify.entities.LoanType
 import com.example.budgify.navigation.BottomBar
 import com.example.budgify.navigation.TopBar
 import com.example.budgify.navigation.XButton
@@ -93,7 +90,7 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
             it.type == CategoryType.EXPENSE &&
                     it.desc != "Debts repaid" &&
                     it.desc != "Credits contracted" &&
-                    it.desc != "Objectives (Expense)"
+                    it.desc != "Goals (Expense)"
         }
     }
     val incomeCategories = remember(allCategories, allCategories.size) { // Aggiunto allCategories.size
@@ -101,7 +98,7 @@ fun CategoriesScreen(navController: NavController, viewModel: FinanceViewModel) 
             it.type == CategoryType.INCOME &&
                     it.desc != "Credits collected" &&
                     it.desc != "Debts contracted" &&
-                    it.desc != "Objectives (Income)"
+                    it.desc != "Goals (Income)"
         }
     }
     val showSnackbar: (String) -> Unit = { message ->

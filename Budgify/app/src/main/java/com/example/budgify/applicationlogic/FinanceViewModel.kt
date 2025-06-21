@@ -293,7 +293,7 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
                 val categoryIdForTransaction = defaultCategory?.id // Use the fetched category's ID
 
                 if (categoryIdForTransaction == null) {
-                    Log.e("FinanceViewModel", "Could not find default category: $defaultCategoryDescription. Transaction for objective '${objective.desc}' will have no category.")
+                    Log.e("FinanceViewModel", "Could not find default category: $defaultCategoryDescription. Transaction for goal '${objective.desc}' will have no category.")
                     // Optionally, emit a snackbar message about the missing category
                     _snackbarMessages.emit("Error: Default category '$defaultCategoryDescription' not found. Transaction created without category.")
                 }
@@ -305,7 +305,7 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
                     accountId = accountId, // This will come from the UI
                     type = transactionType,
                     date = LocalDate.now(), // Or objective.endDate, if preferred
-                    description = "Objective: ${objective.desc}",
+                    description = "Goal: ${objective.desc}",
                     amount = objective.amount,
                     categoryId = categoryIdForTransaction // Pass the selected categoryId, or null
                 )
@@ -318,9 +318,9 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
 
                 // The UI should react to changes in allObjectives and allTransactionsWithDetails StateFlows
                 // No explicit refresh needed here if your UI collects these flows.
-                Log.d("XP_System", "Objective '${objective.desc}' completed. XP Gained: $xpGained. Current XP: ${_userXp.value}/${xpForCurrentUserNextLevel.value}, Level: ${_userLevel.value}")
+                Log.d("XP_System", "Goal '${objective.desc}' reached. XP Gained: $xpGained. Current XP: ${_userXp.value}/${xpForCurrentUserNextLevel.value}, Level: ${_userLevel.value}")
             } else {
-                Log.d("XP_System", "Objective '${objective.desc}' was already completed.")
+                Log.d("XP_System", "Goal '${objective.desc}' was already completed.")
             }
         }
     }
@@ -473,14 +473,14 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
         } else {
             if (daysRemaining < 0) { // Completed late
                 // No bonus, or even a penalty if desired (e.g., baseXP /= 2)
-                Log.d("XP_System", "Objective completed late. Days remaining: $daysRemaining")
+                Log.d("XP_System", "Goal completed late. Days remaining: $daysRemaining")
             } else { // Completed on time or early
                 // Bonus proportional to how much of the objective's duration was left
                 val earlyCompletionRatio = daysRemaining.toDouble() / totalDuration.toDouble()
                 // Max bonus of, say, 50% of baseXP for completing very early
                 val earlyCompletionBonus = (earlyCompletionRatio * (baseXP * 0.5)).toInt()
                 baseXP += earlyCompletionBonus
-                Log.d("XP_System", "Objective completed on time/early. Days remaining: $daysRemaining, Total duration: $totalDuration, Bonus: $earlyCompletionBonus")
+                Log.d("XP_System", "Goal completed on time/early. Days remaining: $daysRemaining, Total duration: $totalDuration, Bonus: $earlyCompletionBonus")
             }
         }
 
@@ -694,6 +694,26 @@ class FinanceViewModel(private val repository: FinanceRepository) : ViewModel() 
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
+        )
+
+    val completedCreditLoansCount: StateFlow<Int> = allLoans
+        .map { loans ->
+            loans.count { it.type == LoanType.CREDIT && it.completed }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
+    val completedDebtLoansCount: StateFlow<Int> = allLoans
+        .map { loans ->
+            loans.count { it.type == LoanType.DEBT && it.completed }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
         )
 
     fun addLoan(loan: Loan, accountId: Int) {

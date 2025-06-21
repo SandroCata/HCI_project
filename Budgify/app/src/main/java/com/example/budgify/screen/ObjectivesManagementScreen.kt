@@ -72,10 +72,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.budgify.applicationlogic.FinanceViewModel
-import com.example.budgify.entities.LoanType
 import com.example.budgify.entities.Objective
 import com.example.budgify.entities.ObjectiveType
-import com.example.budgify.entities.TransactionType
 import com.example.budgify.navigation.BottomBar
 import com.example.budgify.navigation.TopBar
 import com.example.budgify.navigation.XButton
@@ -160,8 +158,8 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                 }
 
                 val explanatoryText = when (selectedSection) {
-                    ObjectivesManagementSection.Active -> "Here you can find all currently active objectives.\nTry to complete them before they expire!"
-                    ObjectivesManagementSection.Expired -> "Here you can find all completed and/or expired objectives.\nYou can still complete expired objectives."
+                    ObjectivesManagementSection.Active -> "Here you can find all currently active goals.\nTry to complete them before they expire!"
+                    ObjectivesManagementSection.Expired -> "Here you can find all reached and/or expired goals.\nYou can still reach expired goals."
                 }
                 Box(
                     modifier = Modifier
@@ -186,7 +184,7 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                 }
 
                 Text(
-                    text = "Hold on an objective to manage it",
+                    text = "Hold on a goal to manage it",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
@@ -227,7 +225,7 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
                         .padding(horizontal = 16.dp) // Padding orizzontale
                         .padding(bottom = 16.dp) // Padding dal fondo
                 ) {
-                    Text("Back to Objectives Overview")
+                    Text("Back to Stats Overview")
                 }
             }
         }
@@ -235,8 +233,8 @@ fun ObjectivesManagementScreen(navController: NavController, viewModel: FinanceV
 }
 
 enum class ObjectivesManagementSection(val title: String) {
-    Active("Active Objectives"),
-    Expired("Inactive Objectives")
+    Active("Active Goals"),
+    Expired("Inactive Goals")
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -274,7 +272,7 @@ fun ObjectiveItem(
     }
 
     val statusTextUnderIcon = when {
-        obj.completed -> "Completed"
+        obj.completed -> "Reached"
         isExpiredNotCompleted -> "Expired"
         else -> "Active" // Nessun testo se attivo e non scaduto
     }
@@ -289,11 +287,11 @@ fun ObjectiveItem(
             .combinedClickable(
                 onClick = {
                     if (obj.completed) {
-                        showSnackbar("This objective is already completed.")
+                        showSnackbar("This goal has already been reached.")
                     } else if (isExpiredNotCompleted) {
-                        showSnackbar("This objective is expired. Hold to interact.")
+                        showSnackbar("This goal has expired. Hold to interact.")
                     } else {
-                        showSnackbar("Hold to edit or delete the objective.")
+                        showSnackbar("Hold to edit or delete the goal.")
                     }
                 },
                 onLongClick = {
@@ -390,7 +388,7 @@ fun ObjectiveItem(
             AlertDialog(
                 onDismissRequest = { showAccountSelectionForCompletionDialog = false },
                 title = { Text("No Accounts Found") },
-                text = { Text("You need to create an account first before completing an objective and creating a transaction.") },
+                text = { Text("You need to create an account first before being able to reach a goal and create a transaction.") },
                 confirmButton = {
                     TextButton(onClick = { showAccountSelectionForCompletionDialog = false }) {
                         Text("OK")
@@ -416,7 +414,7 @@ fun ObjectiveItem(
                     } else {
                         Column {
                             Text(
-                                "Choose an account to create a transaction for this objective",
+                                "Choose an account to create a transaction for this goal",
                                 style = MaterialTheme.typography.titleSmall,
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
@@ -426,7 +424,7 @@ fun ObjectiveItem(
                                         headlineContent = { Text(account.title) },
                                         supportingContent = { Text("Balance: ${account.amount} €") },
                                         modifier = Modifier.clickable {
-                                            Log.d("XP_DEBUG", "Account selected: ${account.title} for objective: ${obj.desc}. Calling completeObjectiveAndCreateTransaction.")
+                                            Log.d("XP_DEBUG", "Account selected: ${account.title} for goal: ${obj.desc}. Calling completeObjectiveAndCreateTransaction.")
                                             if (obj.type == ObjectiveType.EXPENSE && obj.amount > account.amount) {
                                                 insufficientBalanceAccountInfo = Pair(account.title, account.amount)
                                                 showInsufficientBalanceDialog = true
@@ -438,7 +436,7 @@ fun ObjectiveItem(
                                                     // categoryId = null
                                                 )
                                                 // You can still show a generic local snackbar if desired:
-                                                showSnackbar("Objective '${obj.desc}' marked complete. Transaction created for '${account.title}'.")
+                                                showSnackbar("Goal '${obj.desc}' reached. Transaction created for '${account.title}'.")
                                                 showAccountSelectionForCompletionDialog = false
                                             }
                                         },
@@ -507,7 +505,7 @@ fun ObjectiveItem(
             onConfirmDelete = {
                 viewModel.deleteObjective(obj) // Logica di eliminazione
                 showDeleteConfirmationDialog = false
-                showSnackbar("Objective '${obj.desc}' deleted")
+                showSnackbar("Goal '${obj.desc}' deleted")
             }
         )
     }
@@ -538,7 +536,7 @@ fun ObjectiveActionChoiceDialog(
             )
             XButton(onDismiss)
         } },
-        text = { Text("What would you like to do with this objective?")
+        text = { Text("What would you like to do with this goal?")
         },
         confirmButton = {
             Column {
@@ -558,13 +556,13 @@ fun ObjectiveActionChoiceDialog(
                 if (!objective.completed) {
                     TextButton(
                         onClick = {
-                            Log.d("XP_DEBUG", "Mark as Completed clicked in ActionChoiceDialog for: ${objective.desc}")
+                            Log.d("XP_DEBUG", "Mark as Reached clicked in ActionChoiceDialog for: ${objective.desc}")
                             onCompleteClick()
                             // onDismiss() // Dismiss after action is initiated
                         }, // onDismiss is handled by the actions themselves opening new dialogs or by XButton
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Mark as Completed")
+                        Text("Mark as Reached")
                     }
                 }
             }
@@ -609,7 +607,7 @@ fun EditObjectiveDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Edit Objective", style = MaterialTheme.typography.titleLarge)
+                Text("Edit Goal", style = MaterialTheme.typography.titleLarge)
                 XButton(onDismiss)
             }
 
@@ -854,7 +852,7 @@ fun DeleteObjectiveConfirmationDialog( // Rinominato per coerenza
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Confirm Deletion") },
-        text = { Text("Are you sure you want to delete the objective \"${objective.desc}\"?") },
+        text = { Text("Are you sure you want to delete the goal \"${objective.desc}\"?") },
         confirmButton = {
             TextButton(
                 onClick = {
@@ -900,7 +898,7 @@ fun ObjectivesSection(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "No $typeText objectives found.",
+                text = "No $typeText goals found.",
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)

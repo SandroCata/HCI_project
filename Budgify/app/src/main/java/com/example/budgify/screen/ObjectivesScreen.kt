@@ -25,15 +25,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter.Companion.tint
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.painter.Painter
@@ -42,9 +39,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.navigation.BottomBar
 import com.example.budgify.navigation.TopBar
-import com.example.budgify.applicationlogic.FinanceViewModel
 import com.example.budgify.routes.ScreenRoutes
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -66,6 +63,9 @@ fun ObjectivesScreen(navController: NavController, viewModel: FinanceViewModel) 
     val currentXp by viewModel.userXp.collectAsStateWithLifecycle()
     val xpForNextLevel = remember(currentLevel) { calculateXpForNextLevel(currentLevel) } //
 
+    val creditsRepaidCount by viewModel.completedCreditLoansCount.collectAsStateWithLifecycle()
+    val debtsCollectedCount by viewModel.completedDebtLoansCount.collectAsStateWithLifecycle()
+
     Scaffold (
         topBar = { TopBar(navController, currentRoute) },
         bottomBar = { BottomBar(
@@ -84,13 +84,13 @@ fun ObjectivesScreen(navController: NavController, viewModel: FinanceViewModel) 
                     .fillMaxSize()
                     .padding(innerPadding)
                     .padding(16.dp),
-                verticalArrangement = Arrangement.Center, // Add space between sections
+                // verticalArrangement = Arrangement.Center, // Add space between sections
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
                 Column {
 
-                    val explanatoryText = "Here you can check your stats and access objective management.\nComplete objectives, repay debts or collect credits to gain XP and increase your level.\nBy increasing your level you can unlock new themes!"
+                    val explanatoryText = "Here you can check your stats and access goal management.\nReach goals, repay debts or collect credits to gain XP and increase your level.\nBy increasing your level you can unlock new themes!"
 
                     Box(
                         modifier = Modifier
@@ -113,6 +113,9 @@ fun ObjectivesScreen(navController: NavController, viewModel: FinanceViewModel) 
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     // Section 1: Profile Picture, Level, and Level Bar
                     ProfileAndLevelSection(
                         profilePicture = rememberVectorPainter(Icons.Filled.Person),
@@ -122,16 +125,22 @@ fun ObjectivesScreen(navController: NavController, viewModel: FinanceViewModel) 
                         progressToNextLevel = if (xpForNextLevel > 0) currentXp.toFloat() / xpForNextLevel else 0f
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(5.dp))
+
+                    // Section 3: Loan Completion Counts
+                    LoanCompletionCountsSection(
+                        creditsRepaidCount = creditsRepaidCount,
+                        debtsCollectedCount = debtsCollectedCount
+                    )
+
+                    Spacer(modifier = Modifier.height(5.dp))
 
                     // Section 2: Reached and Unreached Objectives Count
                     ObjectiveCountsSection(
                         reachedCount = reachedCount,
-                        unreachedCount = unreachedCount
+                        unreachedCount = unreachedCount,
+                        navController = navController
                     )
-
-                    // Section 3: Manage Objectives Button
-                    ManageObjectivesButton(navController = navController)
 
                     // Optional: Display XP for demonstration
 //                    Text("Current XP: $currentXp / $xpForNextLevel")
@@ -147,7 +156,7 @@ fun calculateXpForNextLevel(level: Int): Int {
 }
 
 @Composable
-fun ObjectiveCountsSection(reachedCount: Int, unreachedCount: Int) {
+fun ObjectiveCountsSection(reachedCount: Int, unreachedCount: Int, navController: NavController) {
     Column (
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
@@ -155,7 +164,7 @@ fun ObjectiveCountsSection(reachedCount: Int, unreachedCount: Int) {
             .padding(5.dp)
     ) {
         Text (
-            text = "Objectives",
+            text = "Goals",
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
@@ -189,6 +198,8 @@ fun ObjectiveCountsSection(reachedCount: Int, unreachedCount: Int) {
                 )
             }
         }
+        // Section 4: Manage Objectives Button
+        ManageObjectivesButton(navController = navController)
     }
 }
 
@@ -210,7 +221,7 @@ fun ProfileAndLevelSection(
         verticalArrangement = Arrangement.spacedBy(8.dp) // Space out elements within this section
     ) {
         Text(
-            text = "Your Achievements",
+            text = "Your Stats",
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
@@ -249,6 +260,57 @@ fun ProfileAndLevelSection(
 }
 
 @Composable
+fun LoanCompletionCountsSection(creditsRepaidCount: Int, debtsCollectedCount: Int) {
+    Column (
+        modifier = Modifier
+            .fillMaxWidth() // Make it fill width like other sections
+            //.padding(top = 16.dp) // Add some space above it
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(16.dp) // Inner padding
+    ) {
+        Text (
+            text = "Loan Settlements", // Or a title you prefer
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        Spacer(modifier = Modifier.height(8.dp)) // Space between title and counts
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp), // Adjusted padding
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            // Credits Repaid (meaning someone paid you back a credit you gave)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = creditsRepaidCount.toString(),
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                Text(
+                    text = "Credits Collected", // "Credits Repaid to You" or "Credits Collected"
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            // Debts Collected (meaning you paid back a debt you owed)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = debtsCollectedCount.toString(),
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                Text(
+                    text = "Debts Repaid", // "Debts You Repaid" or "Debts Cleared"
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun ManageObjectivesButton(navController: NavController) {
     Button(
         onClick = {
@@ -256,8 +318,9 @@ fun ManageObjectivesButton(navController: NavController) {
         },
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 16.dp) // Add some space above the button
+            .padding(horizontal = 32.dp)
+            //.padding(top = 16.dp) // Add some space above the button
     ) {
-        Text("Manage Objectives")
+        Text("Manage Goals")
     }
 }
