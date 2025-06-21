@@ -263,7 +263,9 @@ fun ObjectiveItem(
         else -> MaterialTheme.colorScheme.surfaceVariant // Fallback
     }
 
-    val contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = if (obj.completed || isExpiredNotCompleted) 0.7f else 1f)
+    val baseContentColor = MaterialTheme.colorScheme.onSurface
+    val contentAlpha = if (obj.completed || isExpiredNotCompleted) 0.7f else 1f
+    val contentColor = baseContentColor.copy(alpha = contentAlpha)
 
     val iconImage = when {
         obj.completed -> Icons.Filled.CheckCircleOutline
@@ -349,7 +351,7 @@ fun ObjectiveItem(
                 Text(
                     text = it,
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = if (isExpiredNotCompleted) MaterialTheme.colorScheme.error.copy(alpha = contentColor.alpha) else contentColor,
+                    color = contentColor,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 4.dp)
                 )

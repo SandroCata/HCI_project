@@ -304,7 +304,9 @@ fun LoanItem(
         else -> MaterialTheme.colorScheme.surfaceVariant // Fallback
     }
 
-    val contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = if (loan.completed || isExpired) 0.7f else 1f)
+    val baseContentColor = MaterialTheme.colorScheme.onSurface
+    val contentAlpha = if (loan.completed || isExpired) 0.7f else 1f
+    val contentColor = baseContentColor.copy(alpha = contentAlpha)
 
     val iconImage = when {
         loan.completed -> Icons.Filled.CheckCircleOutline
@@ -391,7 +393,8 @@ fun LoanItem(
                 Text(
                     text = it,
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = if (isExpired) MaterialTheme.colorScheme.error.copy(alpha = contentColor.alpha) else contentColor,
+                    // Applica expiredColor al testo "Expired", altrimenti contentColor
+                    color = contentColor,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 4.dp)
                 )
