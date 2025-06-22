@@ -1,25 +1,41 @@
 \contentsline {section}{\numberline {1}Introduction}{2}{section.1}%
-\contentsline {section}{\numberline {2}Requirements Analysis}{2}{section.2}%
-\contentsline {subsection}{\numberline {2.1}Personas and Scenarios}{2}{subsection.2.1}%
-\contentsline {subsubsection}{\numberline {2.1.1}Alex Jameson – The Student with the Dream of a Car}{2}{subsubsection.2.1.1}%
-\contentsline {subsubsection}{\numberline {2.1.2}James Carter – The Man Who Got Fired}{2}{subsubsection.2.1.2}%
-\contentsline {subsubsection}{\numberline {2.1.3}Margaret "Maggie" Thompson – The Elder Who Wants to Go on a Cruise}{3}{subsubsection.2.1.3}%
-\contentsline {subsection}{\numberline {2.2}User analysis}{4}{subsection.2.2}%
-\contentsline {subsubsection}{\numberline {2.2.1}Questionnaire}{4}{subsubsection.2.2.1}%
-\contentsline {subsubsection}{\numberline {2.2.2}Interview}{6}{subsubsection.2.2.2}%
-\contentsline {subsection}{\numberline {2.3}Hierarchical Task Analysis}{7}{subsection.2.3}%
-\contentsline {subsubsection}{\numberline {2.3.1}Buy an item and record the expense}{7}{subsubsection.2.3.1}%
-\contentsline {subsubsection}{\numberline {2.3.2}Set an objective and buy the related item}{7}{subsubsection.2.3.2}%
-\contentsline {subsubsection}{\numberline {2.3.3}Extinguish a debt}{7}{subsubsection.2.3.3}%
-\contentsline {subsection}{\numberline {2.4}Conclusions Analysis}{8}{subsection.2.4}%
-\contentsline {section}{\numberline {3}Design and Implementation}{8}{section.3}%
-\contentsline {subsection}{\numberline {3.1}Add transaction}{8}{subsection.3.1}%
-\contentsline {subsection}{\numberline {3.2}Set objective to buy an item}{9}{subsection.3.2}%
-\contentsline {section}{\numberline {4}Prototype Zero}{9}{section.4}%
-\contentsline {subsection}{\numberline {4.1}Dashboard}{9}{subsection.4.1}%
-\contentsline {subsection}{\numberline {4.2}Transactions}{9}{subsection.4.2}%
-\contentsline {subsection}{\numberline {4.3}Objectives}{10}{subsection.4.3}%
-\contentsline {subsection}{\numberline {4.4}Loans}{10}{subsection.4.4}%
-\contentsline {subsection}{\numberline {4.5}Categories}{10}{subsection.4.5}%
-\contentsline {subsection}{\numberline {4.6}Adding Section}{10}{subsection.4.6}%
-\contentsline {subsection}{\numberline {4.7}Settings}{10}{subsection.4.7}%
+\contentsline {section}{\numberline {2}Application scenario}{2}{section.2}%
+\contentsline {section}{\numberline {3}Work Plan}{3}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Requirements Gathering}{3}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Analysis and Design}{3}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Implementation and Prototyping}{3}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Evaluation and Conclusion}{4}{subsection.3.4}%
+\contentsline {section}{\numberline {4}Requirements Analysis}{4}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Personas and Scenarios}{4}{subsection.4.1}%
+\contentsline {subsubsection}{\numberline {4.1.1}Alex Jameson – The Student with the Dream of a Car}{4}{subsubsection.4.1.1}%
+\contentsline {subsubsection}{\numberline {4.1.2}James Carter – The Man Who Got Fired}{5}{subsubsection.4.1.2}%
+\contentsline {subsubsection}{\numberline {4.1.3}Margaret "Maggie" Thompson – The Elder Who Wants to Go on a Cruise}{6}{subsubsection.4.1.3}%
+\contentsline {subsection}{\numberline {4.2}User analysis}{6}{subsection.4.2}%
+\contentsline {subsubsection}{\numberline {4.2.1}Questionnaire}{6}{subsubsection.4.2.1}%
+\contentsline {subsubsection}{\numberline {4.2.2}Interview}{10}{subsubsection.4.2.2}%
+\contentsline {subsection}{\numberline {4.3}Competitor Analysis}{10}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Hierarchical Task Analysis}{11}{subsection.4.4}%
+\contentsline {subsubsection}{\numberline {4.4.1}Buy an item and record the expense}{11}{subsubsection.4.4.1}%
+\contentsline {subsubsection}{\numberline {4.4.2}Set an objective and buy the related item}{12}{subsubsection.4.4.2}%
+\contentsline {subsubsection}{\numberline {4.4.3}Extinguish a debt}{12}{subsubsection.4.4.3}%
+\contentsline {subsection}{\numberline {4.5}Conclusions Analysis}{12}{subsection.4.5}%
+\contentsline {section}{\numberline {5}Design and Implementation}{13}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Add transaction}{13}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Set objective to buy an item}{14}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Extinguish a debt}{15}{subsection.5.3}%
+\contentsline {section}{\numberline {6}Prototypes}{15}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Prototype ZERO}{15}{subsection.6.1}%
+\contentsline {subsubsection}{\numberline {6.1.1}Expert Evaluation}{20}{subsubsection.6.1.1}%
+\contentsline {subsection}{\numberline {6.2}Prototype ONE}{24}{subsection.6.2}%
+\contentsline {subsubsection}{\numberline {6.2.1}User Evaluation}{25}{subsubsection.6.2.1}%
+\contentsline {subsubsection}{\numberline {6.2.2}Controlled Experiment}{26}{subsubsection.6.2.2}%
+\contentsline {subsection}{\numberline {6.3}Prototype TWO and FINAL}{27}{subsection.6.3}%
+\contentsline {section}{\numberline {7}Final Realization}{28}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Dashboard and Core Navigation}{28}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Adding New Entries (Transaction, Goal, Loan)}{29}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Transaction Management}{30}{subsection.7.3}%
+\contentsline {subsection}{\numberline {7.4}Goals and Stats}{31}{subsection.7.4}%
+\contentsline {subsection}{\numberline {7.5}Loan Management}{32}{subsection.7.5}%
+\contentsline {subsection}{\numberline {7.6}Category Management}{33}{subsection.7.6}%
+\contentsline {subsection}{\numberline {7.7}Settings}{34}{subsection.7.7}%
+\contentsline {section}{\numberline {8}Conclusions and Future Work}{35}{section.8}%

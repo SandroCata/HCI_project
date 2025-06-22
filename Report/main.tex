@@ -205,7 +205,7 @@ This structured, feedback-driven approach ensured that Budgify evolved according
 \subsection{User analysis}
 
 \subsubsection{Questionnaire}
-The questionnaire helped us to understand better our potential targeted users.
+The questionnaire helped in better understanding our potential targeted users.
 We reached 29 people and these data were useful to validate our assumptions and
 ideas and to improve.
 \begin{figure}[H]
@@ -270,19 +270,19 @@ Simple graphs and charts, like pie charts showing expenses by category, are high
 \end{itemize}
 
 \subsection{Competitor Analysis}
-To better understand our competitors we analyzed the answers from the questionnaire:
+To better understand our competitors we analyzed the answers from the questionnaire and looked at some of the most downloaded finance apps. These where the apps we analyzed:
 \begin{itemize}
     \item Budget e Finanze
     \item Splitwise
     \item Money Manager
     \item 1Money
 \end{itemize}
-These where the apps that our audience was currently using or had used in the past. We analyzed them to have a clear view fo their strengths and weaknesses.
+We tried this apps in order to understand their features, strengths and weaknesses.
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{Competitors_table.png}
 \end{figure}
-\noindent As we can see all of them can give a basic expense tracking system and a secure access to the app. It's interesting to note that most of the apps offer only one type of chart.\newline \textbf{Budget e finanze} and \textbf{Money Manager} don't have loans management.\newline \textbf{Splitwise} it's missing category personalization and provides charts only for the PRO version.\newline \textbf{1Money} has limited personalization about categories.\newline All of them lack in a rewarding system that is helpful to keep the user interested in using the application.\newline Considering this analysis we decided to focus on giving all the functionalities and adding an engaging reward system.
+\noindent As we can see all of them offer a basic expense tracking system and a secure access to the app. It's interesting to note that most of the apps offer only one type of chart.\newline \textbf{Budget e finanze} and \textbf{Money Manager} don't feature loans management.\newline \textbf{Splitwise} is missing category personalization and provides charts only in the PRO version.\newline \textbf{1Money} allows the creation of a limited number of categories without paying for the pro version.\newline All of them lack a rewarding system that is helpful to keep the user interested in using the application.\newline Considering this analysis we decided to focus on giving all the functionalities and adding an engaging reward system.
 \subsection{Hierarchical Task Analysis}
 
 Hierarchical Task Analysis (HTA) is a task description methodology that is used to produce a complete description of tasks in a hierarchical structure of goals, sub-goals, operations and plans in order
@@ -310,7 +310,7 @@ to have a complete representation of the action.
 
 \subsection{Conclusions Analysis}
 
-In conclusion, the analysis indicates a clear user need for a comprehensive and goal-oriented financial tool. The application's core functionality should be built around motivating users through Rewarding Objectives, transforming saving from a chore into an engaging challenge. To provide a complete financial picture, robust Debts and Credits handling is essential. Proactive financial planning will be enabled by a Transactions Calendar, which helps users anticipate future payments and deadlines. For insightful analysis of spending habits, the app must provide clear Percentages on kinds of purchases. Underpinning all of this is the fundamental need for user control, allowing individuals to seamlessly Create, Delete, or Change accounts, ensuring the tool remains flexible and perfectly tailored to their evolving financial lives.
+In conclusion, the analysis indicates a clear user need for a comprehensive and goal-oriented financial tool. The application's core functionality should be built around motivating users through rewarding reaching Goals, transforming saving from a chore into an engaging challenge. To provide a complete financial picture, robust Debts and Credits handling is essential. Proactive financial planning will be enabled by a Transactions Calendar, which helps users anticipate future payments and deadlines. For insightful analysis of spending habits, the app must provide clear Percentages on kinds of purchases. Underpinning all of this is the fundamental need for user control, allowing individuals to seamlessly Create, Delete, or Change accounts, ensuring the tool remains flexible and perfectly tailored to their evolving financial lives.
 \vspace{5cm}
 \section{Design and Implementation}
 State Transition Network (STN) represents a dialogue between the user and the sys-
@@ -402,7 +402,7 @@ We provided our mockup and a brief description of the functionalities and we rec
     \includegraphics[width=1\linewidth]{HE3.pdf}
 \end{figure}
 \subsection{Prototype ONE}
-After the Heuristic Evaluation we improved our interface by solving the problems raised by the experts. The prototype number ONE was created, a fully functional android app using Android Studio.
+After the Heuristic Evaluation we improved our interface by solving the problems raised by the experts. The prototype number ONE was created, a fully functional android app using Android Studio. Here are the fixes to some of the major usability problems highlighted in the Heuristic Evaluation:
 \begin{itemize}
     \item The transactions screen now features an indication on the days that contain transactions
     \item Categories can be edited an deleted and it is clearly stated how to do so
@@ -417,6 +417,7 @@ After the Heuristic Evaluation we improved our interface by solving the problems
     \centering
     \includegraphics[scale=0.6]{HEres2.png}
 \end{figure}
+The other less severe problems were also promptly resolved, while some others only surfaced from the extreme simplicity of the mockups and were easily implemented in the realization.
 \subsubsection{User Evaluation}
 With the working application we tested it on a bunch of users by performing the "Think Aloud". We asked users to perform the following task:
 \begin{itemize}
@@ -428,13 +429,13 @@ The first two tasks were performed fairly easily. Thanks to the icons, the add b
 \vspace{0.5cm}\\
 However while conducting the evaluation of the third task, we noticed that users had trouble locating the stats page, which is in the same section as the goals.
 Therefore, we decide to rename objectives to "goals" and to rename the Objectives section to "Goals \& Stats" to make it more clear.
-While doing this we also added stats related to loans and renamed.
+While doing this we also added stats related to loans.
 \begin{figure}[H]
     \centering
     \includegraphics[scale=0.6]{G&T.png}
 \end{figure}
 \subsubsection{Controlled Experiment}
-For the controlled experiment we designed two styles of interfaces for the navigation bar and the add dialog: one with labels and one with icons. 
+For the controlled experiment we designed two styles of interfaces for the navigation bar and the add dialog: one with labels and one with icons only. 
 We divided users in two groups of 10 people each and tested each group on one of the two interfaces.\\The task the users were asked to perform was the following:
 \vspace{0.5cm}\\
 \textbf{Add a debt, then mark it as repaid and check your stats}
@@ -462,7 +463,7 @@ From the results of the ANOVA we can see that:\\
 \[
 F > F_{\text{crit}}
 \]
-meaning there is a statistically significant difference in task times between Group A and Group B. We can thus reject the null hypothesis and conclude that the interface used by Group A (the one with labels) is better than the one used by Group B.\\
+meaning there is a statistically significant difference in task times between Group A and Group B. We can thus reject the null hypothesis and, by looking at the mean times to perform the task, conclude that the interface used by Group A (the one with labels) is better than the one used by Group B.\\
 Therefore, we chose to use the interface with labels in the final prototype.
 
 \subsection{Prototype TWO and FINAL}
@@ -474,7 +475,7 @@ Thanks to the help of our users and of the evaluations conducted by the team we 
 This section presents the key screens of the final Budgify application, demonstrating its core functionalities and user interface design. The application aims to provide a comprehensive yet intuitive experience for personal finance management.
 
 \subsection{Dashboard and Core Navigation}
-The dashboard serves as the main entry point, offering an overview of finances. Navigation is facilitated by a bottom bar. Account management is also accessible from the dashboard.
+The dashboard serves as the main entry point, offering an overview of finances. Navigation is facilitated by a bottom bar. Account management is also accessible from the dashboard, alongside chart visualization of transactions, including a switch between income and expenses and two types of charts. An account filter is also present to select which accounts to show in the charts.
 
 \begin{figure}[H]
     \centering
@@ -561,7 +562,7 @@ A central "+" button provides access to adding new transactions, goals, or loans
 \end{figure}
 
 \subsection{Transaction Management}
-Users can view transactions by day or as a list of latest transactions, and manage them individually.
+Users can view transactions by day with the help of a calendar or as a list of latest transactions, and manage them individually.
 
 \begin{figure}[H]
     \centering
@@ -599,7 +600,7 @@ Users can view transactions by day or as a list of latest transactions, and mana
 \end{figure}
 \vspace{1cm}
 \subsection{Goals and Stats}
-This section allows users to track their financial goals and view overall statistics, including a leveling system.
+This section allows users to track their financial goals and view overall statistics, including number of goals reached, credits collected and debts repaid. The user's overall level is also displayed here. To increase their level, the user can reach goals, repay debts or collect credits. After reaching a certain level, a reward can be unlocked.
 
 \begin{figure}[H]
     \centering
@@ -655,7 +656,7 @@ This section allows users to track their financial goals and view overall statis
 \end{figure}
 
 \subsection{Loan Management}
-Budgify allows tracking of both money lent (credits) and money borrowed (debts).
+Budgify allows tracking of both money lent (credits) and borrowed (debts) through the loans section.
 
 \begin{figure}[H]
     \centering
@@ -749,7 +750,7 @@ Users can define and manage custom categories for both income and expenses.
 \end{figure}
 \vspace{1cm}
 \subsection{Settings}
-The settings section allows users to configure app security (PIN), theme, and view application information.
+The settings section allows users to configure app security (PIN), theme, and view application information. Themes are unlocked by leveling up.
 
 \begin{figure}[H]
     \centering
@@ -798,12 +799,14 @@ Despite the successes, the app exhibited some weaknesses:
     \item Limited feedback and error-handling mechanisms in certain sections.
     \item Some interface elements, such as the goals section, suffered from poor information density and unclear labeling.
 \end{itemize}
-We would like to explore further the possibility of implementing more features for our users Here are some ideas of improvements that could be made to Budgify in order to enrich the user experience:
+This issues were fixed and the final version was created.
+\vspace{0.5cm}\\
+We would like to explore further the possibility of implementing more features for our users. Here are some ideas of improvements that could be made to Budgify in order to enrich the user experience:
 \begin{itemize}
     \item Add more rewards (maybe collaborations with some partners to make the rewards more interesting).
     \item Add selection of preferred currency type, to allow foreign user to use a different currency.
     \item Provide more types of authentication, like biometric.
     \item Polish the interface even more to please the user and improve usability.
 \end{itemize}
-In conclusion, Budgify is more than a budgeting app, it is a step toward empowering users to take control of their financial well-being with confidence and clarity.
+In conclusion, Budgify is more than a budgeting app, it is a step toward empowering users to take control of their financial well-being with confidence and clarity while also rewarding them for everyday use.
 \end{document}
